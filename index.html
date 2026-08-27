@@ -164,6 +164,15 @@
   .kurzCats{display:flex;flex-wrap:wrap;gap:5px}
   .kurzCat{padding:3px 7px;border-radius:6px;font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.02em;background:var(--panel3);color:var(--tx3)}
   .kurzNone{font:400 12px/1.4 Archivo,sans-serif;color:var(--di)}
+  .ribbonWrap{display:flex;gap:2px;align-items:flex-end;overflow-x:auto;padding:6px 2px 10px}
+  .ribbonBar{flex:none;width:6px;border-radius:2px;height:26px}
+  .ribbonBar.cur{outline:2px solid var(--am);outline-offset:2px;height:38px}
+  .legendRow{display:flex;flex-wrap:wrap;gap:10px 14px}
+  .legendItem{display:flex;align-items:center;gap:5px;font:500 9.5px/1 'Roboto Mono',monospace;color:var(--mu)}
+  .legendSwatch{width:9px;height:9px;border-radius:2px;flex:none}
+  .phaseChip{padding:3px 8px;border-radius:7px;font:600 9.5px/1 'Roboto Mono',monospace;letter-spacing:.05em;text-transform:uppercase;flex:none}
+  .reduTag{padding:2px 6px;border-radius:5px;font:500 8px/1 'Roboto Mono',monospace;letter-spacing:.04em;color:var(--di);border:1px dashed var(--border2);flex:none}
+  .jahrRowHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -174,6 +183,20 @@ const GNAME={'U9':'U9','U11I':'U11 I','U11II':'U11 II','U13 I':'U13 I','U13II':'
 const GCLASS={'U9':'U9','U11I':'U11','U11II':'U11','U13 I':'U13','U13II':'U13','U15I':'U15','U15 II':'U15','SPOGY Gruppe':'U17'};
 const WKCLASS_TO_AGE = (wk)=>{ if(!wk) return 'U19'; const m = String(wk).match(/U(9|11|13|15|17|19)/); return m ? 'U'+m[1] : 'U19'; };
 const MNAMES=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const PHASECOL = {
+  'Max': {bg:'rgba(0,88,143,.14)', bd:'rgba(0,88,143,.4)', fg:AM, bar:AM},
+  'SK': {bg:'rgba(18,128,137,.14)', bd:'rgba(18,128,137,.4)', fg:LI, bar:LI},
+  'Skill': {bg:'rgba(18,128,137,.14)', bd:'rgba(18,128,137,.4)', fg:LI, bar:LI},
+  'Max/SK': {bg:'rgba(91,95,166,.14)', bd:'rgba(91,95,166,.4)', fg:'#5b5fa6', bar:'#5b5fa6'},
+  'KA': {bg:'rgba(111,164,201,.2)', bd:'rgba(111,164,201,.5)', fg:'#3f7ea8', bar:'#6fa4c9'},
+  'Aufbau': {bg:'#e0e8f0', bd:'rgba(10,50,80,.16)', fg:'#33546a', bar:'#c3ccd6'},
+  'Basis': {bg:'#e0e8f0', bd:'rgba(10,50,80,.16)', fg:'#33546a', bar:'#aebccb'},
+  'Fels': {bg:'transparent', bd:'rgba(18,128,137,.4)', fg:'#0f6f77', bar:'rgba(18,128,137,.35)'},
+  'Fels + Basis': {bg:'transparent', bd:'rgba(18,128,137,.4)', fg:'#0f6f77', bar:'rgba(18,128,137,.35)'},
+  'Pause': {bg:'transparent', bd:'rgba(10,50,80,.16)', fg:'#9db0bd', bar:'#e3e8ef'},
+  'WK': {bg:'rgba(241,119,78,.16)', bd:'rgba(241,119,78,.5)', fg:'#c85a30', bar:'#f1774e'},
+};
+const PHASE_NEUTRAL = {bg:'transparent', bd:'rgba(10,50,80,.1)', fg:'#9db0bd', bar:'#eef3f7'};
 
 function val(x){ return (x===null||x===undefined||x==='') ? '-' : x; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -416,6 +439,84 @@ function renderKurz(days, di){
 }
 
 function renderJahr(view, isSolo, athlete, group){
+  const jp = isSolo ? D.JAHRESPLAN[view.id] : null;
+  if(jp && jp.length) return renderJahrPhasen(view, jp);
+  return renderJahrEvents(view, isSolo, athlete, group);
+}
+
+function renderJahrPhasen(view, weeks){
+  const src = D.JAHRESPLAN_SOURCE[view.id] || '-';
+  const withMeta = weeks.map(w=>{
+    const mon = isoWeekMonday(w.year, w.kw);
+    const monEnd = new Date(mon); monEnd.setUTCDate(monEnd.getUTCDate()+6);
+    const pad = n => String(n).padStart(2,'0');
+    const span = pad(mon.getUTCDate())+'.'+pad(mon.getUTCMonth()+1)+'. – '+pad(monEnd.getUTCDate())+'.'+pad(monEnd.getUTCMonth()+1)+'.';
+    const monLabel = MNAMES[mon.getUTCMonth()] + ' ' + String(w.year).slice(2);
+    const cur = w.year===NOW.year && w.kw===NOW.kw;
+    return Object.assign({}, w, {span, monLabel, cur});
+  });
+
+  const ribbon = withMeta.map(w=>{
+    const p = w.phase ? (PHASECOL[w.phase] || PHASE_NEUTRAL) : PHASE_NEUTRAL;
+    return `<div class="ribbonBar ${w.cur?'cur':''}" style="background:${p.bar}" title="KW ${w.kw} · ${esc(w.phase||w.phaseRaw||'-')}"></div>`;
+  }).join('');
+
+  const usedPhases = [];
+  withMeta.forEach(w=>{ if(w.phase && usedPhases.indexOf(w.phase)<0) usedPhases.push(w.phase); });
+  const legend = usedPhases.map(p=>`<div class="legendItem"><span class="legendSwatch" style="background:${(PHASECOL[p]||PHASE_NEUTRAL).bar}"></span>${esc(p)}</div>`).join('')
+    + `<div class="legendItem"><span class="legendSwatch" style="background:${AM}"></span>Boulder-WK</div>`
+    + `<div class="legendItem"><span class="legendSwatch" style="background:${LI}"></span>Lead-WK</div>`;
+
+  const buckets = [];
+  withMeta.forEach(w=>{
+    let b = buckets[buckets.length-1];
+    if(!b || b.label!==w.monLabel){ b = {label:w.monLabel, weeks:[]}; buckets.push(b); }
+    b.weeks.push(w);
+  });
+
+  const weekRow = (w)=>{
+    const p = w.phase ? (PHASECOL[w.phase] || PHASE_NEUTRAL) : null;
+    const items = [];
+    if(w.boulder) items.push(`<div class="evItem"><span class="evChip" style="background:rgba(0,88,143,.14);color:${AM}">Boulder</span><span class="evText">${esc(w.boulder)}</span></div>`);
+    if(w.lead) items.push(`<div class="evItem"><span class="evChip" style="background:rgba(18,128,137,.14);color:${LI}">Lead</span><span class="evText">${esc(w.lead)}</span></div>`);
+    if(w.fels) items.push(`<div class="evItem"><span class="evChip">Fels</span><span class="evText">${esc(w.fels)}</span></div>`);
+    if(w.ferien) items.push(`<div class="evItem"><span class="evChip">Ferien</span><span class="evText">${esc(w.ferien)}</span></div>`);
+    if(w.sonstiges) items.push(`<div class="evItem"><span class="evChip">Sonstiges</span><span class="evText">${esc(w.sonstiges)}</span></div>`);
+    (w.notes||[]).forEach(n=>items.push(`<div class="evItem"><span class="evChip">${esc(n.label)}</span><span class="evText">${esc(n.text)}</span></div>`));
+    if(!w.phase && w.phaseRaw) items.unshift(`<div class="evItem"><span class="evText" style="color:${MU}">${esc(w.phaseRaw)}</span></div>`);
+    return `
+      <div class="evRow">
+        <div class="evKw"><span class="k">KW ${w.kw}</span><span class="d">${esc(w.span)}</span></div>
+        <div class="evItems">
+          <div class="jahrRowHead">
+            ${p ? `<span class="phaseChip" style="background:${p.bg};border:1px solid ${p.bd};color:${p.fg}">${esc(w.phase)}</span>` : ''}
+            ${w.reduziert ? `<span class="reduTag">Reduziert</span>` : ''}
+            ${w.cur ? `<span class="reduTag" style="color:${AM};border-color:rgba(0,88,143,.4)">Aktuell</span>` : ''}
+          </div>
+          ${items.join('')}
+        </div>
+      </div>`;
+  };
+
+  return `
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <span class="sectionTitle">Jahresplan</span>
+        <span class="subMeta">${withMeta.length} WOCHEN</span>
+      </div>
+      <div class="footNote">${esc(src)}. Phasen und WK-Termine direkt aus der Jahresplanung — Wochen ohne Eintrag bleiben neutral, keine erfundenen Werte.</div>
+    </div>
+    <div class="ribbonWrap">${ribbon}</div>
+    <div class="legendRow">${legend}</div>
+    ${buckets.map(b=>`
+      <div>
+        <div class="monthHead"><span class="m">${esc(b.label)}</span></div>
+        ${b.weeks.map(weekRow).join('')}
+      </div>`).join('')}
+  `;
+}
+
+function renderJahrEvents(view, isSolo, athlete, group){
   const ageClass = isSolo ? WKCLASS_TO_AGE(athlete ? athlete.wk : null) : (GCLASS[view.id] || 'U15');
   const gkc = D.GK[ageClass] || {};
   const keys = Object.keys(gkc).sort((a,b)=>{ const A=a.split('-').map(Number), B=b.split('-').map(Number); return (A[0]-B[0])||(A[1]-B[1]); });
