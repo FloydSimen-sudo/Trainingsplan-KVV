@@ -3,202 +3,565 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trainingsplan KVV</title>
+<title>Trainingspläne KVV</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="./tp-data.js"></script>
 <style>
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: oklch(0.16 0.01 260); font-family: 'Inter', system-ui, sans-serif; }
-  a { color: #ff6a3d; }
-  a:hover { color: #ff8a5f; }
+  :root{
+    --bg:#0a0d12; --bg2:#0d1117; --panel:#161c24; --panel2:#1a2129; --panel3:#1d242e; --panel4:#12181f;
+    --tx:#e8ecf2; --tx2:#dbe3ec; --tx3:#c7d1de; --mu:#8b97a8; --di:#5d6878;
+    --am:#e9a63c; --li:#93c34a; --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.1);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--tx);font-family:Archivo,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--am);text-decoration:none}
+  a:hover{color:#f2bc63}
+  button{font-family:inherit}
+  .mono{font-family:'Roboto Mono',monospace}
+  #app{max-width:560px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--bg2)}
+  .header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:18px 18px 12px;position:sticky;top:0;background:var(--bg2);z-index:5;border-bottom:1px solid var(--border)}
+  .headerBtn{display:flex;align-items:center;gap:9px;background:transparent;border:none;padding:0;cursor:pointer;text-align:left;min-width:0}
+  .viewName{font:600 19px/1.15 Archivo,sans-serif;letter-spacing:-.01em;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px}
+  .viewSub{font:500 9.5px/1 'Roboto Mono',monospace;letter-spacing:.09em;color:var(--di)}
+  .caret{font:400 12px/1 Archivo,sans-serif;color:var(--am)}
+  .syncbar{margin:12px 18px 4px;padding:9px 11px;border-radius:12px;background:var(--panel4);border:1px solid var(--border);display:flex;align-items:center;gap:9px}
+  .dot{width:7px;height:7px;border-radius:4px;flex:none;background:var(--li);box-shadow:0 0 0 3px rgba(147,195,74,.12)}
+  .syncFile{font:500 10px/1.2 'Roboto Mono',monospace;letter-spacing:.04em;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .syncInfo{font:400 9.5px/1.2 'Roboto Mono',monospace;color:var(--di)}
+  .content{flex:1;padding:14px 18px 10px;display:flex;flex-direction:column;gap:14px}
+  .weekNav{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .navBtn{width:32px;height:32px;border-radius:10px;background:var(--panel);border:1px solid var(--border2);color:var(--mu);font:400 15px/1 Archivo;cursor:pointer}
+  .navBtn:hover{background:var(--panel3);color:var(--tx)}
+  .weekTitle{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+  .weekKw{font:600 15px/1 Archivo,sans-serif}
+  .weekMeta{font:500 9.5px/1.3 'Roboto Mono',monospace;letter-spacing:.06em;color:var(--di);text-align:center}
+  .dayChips{display:flex;gap:6px}
+  .dayChip{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 0 7px;border-radius:12px;cursor:pointer;font-family:Archivo,sans-serif;background:var(--panel);border:1px solid var(--border2);color:var(--mu)}
+  .dayChip.sel{background:var(--tx3);color:var(--bg2);border-color:transparent}
+  .dayChip .dow{font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.06em;opacity:.75}
+  .dayChip .dom{font:600 14px/1 Archivo,sans-serif}
+  .dayHead{display:flex;align-items:baseline;gap:8px}
+  .dayTitle{font:600 16px/1.2 Archivo,sans-serif}
+  .metaRow{display:flex;flex-wrap:wrap;gap:6px}
+  .metaPill{display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:8px;background:var(--panel);border:1px solid var(--border)}
+  .metaPill .k{font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:var(--di);text-transform:uppercase}
+  .metaPill .v{font:500 11px/1 Archivo,sans-serif;color:var(--tx3)}
+  .card{border-radius:16px;background:var(--panel);border:1px solid var(--border);overflow:hidden}
+  .cardHead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--panel2);border-bottom:1px solid var(--border)}
+  .cardHead .name{display:flex;align-items:center;gap:9px;font:600 12px/1 Archivo,sans-serif;letter-spacing:.02em}
+  .cardHead .dotSm{width:6px;height:6px;border-radius:3px;background:var(--li)}
+  .cardHead .time{font:500 10px/1 'Roboto Mono',monospace;color:var(--mu)}
+  .slotRow{display:grid;grid-template-columns:100px 1fr;gap:10px;width:100%;padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.04);text-align:left}
+  .slotRow:last-child{border-bottom:none}
+  .slotK{font:500 9px/1.35 'Roboto Mono',monospace;letter-spacing:.06em;color:var(--di);text-transform:uppercase;padding-top:3px}
+  .slotName{font:500 13px/1.35 Archivo,sans-serif;color:var(--tx);text-wrap:pretty}
+  .slotMeta{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+  .metaTag{padding:3px 7px;border-radius:6px;font:500 9.5px/1 'Roboto Mono',monospace;letter-spacing:.03em;background:var(--panel3);color:var(--mu)}
+  .metaTag.hi{background:rgba(147,195,74,.12);color:var(--li)}
+  .empty{border-radius:16px;background:var(--panel4);border:1px dashed var(--border2);padding:22px 16px;display:flex;flex-direction:column;gap:9px}
+  .empty .t1{font:600 13px/1.2 Archivo,sans-serif;color:var(--tx3)}
+  .empty .t2{font:400 12px/1.5 Archivo,sans-serif;color:var(--mu);text-wrap:pretty}
+  .dashed{border-radius:12px;border:1px dashed var(--border2);padding:14px 16px;font:400 13px/1.4 Archivo,sans-serif;color:var(--di)}
+  .dokuBlock{border-radius:16px;background:var(--panel);border:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:14px}
+  .scaleLabel{display:flex;align-items:baseline;justify-content:space-between}
+  .scaleLabel .l{font:500 10px/1 'Roboto Mono',monospace;letter-spacing:.07em;color:var(--mu);text-transform:uppercase}
+  .scaleLabel .v{font:600 13px/1 'Roboto Mono',monospace;color:var(--am)}
+  .cells{display:flex;gap:3px}
+  .cell{flex:1;height:20px;border-radius:5px;background:var(--panel3)}
+  .cell.on{background:var(--am)}
+  .durRow{display:flex;gap:10px}
+  .durBox{flex:1;padding:10px 12px;border-radius:12px;background:var(--panel3);display:flex;flex-direction:column;gap:4px}
+  .durBox .k{font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.07em;color:var(--di);text-transform:uppercase}
+  .durBox .v{font:600 15px/1 Archivo,sans-serif}
+  .loadRow{display:flex;align-items:center;justify-content:space-between}
+  .loadRow .k{font:500 10px/1 'Roboto Mono',monospace;letter-spacing:.07em;color:var(--di);text-transform:uppercase}
+  .loadRow .v{font:600 15px/1 'Roboto Mono',monospace;color:var(--li)}
+  .noteBlock{border-radius:16px;background:var(--panel4);border:1px dashed var(--border2);padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+  .noteBlock .l{font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:var(--di);text-transform:uppercase}
+  .noteBlock .t{font:400 12.5px/1.45 Archivo,sans-serif;color:var(--mu);text-wrap:pretty}
+  .tabs{display:flex;gap:3px;padding:8px 10px calc(10px + env(safe-area-inset-bottom));background:var(--bg2);border-top:1px solid var(--border);position:sticky;bottom:0}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 0;border-radius:12px;border:1px solid transparent;background:transparent;color:var(--di);cursor:pointer}
+  .tab.sel{border-color:rgba(233,166,60,.35);background:rgba(233,166,60,.1);color:var(--am)}
+  .tab .icon{width:14px;height:12px;border-radius:2px;border:1.5px solid currentColor}
+  .tab .lbl{font:500 8.5px/1 'Roboto Mono',monospace;letter-spacing:.04em}
+  .sectionTitle{font:600 13px/1 Archivo,sans-serif}
+  .subMeta{font:500 10px/1 'Roboto Mono',monospace;color:var(--di)}
+  .monthHead{position:sticky;top:0;z-index:2;padding:8px 0;background:var(--bg2);display:flex;align-items:baseline;gap:8px;border-bottom:1px solid var(--border)}
+  .monthHead .m{font:600 11px/1 'Roboto Mono',monospace;letter-spacing:.12em;color:var(--tx);text-transform:uppercase}
+  .evRow{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+  .evKw{width:56px;flex:none;display:flex;flex-direction:column;gap:3px}
+  .evKw .k{font:600 11.5px/1 'Roboto Mono',monospace;color:var(--tx)}
+  .evKw .d{font:400 8.5px/1.2 'Roboto Mono',monospace;color:var(--di)}
+  .evItems{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0}
+  .evItem{display:flex;align-items:flex-start;gap:8px}
+  .evChip{padding:3px 7px;border-radius:6px;flex:none;font:500 8.5px/1 'Roboto Mono',monospace;letter-spacing:.05em;text-transform:uppercase;background:rgba(139,151,168,.18);color:var(--mu)}
+  .evText{font:400 12px/1.35 Archivo,sans-serif;color:var(--tx2);text-wrap:pretty}
+  .kpiRow{display:flex;gap:10px;flex-wrap:wrap}
+  .kpi{flex:1;min-width:120px;padding:12px;border-radius:14px;background:var(--panel);border:1px solid var(--border);display:flex;flex-direction:column;gap:5px}
+  .kpi .l{font:500 8.5px/1.2 'Roboto Mono',monospace;letter-spacing:.07em;color:var(--di);text-transform:uppercase}
+  .kpi .v{font:600 21px/1 Archivo,sans-serif;letter-spacing:-.02em}
+  .kpi .s{font:500 9.5px/1 'Roboto Mono',monospace;color:var(--mu)}
+  .barChart{padding:14px;border-radius:16px;background:var(--panel);border:1px solid var(--border);display:flex;flex-direction:column;gap:12px}
+  .bars{display:flex;align-items:flex-end;gap:4px;height:110px;overflow-x:auto}
+  .barCol{flex:1;min-width:14px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px;height:100%}
+  .bar{width:100%;border-radius:3px 3px 1px 1px;background:rgba(147,195,74,.55)}
+  .barKw{font:500 8px/1 'Roboto Mono',monospace;color:var(--di)}
+  .distRow{display:flex;flex-direction:column;gap:5px}
+  .distTop{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .distTop .n{font:500 11px/1.3 Archivo,sans-serif;color:var(--tx2)}
+  .distTop .c{font:500 10px/1 'Roboto Mono',monospace;color:var(--mu)}
+  .distBarBg{height:6px;border-radius:3px;background:var(--panel3);overflow:hidden}
+  .distBarFg{height:100%;border-radius:3px;background:var(--li)}
+  .benchCatHead{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--panel2);border-bottom:1px solid var(--border)}
+  .benchCatHead .n{font:600 12px/1.2 Archivo,sans-serif}
+  .benchCatHead .r{font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.06em;color:var(--di);text-transform:uppercase}
+  .benchItem{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .benchItem:last-child{border-bottom:none}
+  .benchK{flex:1;font:400 12.5px/1.3 Archivo,sans-serif;color:var(--tx2)}
+  .benchV{font:600 14px/1 'Roboto Mono',monospace;color:var(--tx);min-width:56px;text-align:right}
+  .roster{padding:14px;border-radius:16px;background:var(--panel);border:1px solid var(--border);display:flex;flex-direction:column;gap:9px}
+  .rosterRow{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+  .rosterRow:last-child{border-bottom:none}
+  .initials{width:26px;height:26px;flex:none;border-radius:13px;background:var(--panel3);display:flex;align-items:center;justify-content:center;font:600 9.5px/1 'Roboto Mono',monospace;color:var(--mu)}
+  .roleChip{padding:3px 7px;border-radius:6px;flex:none;font:500 8.5px/1 'Roboto Mono',monospace;letter-spacing:.06em;text-transform:uppercase}
+  .roleChip.head{background:rgba(233,166,60,.14);color:var(--am)}
+  .roleChip.coach{background:var(--panel3);color:var(--di)}
+  .groupRow{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:11px 13px;border-radius:14px;cursor:pointer;background:var(--panel);border:1px solid var(--border)}
+  .groupRow .badge{width:38px;height:34px;flex:none;border-radius:11px;background:var(--panel3);display:flex;align-items:center;justify-content:center;font:600 10px/1 'Roboto Mono',monospace;color:var(--mu)}
+  .groupRow .info{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+  .groupRow .gn{font:500 13px/1.15 Archivo,sans-serif;color:var(--tx)}
+  .groupRow .gs{font:400 9.5px/1.3 'Roboto Mono',monospace;color:var(--di)}
+  .overlay{position:fixed;inset:0;z-index:20;background:rgba(6,9,13,.9);backdrop-filter:blur(7px);display:flex;flex-direction:column;padding:24px 0}
+  .overlayHead{display:flex;align-items:center;justify-content:space-between;padding:0 18px 12px;max-width:560px;width:100%;margin:0 auto}
+  .overlayTitle{font:600 16px/1 Archivo,sans-serif}
+  .closeBtn{width:32px;height:32px;border-radius:16px;background:var(--panel3);border:1px solid var(--border2);color:var(--mu);font:400 14px/1 Archivo;cursor:pointer}
+  .overlayBody{flex:1;overflow:auto;padding:0 18px;max-width:560px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+  .pickerGroupLabel{font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:var(--di);text-transform:uppercase;margin-bottom:8px}
+  .pickerOpt{display:flex;align-items:center;gap:10px;width:100%;padding:11px 13px;border-radius:13px;cursor:pointer;text-align:left;background:var(--panel);border:1px solid var(--border);color:var(--tx);margin-bottom:6px}
+  .pickerOpt.sel{background:rgba(233,166,60,.1);border-color:rgba(233,166,60,.35)}
+  .pickerOpt .info{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+  .pickerOpt .n{font:500 13px/1.15 Archivo,sans-serif}
+  .pickerOpt .s{font:400 9.5px/1.3 'Roboto Mono',monospace;color:var(--di)}
+  .footNote{font:400 10.5px/1.5 'Roboto Mono',monospace;color:var(--di);text-wrap:pretty;padding-bottom:8px}
+  .intro{padding:16px 18px 4px;display:flex;flex-direction:column;gap:6px}
+  .intro .eyebrow{font:500 11px/1 'Roboto Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--am)}
+  .intro .desc{font:400 12.5px/1.5 Archivo,sans-serif;color:var(--mu);text-wrap:pretty}
 </style>
 </head>
 <body>
+<div id="app"></div>
+<script>
+const AM='#e9a63c', LI='#93c34a', TX='#e8ecf2', MU='#8b97a8', DI='#5d6878';
+const GNAME={'U9':'U9','U11I':'U11 I','U11II':'U11 II','U13 I':'U13 I','U13II':'U13 II','U15I':'U15 I','U15 II':'U15 II','SPOGY Gruppe':'SPOGY'};
+const GCLASS={'U9':'U9','U11I':'U11','U11II':'U11','U13 I':'U13','U13II':'U13','U15I':'U15','U15 II':'U15','SPOGY Gruppe':'U17'};
+const WKCLASS_TO_AGE = (wk)=>{ if(!wk) return 'U19'; const m = String(wk).match(/U(9|11|13|15|17|19)/); return m ? 'U'+m[1] : 'U19'; };
+const MNAMES=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 
-<div style="width: 100%; max-width: 480px; margin: 0 auto; min-height: 100vh; background: oklch(0.16 0.01 260); color: oklch(0.94 0.01 90); display: flex; flex-direction: column;">
+function val(x){ return (x===null||x===undefined||x==='') ? '-' : x; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-  <div style="padding: 28px 24px 20px 24px; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid oklch(0.28 0.01 260);">
-    <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: oklch(0.68 0.01 90);">KW 36 · 31.08.–06.09.</div>
-    <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; line-height: 1.15;">Adrian Kathan</div>
-  </div>
+// ---- ISO Woche ----
+function isoWeekMonday(year, week){
+  const simple = new Date(Date.UTC(year,0,1+(week-1)*7));
+  const dow = simple.getUTCDay() || 7;
+  const monday = new Date(simple);
+  if(dow<=4) monday.setUTCDate(simple.getUTCDate()-dow+1); else monday.setUTCDate(simple.getUTCDate()+8-dow);
+  return monday;
+}
+function getISOWeek(date){
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayNum = (d.getUTCDay()+6)%7;
+  d.setUTCDate(d.getUTCDate()-dayNum+3);
+  const firstThu = new Date(Date.UTC(d.getUTCFullYear(),0,4));
+  const week = 1+Math.round(((d-firstThu)/86400000-3+((firstThu.getUTCDay()+6)%7))/7);
+  return {year: d.getUTCFullYear(), kw: week};
+}
+function addWeeks(year, kw, delta){
+  const d = isoWeekMonday(year, kw);
+  d.setUTCDate(d.getUTCDate()+delta*7);
+  return getISOWeek(d);
+}
+const NOW = getISOWeek(new Date());
 
-  <div style="padding: 20px 24px 32px 24px; display: flex; flex-direction: column; gap: 22px;">
+// ---- State ----
+const D = (window.TPDATA || {GROUPS:[],COACHES:[],EX:{},PLANS:{},CATS_BY_VIEW:{},WEEKS_BY_ATHLETE:{},BENCH:{},GK:{},SOURCE_INFO:{}});
+const spogy = D.GROUPS.find(g=>g.id==='SPOGY Gruppe');
 
-    <!-- Montag: trainingsfrei -->
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-      <div style="display: flex; align-items: baseline; gap: 8px;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px;">Montag</div>
-        <div style="font-size: 12px; color: oklch(0.58 0.01 90);">31.08.</div>
-      </div>
-      <div style="border: 1px dashed oklch(0.32 0.01 260); border-radius: 12px; padding: 14px 16px; font-size: 13px; color: oklch(0.55 0.01 90);">Trainingsfrei</div>
+const state = {
+  view: {t:'a', id:'Adrian Kathan'},
+  tab: 'Woche',
+  year: NOW.year, kw: NOW.kw, day: 0,
+  picker: false, openSlot: null,
+};
+
+function setState(patch){ Object.assign(state, patch); render(); }
+
+// ---- Render ----
+function render(){
+  const el = document.getElementById('app');
+  el.innerHTML = renderApp();
+  wireEvents();
+  window.scrollTo(0,0);
+}
+
+function renderApp(){
+  const view = state.view;
+  const isSolo = view.t === 'a';
+  const group = !isSolo ? D.GROUPS.find(g=>g.id===view.id) : null;
+  const athlete = isSolo && spogy ? spogy.athletes.find(a=>a.n===view.id) : null;
+  const viewName = isSolo ? view.id : (GNAME[view.id] || view.id);
+  const viewSub = isSolo ? ('EINZELPLAN · WK-KLASSE ' + val(athlete ? athlete.wk : null)) : ('GRUPPENPLAN · ' + (group ? group.athletes.length : 0) + ' ATHLET:INNEN');
+  const key = (isSolo?'a:':'g:') + view.id;
+  const srcInfo = D.SOURCE_INFO[key] || '-';
+  const hasSource = !!(D.PLANS[key] && Object.keys(D.PLANS[key]).length);
+
+  const tabNames = ['Woche','Jahr'];
+  if(isSolo){ tabNames.push('Statistik'); tabNames.push('Benchmarks'); }
+  tabNames.push('Kader');
+  if(tabNames.indexOf(state.tab) < 0) state.tab = 'Woche';
+
+  return `
+    <div class="header">
+      <button class="headerBtn" data-act="openPicker">
+        <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+          <span class="viewName">${esc(viewName)}</span>
+          <span class="viewSub">${esc(viewSub)}</span>
+        </span>
+        <span class="caret">▾</span>
+      </button>
     </div>
-
-    <!-- Dienstag -->
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-      <div style="display: flex; align-items: baseline; gap: 8px;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px;">Dienstag</div>
-        <div style="font-size: 12px; color: oklch(0.58 0.01 90);">01.09.</div>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 12px; background: oklch(0.20 0.012 260); border: 1px solid oklch(0.28 0.01 260); border-radius: 14px; padding: 16px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 26px; height: 26px; border-radius: 7px; background: oklch(0.62 0.19 41); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 12px; color: oklch(0.16 0.01 260);">1</span>
-          </div>
-          <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px;">SESSION 1</div>
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 6px; background: oklch(0.26 0.012 260); border-radius: 999px; padding: 5px 11px 5px 9px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: oklch(0.68 0.01 90); flex-shrink: 0;">
-              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
-            </svg>
-            <span style="font-size: 12px; font-weight: 500; color: oklch(0.9 0.01 90);">k1</span>
-          </div>
-        </div>
-        <div style="height: 1px; background: oklch(0.28 0.01 260);"></div>
-        <div style="display: flex; flex-direction: column; gap: 3px;">
-          <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: oklch(0.62 0.19 41);">5 Technik Taktik 2</div>
-          <div style="font-size: 15px; font-weight: 500; line-height: 1.4;">2-3 Rotpunktgos</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Mittwoch -->
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-      <div style="display: flex; align-items: baseline; gap: 8px;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px;">Mittwoch</div>
-        <div style="font-size: 12px; color: oklch(0.58 0.01 90);">02.09.</div>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 12px; background: oklch(0.20 0.012 260); border: 1px solid oklch(0.28 0.01 260); border-radius: 14px; padding: 16px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 26px; height: 26px; border-radius: 7px; background: oklch(0.62 0.19 41); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 12px; color: oklch(0.16 0.01 260);">1</span>
-          </div>
-          <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px;">SESSION 1</div>
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 6px; background: oklch(0.26 0.012 260); border-radius: 999px; padding: 5px 11px 5px 9px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: oklch(0.68 0.01 90); flex-shrink: 0;">
-              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
-            </svg>
-            <span style="font-size: 12px; font-weight: 500; color: oklch(0.9 0.01 90);">SB D</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 6px; background: oklch(0.26 0.012 260); border-radius: 999px; padding: 5px 11px 5px 9px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: oklch(0.68 0.01 90); flex-shrink: 0;">
-              <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
-            </svg>
-            <span style="font-size: 12px; font-weight: 500; color: oklch(0.9 0.01 90);">60 min</span>
-          </div>
-        </div>
-        <div style="height: 1px; background: oklch(0.28 0.01 260);"></div>
-        <div style="display: flex; flex-direction: column; gap: 3px;">
-          <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: oklch(0.62 0.19 41);">6 Physis Klettern 1</div>
-          <div style="font-size: 15px; font-weight: 500; line-height: 1.4;">1h Sub Max Spraywall</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Donnerstag -->
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-      <div style="display: flex; align-items: baseline; gap: 8px;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px;">Donnerstag</div>
-        <div style="font-size: 12px; color: oklch(0.58 0.01 90);">03.09.</div>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 12px; background: oklch(0.20 0.012 260); border: 1px solid oklch(0.28 0.01 260); border-radius: 14px; padding: 16px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 26px; height: 26px; border-radius: 7px; background: oklch(0.62 0.19 41); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 12px; color: oklch(0.16 0.01 260);">1</span>
-          </div>
-          <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px;">SESSION 1</div>
-        </div>
-        <div style="height: 1px; background: oklch(0.28 0.01 260);"></div>
-        <div style="display: flex; flex-direction: column; gap: 3px;">
-          <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: oklch(0.62 0.19 41);">8 Athletik + Mentales</div>
-          <div style="font-size: 15px; font-weight: 500; line-height: 1.4;">Physio</div>
-        </div>
+    <div class="syncbar">
+      <span class="dot"></span>
+      <div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0">
+        <span class="syncFile">${esc(srcInfo)}</span>
+        <span class="syncInfo">Stand ${esc(D.GENERATED || '-')} · Aktualisierung durch Floyd (Excel → Push)</span>
       </div>
     </div>
+    <div class="content">
+      ${state.tab==='Woche' ? renderWoche(view, isSolo, key, hasSource, srcInfo) : ''}
+      ${state.tab==='Jahr' ? renderJahr(view, isSolo, athlete, group) : ''}
+      ${state.tab==='Statistik' ? renderStatistik(view) : ''}
+      ${state.tab==='Benchmarks' ? renderBenchmarks(view) : ''}
+      ${state.tab==='Kader' ? renderKader() : ''}
+    </div>
+    <div class="tabs">
+      ${tabNames.map(n=>`
+        <button class="tab ${state.tab===n?'sel':''}" data-act="tab" data-tab="${n}">
+          <span class="icon"></span><span class="lbl">${n.toUpperCase()}</span>
+        </button>`).join('')}
+    </div>
+    ${state.picker ? renderPicker() : ''}
+  `;
+}
 
-    <!-- Freitag -->
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-      <div style="display: flex; align-items: baseline; gap: 8px;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px;">Freitag</div>
-        <div style="font-size: 12px; color: oklch(0.58 0.01 90);">04.09.</div>
+function renderWoche(view, isSolo, key, hasSource, srcInfo){
+  if(!hasSource){
+    return `<div class="empty">
+      <div class="t1">Keine Daten hinterlegt</div>
+      <div class="t2">${esc(srcInfo)}</div>
+    </div>`;
+  }
+  const plans = D.PLANS[key] || {};
+  const wkKey = state.year + '-' + state.kw;
+  const plan = plans[wkKey] || null;
+  const days = plan ? plan.days : [];
+  const di = Math.min(state.day, Math.max(0, days.length-1));
+  const day = days[di] || null;
+
+  const dayChips = days.map((dd,i)=>`
+    <button class="dayChip ${i===di?'sel':''}" data-act="day" data-i="${i}">
+      <span class="dow">${esc((dd.dow||'').slice(0,2).toUpperCase())}</span>
+      <span class="dom">${esc(dd.dom)}</span>
+    </button>`).join('');
+
+  const dayMeta = [];
+  if(day && day.ort) dayMeta.push({k:'Ort', v:day.ort});
+
+  const renderItem = (it) => {
+    const m = it.match;
+    const chips = [];
+    if(m){
+      if(m.min!=null && m.min!=='') chips.push(`<span class="metaTag hi">${esc(m.min)} min</span>`);
+      if(m.sets!=null && m.sets!=='' && m.sets!=='x') chips.push(`<span class="metaTag">${esc(m.sets)}</span>`);
+      if(m.vol!=null && m.vol!=='' && m.vol!=='x') chips.push(`<span class="metaTag">${esc(m.vol)}</span>`);
+      if(m.pause!=null && m.pause!=='' && m.pause!=='x') chips.push(`<span class="metaTag">Pause ${esc(m.pause)}</span>`);
+    }
+    return `<div class="slotName">${esc(it.ex)}</div>${chips.length ? `<div class="slotMeta">${chips.join('')}</div>` : ''}`;
+  };
+
+  const sessionsHtml = (day && day.sessions ? day.sessions : []).map(s=>`
+    <div class="card">
+      <div class="cardHead">
+        <span class="name"><span class="dotSm"></span>${esc(s.name)}</span>
+        ${s.time ? `<span class="time">${esc(s.time)}</span>` : ''}
       </div>
+      <div>
+        ${ (s.cats || []).map(cat=>`
+          <div class="slotRow">
+            <div class="slotK">${esc(cat.name)}</div>
+            <div>
+              ${ cat.items && cat.items.length
+                  ? cat.items.map(renderItem).join('<div style="height:8px"></div>')
+                  : `<div class="slotName" style="color:${DI}">-</div>` }
+            </div>
+          </div>`).join('') }
+      </div>
+    </div>
+    <div class="noteBlock">
+      <span class="l">Notizen</span>
+      <span class="t">${s.notiz ? esc(s.notiz) : '-'}</span>
+    </div>`).join('');
 
-      <div style="display: flex; flex-direction: column; gap: 12px; background: oklch(0.20 0.012 260); border: 1px solid oklch(0.28 0.01 260); border-radius: 14px; padding: 16px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 26px; height: 26px; border-radius: 7px; background: oklch(0.62 0.19 41); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 12px; color: oklch(0.16 0.01 260);">1</span>
+  const dk = day && day.doku ? day.doku : null;
+  const scale = (label, v)=>{
+    const n = (typeof v === 'number') ? Math.round(v) : 0;
+    return `<div style="display:flex;flex-direction:column;gap:7px">
+      <div class="scaleLabel"><span class="l">${label}</span><span class="v">${val(v)} / 10</span></div>
+      <div class="cells">${Array.from({length:10},(_,i)=>`<div class="cell ${i<n?'on':''}"></div>`).join('')}</div>
+    </div>`;
+  };
+  const dl = dk ? (parseFloat(dk.d1)||0) + (parseFloat(dk.d2)||0) : 0;
+  const dayLoad = (dk && typeof dk.ee === 'number') ? Math.round(dl*dk.ee*10)/10 : null;
+
+  return `
+    <div class="weekNav">
+      <button class="navBtn" data-act="prevWeek">‹</button>
+      <div class="weekTitle">
+        <div class="weekKw">KW ${state.kw} · ${state.year}</div>
+        <div class="weekMeta">${plan ? esc(plan.span) : 'NOCH NICHT GEPLANT'}</div>
+      </div>
+      <button class="navBtn" data-act="nextWeek">›</button>
+    </div>
+    ${!plan ? `<div class="empty">
+        <div class="t1">Kein Plan für diese Woche</div>
+        <div class="t2">Sobald die Woche in der Einheitenplanung steht, erscheint sie hier beim nächsten Update.</div>
+        <div class="footNote">${esc(srcInfo)}</div>
+      </div>` : `
+      <div class="dayChips">${dayChips}</div>
+      <div class="dayHead"><div class="dayTitle">${esc(day ? (day.dow+', '+day.dom) : '')}</div></div>
+      ${dayMeta.length ? `<div class="metaRow">${dayMeta.map(m=>`<div class="metaPill"><span class="k">${esc(m.k)}</span><span class="v">${esc(m.v)}</span></div>`).join('')}</div>` : ''}
+      ${ (day && day.sessions && day.sessions.length) ? sessionsHtml : `<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>` }
+      ${dk ? `
+        <div class="dokuBlock">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <div style="display:flex;align-items:baseline;gap:7px">
+              <span style="font:600 12px/1 Archivo,sans-serif">Doku</span>
+              <span style="font:400 9px/1 'Roboto Mono',monospace;color:${DI}">aus Excel</span>
+            </div>
           </div>
-          <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px;">SESSION 1</div>
+          ${scale('Motivation', dk.mot)}
+          ${scale('Erschöpfung Beginn', dk.eb)}
+          ${scale('Erschöpfung Ende', dk.ee)}
+          <div class="durRow">
+            <div class="durBox"><span class="k">Dauer S1</span><span class="v">${val(dk.d1)}${dk.d1!=null?' h':''}</span></div>
+            <div class="durBox"><span class="k">Dauer S2</span><span class="v">${val(dk.d2)}${dk.d2!=null?' h':''}</span></div>
+          </div>
+          <div class="loadRow"><span class="k">Load</span><span class="v">${val(dayLoad)}</span></div>
+        </div>` : ''}
+    `}
+  `;
+}
+
+function renderJahr(view, isSolo, athlete, group){
+  const ageClass = isSolo ? WKCLASS_TO_AGE(athlete ? athlete.wk : null) : (GCLASS[view.id] || 'U15');
+  const gkc = D.GK[ageClass] || {};
+  const keys = Object.keys(gkc).sort((a,b)=>{ const A=a.split('-').map(Number), B=b.split('-').map(Number); return (A[0]-B[0])||(A[1]-B[1]); });
+  if(!keys.length){
+    return `<div class="empty">
+      <div class="t1">Keine Termine für Klasse ${esc(ageClass)}</div>
+      <div class="t2">Sobald im Gesamtkalender Termine für diese Wettkampfklasse eingetragen sind, erscheinen sie hier.</div>
+    </div>`;
+  }
+  const buckets = [];
+  keys.forEach(k=>{
+    const w = gkc[k];
+    const [y,kwn] = k.split('-').map(Number);
+    const mon = isoWeekMonday(y,kwn).getUTCMonth();
+    const label = MNAMES[mon] + ' ' + String(y).slice(2);
+    let b = buckets[buckets.length-1];
+    if(!b || b.label!==label){ b = {label, weeks:[]}; buckets.push(b); }
+    b.weeks.push({kw:kwn, d:w.d, items:w.items});
+  });
+  const evCount = keys.reduce((a,k)=>a+gkc[k].items.length,0);
+  return `
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <span class="sectionTitle">Jahresplan</span>
+        <span class="subMeta">${evCount} TERMINE</span>
+      </div>
+      <div class="footNote">Nur Termine der Klasse ${esc(ageClass)}, aus dem Gesamtkalender gefiltert.</div>
+    </div>
+    ${buckets.map(b=>`
+      <div>
+        <div class="monthHead"><span class="m">${esc(b.label)}</span></div>
+        ${b.weeks.map(w=>`
+          <div class="evRow">
+            <div class="evKw"><span class="k">KW ${w.kw}</span><span class="d">${esc(w.d)}</span></div>
+            <div class="evItems">${w.items.map(it=>`<div class="evItem"><span class="evChip">${esc(it.c)}</span><span class="evText">${esc(it.t)}</span></div>`).join('')}</div>
+          </div>`).join('')}
+      </div>`).join('')}
+  `;
+}
+
+function renderStatistik(view){
+  const isSolo = view.t==='a';
+  if(!isSolo) return `<div class="empty"><div class="t1">Nur für Einzelpläne</div><div class="t2">Statistik gibt es für SPOGY-Athlet:innen mit Doku-Werten.</div></div>`;
+  const W = D.WEEKS_BY_ATHLETE[view.id] || [];
+  const filled = W.filter(w=>w.load>0);
+  if(!W.length){
+    return `<div class="empty">
+      <div class="t1">Noch keine Doku-Werte</div>
+      <div class="t2">Die Statistik rechnet mit Erschöpfung und Trainingsdauer aus der Einheitenplanung. Sobald Doku-Werte eingetragen sind, erscheinen Load und Verteilung hier.</div>
+    </div>`;
+  }
+  const avg = (f)=>{ const v=filled.map(f).filter(x=>x!=null); return v.length? v.reduce((a,b)=>a+b,0)/v.length : null; };
+  const kpis = [
+    {l:'Ø Load / Woche', v: avg(w=>w.load), s:'Erschöpfung × Dauer'},
+    {l:'Ø Erschöpfung', v: avg(w=>w.rpe), s:'Skala 1–10'},
+    {l:'Ø Stunden', v: avg(w=>w.hrs), s:'pro Trainingswoche'},
+    {l:'Ø Motivation', v: avg(w=>w.fit), s:'Skala 1–10'},
+  ];
+  const maxV = Math.max(1, ...W.map(w=>w.load||0));
+  const cats = D.CATS_BY_VIEW['a:'+view.id] || [];
+  const maxCat = Math.max(1, ...cats.map(c=>c.count));
+  const totals = [
+    {k:'Trainingsstunden gesamt', v: W.reduce((a,b)=>a+(b.hrs||0),0).toFixed(1)+' h'},
+    {k:'Trainingstage dokumentiert', v: W.reduce((a,b)=>a+(b.days||0),0)},
+    {k:'Load kumuliert', v: Math.round(W.reduce((a,b)=>a+(b.load||0),0))},
+    {k:'Wochen ohne Eintrag', v: W.length-filled.length},
+  ];
+  return `
+    <div class="kpiRow">${kpis.map(k=>`<div class="kpi"><span class="l">${esc(k.l)}</span><span class="v">${k.v==null?'-':(typeof k.v==='number'?k.v.toFixed(1):k.v)}</span><span class="s">${esc(k.s)}</span></div>`).join('')}</div>
+    <div class="barChart">
+      <span class="sectionTitle">Load pro Woche</span>
+      <div class="bars">${W.map(w=>`<div class="barCol"><div class="bar" style="height:${Math.max(2,Math.round((w.load||0)/maxV*90))}px"></div><span class="barKw">${w.kw}</span></div>`).join('')}</div>
+    </div>
+    <div class="barChart">
+      <span class="sectionTitle">Verteilung der Inhalte</span>
+      ${cats.map(c=>`
+        <div class="distRow">
+          <div class="distTop"><span class="n">${esc(c.name)}</span><span class="c">${c.count}</span></div>
+          <div class="distBarBg"><div class="distBarFg" style="width:${Math.round(c.count/maxCat*100)}%"></div></div>
+        </div>`).join('')}
+    </div>
+    <div class="roster">
+      <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">Gesamt</span>
+      ${totals.map(t=>`<div style="display:flex;align-items:baseline;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="font:400 12px/1 Archivo,sans-serif;color:${MU}">${esc(t.k)}</span><span style="font:600 13px/1 'Roboto Mono',monospace">${esc(t.v)}</span></div>`).join('')}
+    </div>
+  `;
+}
+
+function renderBenchmarks(view){
+  const isSolo = view.t==='a';
+  if(!isSolo) return `<div class="empty"><div class="t1">Nur für Einzelpläne</div><div class="t2">Benchmarks gibt es für die 8 SPOGY-Athlet:innen.</div></div>`;
+  const bench = D.BENCH[view.id];
+  if(!bench){
+    return `<div class="empty">
+      <div class="t1">Noch keine Werte für ${esc(view.id)}</div>
+      <div class="t2">Struktur steht: Technik+Taktik, Motorik, Physisches Klettertraining, Athletik. Sobald Werte in der Benchmark-Excel stehen, erscheinen sie hier.</div>
+    </div>`;
+  }
+  return `
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+      <span class="sectionTitle">Benchmarks</span>
+      <span class="subMeta">STAND ${esc(bench.stand)}</span>
+    </div>
+    ${bench.cats.map(c=>`
+      <div class="card">
+        <div class="benchCatHead"><span class="n">${esc(c.name)}</span><span class="r">${esc(c.rhythm)}</span></div>
+        <div>${c.items.map(it=>`
+          <div class="benchItem">
+            <span class="benchK">${esc(it.k)}${it.auto?' (automatisch)':''}</span>
+            <span class="benchV">${val(it.v)}</span>
+          </div>`).join('')}</div>
+      </div>`).join('')}
+    <div class="footNote">Werte kommen aus der Benchmark-Excel. Fehlt ein Wert, steht hier "-" statt einer Erfindung.</div>
+  `;
+}
+
+function renderKader(){
+  const totalAthletes = D.GROUPS.reduce((a,g)=>a+g.athletes.length,0);
+  return `
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <span class="sectionTitle">Kader</span>
+      <span class="subMeta">${totalAthletes} ATHLET:INNEN · ${D.GROUPS.length} GRUPPEN</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${D.GROUPS.map(g=>`
+        <button class="groupRow" data-act="pickGroup" data-id="${esc(g.id)}">
+          <span class="badge">${esc((GNAME[g.id]||g.id).replace(/\s/g,''))}</span>
+          <span class="info">
+            <span class="gn">${esc(GNAME[g.id]||g.id)}</span>
+            <span class="gs">${g.athletes.length} Athlet:innen · ${esc(g.coaches||'-')}</span>
+          </span>
+          <span style="color:${DI}">›</span>
+        </button>`).join('')}
+    </div>
+    <div class="roster">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+        <span style="font:600 12px/1 Archivo,sans-serif">Zugriff</span>
+        <span style="font:400 9px/1 'Roboto Mono',monospace;color:${DI}">${D.COACHES.length} Personen</span>
+      </div>
+      ${D.COACHES.map(c=>`
+        <div class="rosterRow">
+          <span class="initials">${esc(c.n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase())}</span>
+          <span style="flex:1;font:400 12.5px/1.2 Archivo,sans-serif;color:${TX===undefined?'':''};color:#dbe3ec">${esc(c.n)}</span>
+          <span class="roleChip ${c.r==='Headcoach'?'head':'coach'}">${esc(c.r)}</span>
+        </div>`).join('')}
+      <div class="footNote">Ein Link für alle — Headcoaches, Coaches und Athlet:innen sehen dieselben Ansichten.</div>
+    </div>
+  `;
+}
+
+function renderPicker(){
+  const isSoloSel = state.view.t==='a';
+  const groupOpts = D.GROUPS.filter(g=>g.id!=='SPOGY Gruppe').map(g=>`
+    <button class="pickerOpt ${!isSoloSel && state.view.id===g.id?'sel':''}" data-act="pickView" data-t="g" data-id="${esc(g.id)}">
+      <span class="info"><span class="n">${esc(GNAME[g.id]||g.id)}</span><span class="s">${g.athletes.length} Athlet:innen · ${esc(g.coaches||'-')}</span></span>
+    </button>`).join('');
+  const athleteOpts = (spogy ? spogy.athletes : []).map(a=>`
+    <button class="pickerOpt ${isSoloSel && state.view.id===a.n?'sel':''}" data-act="pickView" data-t="a" data-id="${esc(a.n)}">
+      <span class="info"><span class="n">${esc(a.n)}</span><span class="s">WK-Klasse 27: ${esc(a.wk||'-')}</span></span>
+    </button>`).join('');
+  return `
+    <div class="overlay">
+      <div class="overlayHead">
+        <span class="overlayTitle">Ansicht wählen</span>
+        <button class="closeBtn" data-act="closePicker">✕</button>
+      </div>
+      <div class="overlayBody">
+        <div>
+          <div class="pickerGroupLabel">Gruppenpläne</div>
+          ${groupOpts}
         </div>
-        <div style="height: 1px; background: oklch(0.28 0.01 260);"></div>
-        <div style="display: flex; flex-direction: column; gap: 3px;">
-          <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: oklch(0.62 0.19 41);">6 Physis Klettern 1</div>
-          <div style="font-size: 15px; font-weight: 500; line-height: 1.4;">Aktivierung</div>
+        <div>
+          <div class="pickerGroupLabel">Einzelpläne SPOGY</div>
+          ${athleteOpts}
         </div>
       </div>
     </div>
+  `;
+}
 
-    <!-- Samstag -->
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-      <div style="display: flex; align-items: baseline; gap: 8px;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px;">Samstag</div>
-        <div style="font-size: 12px; color: oklch(0.58 0.01 90);">05.09.</div>
-      </div>
+function wireEvents(){
+  document.querySelectorAll('[data-act]').forEach(elm=>{
+    elm.addEventListener('click', ()=>{
+      const act = elm.getAttribute('data-act');
+      if(act==='openPicker') setState({picker:true});
+      else if(act==='closePicker') setState({picker:false});
+      else if(act==='tab') setState({tab: elm.getAttribute('data-tab')});
+      else if(act==='day') setState({day: parseInt(elm.getAttribute('data-i'),10)});
+      else if(act==='prevWeek'){ const nw = addWeeks(state.year, state.kw, -1); setState({year:nw.year, kw:nw.kw, day:0}); }
+      else if(act==='nextWeek'){ const nw = addWeeks(state.year, state.kw, 1); setState({year:nw.year, kw:nw.kw, day:0}); }
+      else if(act==='pickView'){ setState({view:{t:elm.getAttribute('data-t'), id:elm.getAttribute('data-id')}, picker:false, tab:'Woche', day:0, year:NOW.year, kw:NOW.kw}); }
+      else if(act==='pickGroup'){ setState({view:{t:'g', id:elm.getAttribute('data-id')}, tab:'Woche', day:0, year:NOW.year, kw:NOW.kw}); }
+    });
+  });
+}
 
-      <div style="display: flex; flex-direction: column; gap: 12px; background: oklch(0.20 0.012 260); border: 1px solid oklch(0.28 0.01 260); border-radius: 14px; padding: 16px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 26px; height: 26px; border-radius: 7px; background: oklch(0.62 0.19 41); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 12px; color: oklch(0.16 0.01 260);">1</span>
-          </div>
-          <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px;">SESSION 1</div>
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 6px; background: oklch(0.26 0.012 260); border-radius: 999px; padding: 5px 11px 5px 9px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: oklch(0.68 0.01 90); flex-shrink: 0;">
-              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
-            </svg>
-            <span style="font-size: 12px; font-weight: 500; color: oklch(0.9 0.01 90);">EYS</span>
-          </div>
-        </div>
-        <div style="height: 1px; background: oklch(0.28 0.01 260);"></div>
-        <div style="font-size: 13px; color: oklch(0.55 0.01 90);">Keine Übungen hinterlegt</div>
-      </div>
-    </div>
-
-    <!-- Sonntag -->
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-      <div style="display: flex; align-items: baseline; gap: 8px;">
-        <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px;">Sonntag</div>
-        <div style="font-size: 12px; color: oklch(0.58 0.01 90);">06.09.</div>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 12px; background: oklch(0.20 0.012 260); border: 1px solid oklch(0.28 0.01 260); border-radius: 14px; padding: 16px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 26px; height: 26px; border-radius: 7px; background: oklch(0.62 0.19 41); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 12px; color: oklch(0.16 0.01 260);">1</span>
-          </div>
-          <div style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px;">SESSION 1</div>
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 6px; background: oklch(0.26 0.012 260); border-radius: 999px; padding: 5px 11px 5px 9px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: oklch(0.68 0.01 90); flex-shrink: 0;">
-              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
-            </svg>
-            <span style="font-size: 12px; font-weight: 500; color: oklch(0.9 0.01 90);">EYS</span>
-          </div>
-        </div>
-        <div style="height: 1px; background: oklch(0.28 0.01 260);"></div>
-        <div style="font-size: 13px; color: oklch(0.55 0.01 90);">Keine Übungen hinterlegt</div>
-      </div>
-    </div>
-
-  </div>
-
-</div>
+render();
+</script>
 </body>
 </html>
