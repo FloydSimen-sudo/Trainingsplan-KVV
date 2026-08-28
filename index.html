@@ -257,8 +257,8 @@ function renderApp(){
   const srcInfo = D.SOURCE_INFO[key] || '-';
   const hasSource = !!(D.PLANS[key] && Object.keys(D.PLANS[key]).length);
 
-  const tabNames = ['Woche','Jahr'];
-  if(isSolo){ tabNames.push('Statistik'); tabNames.push('Benchmarks'); }
+  const tabNames = ['Woche','Jahr','Statistik'];
+  if(isSolo){ tabNames.push('Benchmarks'); }
   tabNames.push('Kader');
   if(tabNames.indexOf(state.tab) < 0) state.tab = 'Woche';
 
@@ -559,37 +559,51 @@ function renderJahrEvents(view, isSolo, athlete, group){
 
 function renderStatistik(view){
   const isSolo = view.t==='a';
-  if(!isSolo) return `<div class="empty"><div class="t1">Nur für Einzelpläne</div><div class="t2">Statistik gibt es für SPOGY-Athlet:innen mit Doku-Werten.</div></div>`;
-  const W = D.WEEKS_BY_ATHLETE[view.id] || [];
-  const filled = W.filter(w=>w.load>0);
-  if(!W.length){
+  const key = (isSolo?'a:':'g:') + view.id;
+  const ss = D.SEASON_STATS[key];
+  if(!ss){
     return `<div class="empty">
-      <div class="t1">Noch keine Doku-Werte</div>
-      <div class="t2">Die Statistik rechnet mit Erschöpfung und Trainingsdauer aus der Einheitenplanung. Sobald Doku-Werte eingetragen sind, erscheinen Load und Verteilung hier.</div>
+      <div class="t1">Keine Saison-Daten hinterlegt</div>
+      <div class="t2">Für Saison ${esc(D.SEASON_LABEL||'25/26')} liegt keine Einheitenplanung im Testspace-Ordner vor.</div>
     </div>`;
   }
-  const avg = (f)=>{ const v=filled.map(f).filter(x=>x!=null); return v.length? v.reduce((a,b)=>a+b,0)/v.length : null; };
-  const kpis = [
-    {l:'Ø Load / Woche', v: avg(w=>w.load), s:'Erschöpfung × Dauer'},
-    {l:'Ø Erschöpfung', v: avg(w=>w.rpe), s:'Skala 1–10'},
-    {l:'Ø Stunden', v: avg(w=>w.hrs), s:'pro Trainingswoche'},
-    {l:'Ø Motivation', v: avg(w=>w.fit), s:'Skala 1–10'},
-  ];
-  const maxV = Math.max(1, ...W.map(w=>w.load||0));
-  const cats = D.CATS_BY_VIEW['a:'+view.id] || [];
+  const cats = ss.catCounts || [];
   const maxCat = Math.max(1, ...cats.map(c=>c.count));
+  const W = (ss.weeks || []).slice().sort((a,b)=>(a.year-b.year)||(a.kw-b.kw));
+  const filled = W.filter(w=>w.load>0);
+  const showLoad = filled.length >= 10;
+
+  const loadNote = isSolo
+    ? `Load-Verlauf gibt es nur, wo RPE und Trainingsdauer nach jeder Einheit vollständig dokumentiert werden (aktuell: Adrian Kathan). Bei ${esc(view.id)} reicht die Doku-Abdeckung dafür noch nicht.`
+    : `Gruppenpläne erfassen kein individuelles RPE/Trainingsdauer pro Athlet:in — Load-Verlauf gibt es daher nur bei Einzelplänen mit vollständiger Doku (aktuell: Adrian Kathan).`;
+  let loadSection = `<div class="dashed">${loadNote}</div>`;
+  if(showLoad){
+    const maxV = Math.max(1, ...W.map(w=>w.load||0));
+    const last4 = filled.slice(-4);
+    const acute = last4.length ? last4[last4.length-1].load : null;
+    const chronic = last4.length ? last4.reduce((a,b)=>a+b.load,0)/last4.length : null;
+    const acwr = (acute!=null && chronic) ? acute/chronic : null;
+    loadSection = `
+      <div class="barChart">
+        <div style="display:flex;align-items:baseline;justify-content:space-between"><span class="sectionTitle">Load pro Woche</span><span class="subMeta">LOAD</span></div>
+        <div class="bars">${W.map(w=>`<div class="barCol"><div class="bar" style="height:${Math.max(2,Math.round((w.load||0)/maxV*90))}px"></div><span class="barKw">${w.kw}</span></div>`).join('')}</div>
+        <div class="loadRow"><span class="k">ACWR (1 : 4 Wochen)</span><span class="v" style="color:${AM}">${acwr==null?'-':acwr.toFixed(2)}</span></div>
+      </div>`;
+  }
+
   const totals = [
-    {k:'Trainingsstunden gesamt', v: W.reduce((a,b)=>a+(b.hrs||0),0).toFixed(1)+' h'},
-    {k:'Trainingstage dokumentiert', v: W.reduce((a,b)=>a+(b.days||0),0)},
-    {k:'Load kumuliert', v: Math.round(W.reduce((a,b)=>a+(b.load||0),0))},
-    {k:'Wochen ohne Eintrag', v: W.length-filled.length},
+    {k:'Trainingsstunden (Saison)', v: W.length ? W.reduce((a,b)=>a+(b.hrs||0),0).toFixed(1)+' h' : '-'},
+    {k:'Trainingstage dokumentiert', v: W.length ? W.reduce((a,b)=>a+(b.days||0),0) : '-'},
+    {k:'Load kumuliert', v: showLoad ? Math.round(W.reduce((a,b)=>a+(b.load||0),0)) : '-'},
+    {k:'Wochen ohne Load-Eintrag', v: showLoad ? (W.length-filled.length) : '-'},
   ];
+
   return `
-    <div class="kpiRow">${kpis.map(k=>`<div class="kpi"><span class="l">${esc(k.l)}</span><span class="v">${k.v==null?'-':(typeof k.v==='number'?k.v.toFixed(1):k.v)}</span><span class="s">${esc(k.s)}</span></div>`).join('')}</div>
-    <div class="barChart">
-      <span class="sectionTitle">Load pro Woche</span>
-      <div class="bars">${W.map(w=>`<div class="barCol"><div class="bar" style="height:${Math.max(2,Math.round((w.load||0)/maxV*90))}px"></div><span class="barKw">${w.kw}</span></div>`).join('')}</div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between">
+      <span class="sectionTitle">Statistik</span>
+      <span class="subMeta">SAISON ${esc(D.SEASON_LABEL||'25/26')}</span>
     </div>
+    ${loadSection}
     <div class="barChart">
       <span class="sectionTitle">Verteilung der Inhalte</span>
       ${cats.map(c=>`
@@ -597,9 +611,10 @@ function renderStatistik(view){
           <div class="distTop"><span class="n">${esc(c.name)}</span><span class="c">${c.count}</span></div>
           <div class="distBarBg"><div class="distBarFg" style="width:${Math.round(c.count/maxCat*100)}%"></div></div>
         </div>`).join('')}
+      <div class="footNote">Zählt reale Einträge in den Übungszellen der Einheitenplanung Saison ${esc(D.SEASON_LABEL||'25/26')} (${esc(ss.sheet||'-')}) — keine Schätzung.</div>
     </div>
     <div class="roster">
-      <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">Gesamt</span>
+      <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">Saison ${esc(D.SEASON_LABEL||'25/26')} Gesamt</span>
       ${totals.map(t=>`<div style="display:flex;align-items:baseline;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(10,50,80,.08)"><span style="font:400 12px/1 Archivo,sans-serif;color:${MU}">${esc(t.k)}</span><span style="font:600 13px/1 'Roboto Mono',monospace">${esc(t.v)}</span></div>`).join('')}
     </div>
   `;
