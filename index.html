@@ -234,6 +234,7 @@ const state = {
   year: NOW.year, kw: NOW.kw, day: 0,
   weekView: 'tage',
   picker: false, openSlot: null,
+  statSeason: (D.SEASONS && D.SEASONS[0]) || D.SEASON_LABEL || '25/26',
 };
 
 function setState(patch){ Object.assign(state, patch); render(); }
@@ -560,11 +561,18 @@ function renderJahrEvents(view, isSolo, athlete, group){
 function renderStatistik(view){
   const isSolo = view.t==='a';
   const key = (isSolo?'a:':'g:') + view.id;
-  const ss = D.SEASON_STATS[key];
+  const seasons = D.SEASONS && D.SEASONS.length ? D.SEASONS : [D.SEASON_LABEL||'25/26'];
+  const season = seasons.includes(state.statSeason) ? state.statSeason : seasons[0];
+  const seasonToggle = seasons.length > 1 ? `
+    <div class="weekview">
+      ${seasons.map(s=>`<button class="weekviewBtn ${season===s?'sel':''}" data-act="statseason" data-season="${esc(s)}">Saison ${esc(s)}</button>`).join('')}
+    </div>` : '';
+  const statsForSeason = D.SEASON_STATS[season] || {};
+  const ss = statsForSeason[key];
   if(!ss){
-    return `<div class="empty">
+    return `${seasonToggle}<div class="empty">
       <div class="t1">Keine Saison-Daten hinterlegt</div>
-      <div class="t2">Für Saison ${esc(D.SEASON_LABEL||'25/26')} liegt keine Einheitenplanung im Testspace-Ordner vor.</div>
+      <div class="t2">Für Saison ${esc(season)} liegt keine Einheitenplanung im Testspace-Ordner vor.</div>
     </div>`;
   }
   const cats = ss.catCounts || [];
@@ -610,8 +618,9 @@ function renderStatistik(view){
   return `
     <div style="display:flex;align-items:baseline;justify-content:space-between">
       <span class="sectionTitle">Statistik</span>
-      <span class="subMeta">SAISON ${esc(D.SEASON_LABEL||'25/26')}</span>
+      <span class="subMeta">SAISON ${esc(season)}</span>
     </div>
+    ${seasonToggle}
     ${loadSection}
     <div class="barChart">
       <span class="sectionTitle">Verteilung der Inhalte</span>
@@ -620,10 +629,10 @@ function renderStatistik(view){
           <div class="distTop"><span class="n">${esc(c.name)}</span><span class="c">${c.count}</span></div>
           <div class="distBarBg"><div class="distBarFg" style="width:${Math.round(c.count/maxCat*100)}%"></div></div>
         </div>`).join('')}
-      <div class="footNote">Zählt reale Einträge in den Übungszellen der Einheitenplanung Saison ${esc(D.SEASON_LABEL||'25/26')} (${esc(ss.sheet||'-')}) — keine Schätzung.</div>
+      <div class="footNote">Zählt reale Einträge in den Übungszellen der Einheitenplanung Saison ${esc(season)} (${esc(ss.sheet||'-')}) — keine Schätzung.</div>
     </div>
     <div class="roster">
-      <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">Saison ${esc(D.SEASON_LABEL||'25/26')} Gesamt</span>
+      <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">Saison ${esc(season)} Gesamt</span>
       ${totals.map(t=>`<div style="display:flex;align-items:baseline;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(10,50,80,.08)"><span style="font:400 12px/1 Archivo,sans-serif;color:${MU}">${esc(t.k)}</span><span style="font:600 13px/1 'Roboto Mono',monospace">${esc(t.v)}</span></div>`).join('')}
       ${grpEstNote ? `<div class="footNote" style="padding-top:6px">${esc(grpEstNote)}</div>` : ''}
     </div>
@@ -731,6 +740,7 @@ function wireEvents(){
       else if(act==='tab') setState({tab: elm.getAttribute('data-tab')});
       else if(act==='day') setState({day: parseInt(elm.getAttribute('data-i'),10), weekView:'tage'});
       else if(act==='weekview') setState({weekView: elm.getAttribute('data-wv')});
+      else if(act==='statseason') setState({statSeason: elm.getAttribute('data-season')});
       else if(act==='prevWeek'){ const nw = addWeeks(state.year, state.kw, -1); setState({year:nw.year, kw:nw.kw, day:0}); }
       else if(act==='nextWeek'){ const nw = addWeeks(state.year, state.kw, 1); setState({year:nw.year, kw:nw.kw, day:0}); }
       else if(act==='pickView'){ setState({view:{t:elm.getAttribute('data-t'), id:elm.getAttribute('data-id')}, picker:false, tab:'Woche', day:0, year:NOW.year, kw:NOW.kw}); }
