@@ -591,12 +591,21 @@ function renderStatistik(view){
       </div>`;
   }
 
-  const totals = [
-    {k:'Trainingsstunden (Saison)', v: W.length ? W.reduce((a,b)=>a+(b.hrs||0),0).toFixed(1)+' h' : '-'},
-    {k:'Trainingstage dokumentiert', v: W.length ? W.reduce((a,b)=>a+(b.days||0),0) : '-'},
-    {k:'Load kumuliert', v: showLoad ? Math.round(W.reduce((a,b)=>a+(b.load||0),0)) : '-'},
-    {k:'Wochen ohne Load-Eintrag', v: showLoad ? (W.length-filled.length) : '-'},
-  ];
+  const grpEstNote = (!isSolo && ss.trainingDays!=null)
+    ? `Trainingsstunden bei Gruppen sind geschätzt: ${esc(ss.estHoursPerDay)} h × Trainingstage (Gruppen erfassen keine echte Dauer). Ein Trainingstag zählt, wenn an dem Tag mindestens eine Kategorie unterhalb "Trainingsort" befüllt ist — Notizen zählen nicht.`
+    : null;
+
+  const totals = isSolo
+    ? [
+        {k:'Trainingsstunden (Saison)', v: W.length ? W.reduce((a,b)=>a+(b.hrs||0),0).toFixed(1)+' h' : '-'},
+        {k:'Trainingstage dokumentiert', v: W.length ? W.reduce((a,b)=>a+(b.days||0),0) : '-'},
+        {k:'Load kumuliert', v: showLoad ? Math.round(W.reduce((a,b)=>a+(b.load||0),0)) : '-'},
+        {k:'Wochen ohne Load-Eintrag', v: showLoad ? (W.length-filled.length) : '-'},
+      ]
+    : [
+        {k:'Trainingsstunden (Saison, geschätzt)', v: ss.estHours!=null ? ss.estHours.toFixed(1)+' h' : '-'},
+        {k:'Trainingstage dokumentiert', v: ss.trainingDays!=null ? ss.trainingDays : '-'},
+      ];
 
   return `
     <div style="display:flex;align-items:baseline;justify-content:space-between">
@@ -616,6 +625,7 @@ function renderStatistik(view){
     <div class="roster">
       <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">Saison ${esc(D.SEASON_LABEL||'25/26')} Gesamt</span>
       ${totals.map(t=>`<div style="display:flex;align-items:baseline;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(10,50,80,.08)"><span style="font:400 12px/1 Archivo,sans-serif;color:${MU}">${esc(t.k)}</span><span style="font:600 13px/1 'Roboto Mono',monospace">${esc(t.v)}</span></div>`).join('')}
+      ${grpEstNote ? `<div class="footNote" style="padding-top:6px">${esc(grpEstNote)}</div>` : ''}
     </div>
   `;
 }
