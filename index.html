@@ -27,6 +27,11 @@
   .viewName{font:600 19px/1.15 Archivo,sans-serif;letter-spacing:-.01em;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px}
   .viewSub{font:500 9.5px/1 'Roboto Mono',monospace;letter-spacing:.09em;color:var(--di)}
   .caret{font:700 20px/1 Archivo,sans-serif;color:var(--am);flex:none}
+  .landing{display:flex;flex-direction:column;align-items:center;padding:44px 22px 24px;gap:6px;min-height:100vh}
+  .landingLogo{width:min(78%,300px);height:auto;object-fit:contain;margin-bottom:10px}
+  .landingTitle{font:700 24px/1.2 Archivo,sans-serif;color:var(--tx);text-align:center}
+  .landingSub{font:500 12px/1.4 Archivo,sans-serif;color:var(--mu);text-align:center;margin-bottom:22px}
+  .landingBody{width:100%;max-width:420px;display:flex;flex-direction:column;gap:22px}
   .syncbar{margin:12px 18px 4px;padding:9px 11px;border-radius:12px;background:var(--panel4);border:1px solid var(--border);display:flex;align-items:center;gap:9px}
   .dot{width:7px;height:7px;border-radius:4px;flex:none;background:var(--li);box-shadow:0 0 0 3px rgba(18,128,137,.15)}
   .syncFile{font:500 10px/1.2 'Roboto Mono',monospace;letter-spacing:.04em;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -247,7 +252,7 @@ const D = (window.TPDATA || {GROUPS:[],COACHES:[],EX:{},PLANS:{},CATS_BY_VIEW:{}
 const spogy = D.GROUPS.find(g=>g.id==='SPOGY Gruppe');
 
 const state = {
-  view: {t:'a', id:'Adrian Kathan'},
+  view: null,
   tab: 'Woche',
   year: NOW.year, kw: NOW.kw, day: 0,
   weekView: 'tage',
@@ -271,6 +276,7 @@ function render(){
 }
 
 function renderApp(){
+  if(!state.view) return renderLanding();
   const view = state.view;
   const isSolo = view.t === 'a';
   const group = !isSolo ? D.GROUPS.find(g=>g.id===view.id) : null;
@@ -288,7 +294,7 @@ function renderApp(){
 
   return `
     <div class="header">
-      <img class="brandMark" src="${MARK_IMG}" alt="">
+      <img class="brandMark" src="${MARK_IMG}" alt="Startseite" data-act="goHome" style="cursor:pointer">
       <button class="headerBtn" data-act="openPicker" style="flex:1">
         <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
           <span class="viewName">${esc(viewName)}</span>
@@ -706,16 +712,21 @@ function renderKader(){
   `;
 }
 
-function renderPicker(){
-  const isSoloSel = state.view.t==='a';
+function renderPickOpts(selView){
+  const isSoloSel = selView && selView.t==='a';
   const groupOpts = D.GROUPS.filter(g=>g.id!=='SPOGY Gruppe').map(g=>`
-    <button class="pickerOpt ${!isSoloSel && state.view.id===g.id?'sel':''}" data-act="pickView" data-t="g" data-id="${esc(g.id)}">
+    <button class="pickerOpt ${selView && !isSoloSel && selView.id===g.id?'sel':''}" data-act="pickView" data-t="g" data-id="${esc(g.id)}">
       <span class="info"><span class="n">${esc(GNAME[g.id]||g.id)}</span><span class="s">${g.athletes.length} Athlet:innen · ${esc(g.coaches||'-')}</span></span>
     </button>`).join('');
   const athleteOpts = (spogy ? spogy.athletes : []).map(a=>`
-    <button class="pickerOpt ${isSoloSel && state.view.id===a.n?'sel':''}" data-act="pickView" data-t="a" data-id="${esc(a.n)}">
+    <button class="pickerOpt ${selView && isSoloSel && selView.id===a.n?'sel':''}" data-act="pickView" data-t="a" data-id="${esc(a.n)}">
       <span class="info"><span class="n">${esc(a.n)}</span><span class="s">WK-Klasse 27: ${esc(a.wk||'-')}</span></span>
     </button>`).join('');
+  return { groupOpts, athleteOpts };
+}
+
+function renderPicker(){
+  const { groupOpts, athleteOpts } = renderPickOpts(state.view);
   return `
     <div class="overlay">
       <div class="overlayHead">
@@ -736,12 +747,34 @@ function renderPicker(){
   `;
 }
 
+function renderLanding(){
+  const { groupOpts, athleteOpts } = renderPickOpts(null);
+  return `
+    <div class="landing">
+      <img class="landingLogo" src="${LOGO_IMG}" alt="Austria Climbing Vorarlberg">
+      <div class="landingTitle">Trainingspläne</div>
+      <div class="landingSub">Wähle einen Gruppen- oder Einzelplan</div>
+      <div class="landingBody">
+        <div>
+          <div class="pickerGroupLabel">Gruppenpläne</div>
+          ${groupOpts}
+        </div>
+        <div>
+          <div class="pickerGroupLabel">Einzelpläne SPOGY</div>
+          ${athleteOpts}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function wireEvents(){
   document.querySelectorAll('[data-act]').forEach(elm=>{
     elm.addEventListener('click', ()=>{
       const act = elm.getAttribute('data-act');
       if(act==='openPicker') setState({picker:true});
       else if(act==='closePicker') setState({picker:false});
+      else if(act==='goHome') setState({view:null, picker:false});
       else if(act==='tab') setState({tab: elm.getAttribute('data-tab')});
       else if(act==='day') setState({day: parseInt(elm.getAttribute('data-i'),10), weekView:'tage'});
       else if(act==='weekview') setState({weekView: elm.getAttribute('data-wv')});
