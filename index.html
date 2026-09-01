@@ -171,6 +171,16 @@
   .kurzCats{display:flex;flex-wrap:wrap;gap:5px}
   .kurzCat{padding:3px 7px;border-radius:6px;font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.02em;background:var(--panel3);color:var(--tx3)}
   .kurzNone{font:400 12px/1.4 Archivo,sans-serif;color:var(--di)}
+  .gesamtSection{display:flex;flex-direction:column;gap:10px}
+  .gesamtBlock{border-radius:14px;background:var(--panel);border:1px solid var(--border);overflow:hidden}
+  .gesamtName{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;font:600 12.5px/1.2 Archivo,sans-serif;padding:9px 12px;background:var(--panel2);border-bottom:1px solid var(--border);color:var(--tx)}
+  .gesamtEmpty{padding:10px 12px;font:400 11.5px/1.4 Archivo,sans-serif;color:var(--di)}
+  .gesamtRowBody{padding:9px 12px}
+  .gesamtMeta{font:500 9.5px/1.3 'Roboto Mono',monospace;color:var(--mu);text-align:right}
+  .gesamtContent{font:400 11.5px/1.5 Archivo,sans-serif;color:var(--tx)}
+  .gesamtCat{font:600 9.5px/1.2 'Roboto Mono',monospace;color:var(--am);text-transform:uppercase;letter-spacing:.02em;margin-right:3px}
+  .gesamtSep{color:var(--di);margin:0 5px}
+  .pickerOpt.allOpt{background:rgba(0,88,143,.07);border-color:rgba(0,88,143,.3)}
   .ribbonWrap{display:flex;gap:1px;align-items:flex-end;overflow-x:auto;padding:6px 2px 14px}
   .ribbonCol{flex:none;width:22px;display:flex;flex-direction:column;align-items:center;gap:4px}
   .ribbonLbl{font:500 8px/1 'Roboto Mono',monospace;color:var(--di);white-space:nowrap}
@@ -245,7 +255,24 @@ function addWeeks(year, kw, delta){
   d.setUTCDate(d.getUTCDate()+delta*7);
   return getISOWeek(d);
 }
+function addDays(year, kw, day, delta){
+  const monday = isoWeekMonday(year, kw);
+  const d = new Date(monday);
+  d.setUTCDate(d.getUTCDate() + day + delta);
+  const wk = getISOWeek(d);
+  const wkMonday = isoWeekMonday(wk.year, wk.kw);
+  const dayIdx = Math.round((d - wkMonday) / 86400000);
+  return {year: wk.year, kw: wk.kw, day: dayIdx};
+}
 const NOW = getISOWeek(new Date());
+const NOW_TODAY = (() => {
+  const now = new Date();
+  const wk = getISOWeek(now);
+  const monday = isoWeekMonday(wk.year, wk.kw);
+  const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const dayIdx = Math.round((today - monday) / 86400000);
+  return {year: wk.year, kw: wk.kw, day: dayIdx};
+})();
 
 // ---- State ----
 const D = (window.TPDATA || {GROUPS:[],COACHES:[],EX:{},PLANS:{},CATS_BY_VIEW:{},WEEKS_BY_ATHLETE:{},BENCH:{},GK:{},SOURCE_INFO:{}});
@@ -277,6 +304,25 @@ function render(){
 
 function renderApp(){
   if(!state.view) return renderLanding();
+  if(state.view.t === 'all'){
+    return `
+      <div class="header">
+        <img class="brandMark" src="${MARK_IMG}" alt="Startseite" data-act="goHome" style="cursor:pointer">
+        <button class="headerBtn" data-act="openPicker" style="flex:1">
+          <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+            <span class="viewName">Training gesamt</span>
+            <span class="viewSub">ALLE GRUPPEN &amp; EINZELPLÄNE</span>
+          </span>
+          <span class="caret">▾</span>
+        </button>
+        <img class="headerLogo" src="${LOGO_IMG}" alt="Austria Climbing Vorarlberg">
+      </div>
+      <div class="content">
+        ${renderTrainingGesamt()}
+      </div>
+      ${state.picker ? renderPicker() : ''}
+    `;
+  }
   const view = state.view;
   const isSolo = view.t === 'a';
   const group = !isSolo ? D.GROUPS.find(g=>g.id===view.id) : null;
@@ -712,6 +758,99 @@ function renderKader(){
   `;
 }
 
+// "Training gesamt": eine Ansicht auf gleicher Ebene wie Gruppen-/Einzelplan,
+// zeigt IMMER GENAU EINEN TAG auf einmal — ALLE Gruppen und ALLE
+// Einzelathlet:innen für diesen einen Tag, zuerst Abschnitt Gruppenpläne
+// (nach Gruppe sortiert), dann Einzelpläne (nach Athlet sortiert). Navigation
+// zwischen Tagen über Pfeile oben (nicht Wochen) — Floyds Vorgabe: "nur ein
+// Tag auf einmal auf dem Bildschirm". Zeigt den exakten Inhalt jeder
+// Kategorie (nicht nur Kategorie-Namen wie in "Woche kompakt").
+function renderTrainingGesamt(){
+  const wkKey = state.year + '-' + state.kw;
+  const dayIdx = state.day;
+  const dateFromAny = (() => {
+    for(const g of D.GROUPS){
+      const plan = (D.PLANS['g:'+g.id]||{})[wkKey];
+      if(plan && plan.days && plan.days[dayIdx]) return plan.days[dayIdx];
+    }
+    if(spogy) for(const a of spogy.athletes){
+      const plan = (D.PLANS['a:'+a.n]||{})[wkKey];
+      if(plan && plan.days && plan.days[dayIdx]) return plan.days[dayIdx];
+    }
+    return null;
+  })();
+  const dayTitle = dateFromAny ? `${dateFromAny.dow}, ${dateFromAny.dom}${state.year}` : '-';
+
+  const groupRows = D.GROUPS.filter(g=>g.id!=='SPOGY Gruppe').map(g=>{
+    const plan = (D.PLANS['g:'+g.id] || {})[wkKey] || null;
+    const dd = plan && plan.days ? plan.days[dayIdx] : null;
+    return renderGesamtRow(GNAME[g.id]||g.id, dd);
+  }).join('');
+  const athleteRows = (spogy ? spogy.athletes : []).map(a=>{
+    const plan = (D.PLANS['a:'+a.n] || {})[wkKey] || null;
+    const dd = plan && plan.days ? plan.days[dayIdx] : null;
+    return renderGesamtRow(a.n, dd);
+  }).join('');
+
+  return `
+    <div class="weekNav">
+      <button class="navBtn" data-act="prevDay">‹</button>
+      <div class="weekTitle">
+        <div class="weekKw">${esc(dayTitle)}</div>
+        <div class="weekMeta">KW ${state.kw} · ${state.year}</div>
+      </div>
+      <button class="navBtn" data-act="nextDay">›</button>
+    </div>
+    <div class="gesamtSection">
+      <div class="pickerGroupLabel">Gruppenpläne</div>
+      ${groupRows}
+    </div>
+    <div class="gesamtSection">
+      <div class="pickerGroupLabel">Einzelpläne SPOGY</div>
+      ${athleteRows}
+    </div>
+  `;
+}
+
+function renderGesamtRow(name, dd){
+  if(!dd){
+    return `
+      <div class="gesamtBlock">
+        <div class="gesamtName">${esc(name)}</div>
+        <div class="gesamtEmpty">Kein Plan für diesen Tag</div>
+      </div>`;
+  }
+  const oc = ORT_COLORS[dd.ortType];
+  const hasSessions = dd.sessions && dd.sessions.length;
+  let contentHtml = `<span class="kurzNone">Trainingsfrei / keine Einheit eingetragen</span>`;
+  if(hasSessions){
+    const parts = [];
+    dd.sessions.forEach(s=>{
+      (s.cats||[]).forEach(cat=>{
+        if(cat.items && cat.items.length){
+          const exList = cat.items.map(it=>esc(it.ex)).join(', ');
+          parts.push(`<span class="gesamtCat">${esc(cat.name)}</span> ${exList}`);
+        }
+      });
+    });
+    contentHtml = parts.length
+      ? `<div class="gesamtContent">${parts.join('<span class="gesamtSep">·</span>')}</div>`
+      : `<span class="kurzNone">Trainingsfrei / keine Einheit eingetragen</span>`;
+  }
+  const metaBits = [];
+  if(dd.ort) metaBits.push(esc(dd.ort));
+  if(dd.zeit) metaBits.push(esc(dd.zeit));
+  if(dd.trainer) metaBits.push(esc(dd.trainer));
+  return `
+    <div class="gesamtBlock" style="${oc?`border-left:4px solid ${oc}`:''}">
+      <div class="gesamtName">
+        <span>${esc(name)}</span>
+        ${metaBits.length ? `<span class="gesamtMeta">${metaBits.join(' · ')}</span>` : ''}
+      </div>
+      <div class="gesamtRowBody">${contentHtml}</div>
+    </div>`;
+}
+
 function renderPickOpts(selView){
   const isSoloSel = selView && selView.t==='a';
   const groupOpts = D.GROUPS.filter(g=>g.id!=='SPOGY Gruppe').map(g=>`
@@ -722,11 +861,15 @@ function renderPickOpts(selView){
     <button class="pickerOpt ${selView && isSoloSel && selView.id===a.n?'sel':''}" data-act="pickView" data-t="a" data-id="${esc(a.n)}">
       <span class="info"><span class="n">${esc(a.n)}</span><span class="s">WK-Klasse 27: ${esc(a.wk||'-')}</span></span>
     </button>`).join('');
-  return { groupOpts, athleteOpts };
+  const allOpt = `
+    <button class="pickerOpt allOpt ${selView && selView.t==='all'?'sel':''}" data-act="pickView" data-t="all">
+      <span class="info"><span class="n">Training gesamt</span><span class="s">Alle Gruppen &amp; Einzelpläne auf einen Blick</span></span>
+    </button>`;
+  return { groupOpts, athleteOpts, allOpt };
 }
 
 function renderPicker(){
-  const { groupOpts, athleteOpts } = renderPickOpts(state.view);
+  const { groupOpts, athleteOpts, allOpt } = renderPickOpts(state.view);
   return `
     <div class="overlay">
       <div class="overlayHead">
@@ -734,6 +877,9 @@ function renderPicker(){
         <button class="closeBtn" data-act="closePicker">✕</button>
       </div>
       <div class="overlayBody">
+        <div>
+          ${allOpt}
+        </div>
         <div>
           <div class="pickerGroupLabel">Gruppenpläne</div>
           ${groupOpts}
@@ -748,13 +894,16 @@ function renderPicker(){
 }
 
 function renderLanding(){
-  const { groupOpts, athleteOpts } = renderPickOpts(null);
+  const { groupOpts, athleteOpts, allOpt } = renderPickOpts(null);
   return `
     <div class="landing">
       <img class="landingLogo" src="${LOGO_IMG}" alt="Austria Climbing Vorarlberg">
       <div class="landingTitle">Trainingspläne</div>
       <div class="landingSub">Wähle einen Gruppen- oder Einzelplan</div>
       <div class="landingBody">
+        <div>
+          ${allOpt}
+        </div>
         <div>
           <div class="pickerGroupLabel">Gruppenpläne</div>
           ${groupOpts}
@@ -781,7 +930,14 @@ function wireEvents(){
       else if(act==='statseason') setState({statSeason: elm.getAttribute('data-season')});
       else if(act==='prevWeek'){ const nw = addWeeks(state.year, state.kw, -1); setState({year:nw.year, kw:nw.kw, day:0}); }
       else if(act==='nextWeek'){ const nw = addWeeks(state.year, state.kw, 1); setState({year:nw.year, kw:nw.kw, day:0}); }
-      else if(act==='pickView'){ setState({view:{t:elm.getAttribute('data-t'), id:elm.getAttribute('data-id')}, picker:false, tab:'Woche', day:0, year:NOW.year, kw:NOW.kw}); }
+      else if(act==='prevDay'){ const nd = addDays(state.year, state.kw, state.day, -1); setState({year:nd.year, kw:nd.kw, day:nd.day}); }
+      else if(act==='nextDay'){ const nd = addDays(state.year, state.kw, state.day, 1); setState({year:nd.year, kw:nd.kw, day:nd.day}); }
+      else if(act==='pickView'){
+        const t = elm.getAttribute('data-t');
+        const isAll = t === 'all';
+        setState({view:{t, id:elm.getAttribute('data-id')}, picker:false, tab:'Woche',
+          day: isAll ? NOW_TODAY.day : 0, year: isAll ? NOW_TODAY.year : NOW.year, kw: isAll ? NOW_TODAY.kw : NOW.kw});
+      }
       else if(act==='pickGroup'){ setState({view:{t:'g', id:elm.getAttribute('data-id')}, tab:'Woche', day:0, year:NOW.year, kw:NOW.kw}); }
     });
   });
