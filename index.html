@@ -200,6 +200,7 @@
 <div id="app"></div>
 <script>
 const AM='#00588f', LI='#128089', TX='#0f2436', MU='#6b8496', DI='#9db0bd';
+const DOKU_FORMS_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=NGKrNpwXUEOM-qEM82Zuq0rnuv3di_ZEn2AfUPm3tJdUMlgxSzhTUDQ2TUo0OEFEWEZHWVZPVFczWi4u';
 // Trainingsort-Farbe, 1:1 wie von Floyd vorgegeben und identisch zur Farbe im
 // Jahr-Ribbon der Gruppen: Grün=Lead, Blau=Bouldern, Gelb=Speed.
 const ORT_COLORS = { Lead: '#78b83f', Bouldern: '#0090c9', Speed: '#c9a227' };
@@ -348,6 +349,7 @@ function renderApp(){
         </span>
         <span class="caret">▾</span>
       </button>
+      <a href="${DOKU_FORMS_URL}" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;gap:5px;padding:8px 12px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Doku</a>
       <img class="headerLogo" src="${LOGO_IMG}" alt="Austria Climbing Vorarlberg">
     </div>
     <div class="syncbar">
@@ -467,6 +469,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       </div>
       ${state.weekView==='kurz' ? `
         <div class="kurzTable">${renderKurz(days, di)}</div>
+        ${renderWeekStats(view, isSolo)}
       ` : `
       <div class="dayChips">${dayChips}</div>
       <div class="dayHead"><div class="dayTitle">${esc(day ? (day.dow+', '+day.dom) : '')}</div></div>
@@ -492,6 +495,42 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       `}
     `}
   `;
+}
+
+function renderWeekStats(view, isSolo){
+  const plans = D.PLANS[(isSolo?'a:':'g:') + view.id] || {};
+  const plan = plans[state.year + '-' + state.kw] || null;
+  let rows;
+  if(isSolo){
+    const wList = D.WEEKS_BY_ATHLETE[view.id] || [];
+    const w = wList.find(x=>x.year===state.year && x.kw===state.kw) || null;
+    if(!w) return '';
+    const avgLoadWk = w.days ? Math.round((w.load/w.days)*10)/10 : null;
+    rows = [
+      {k:'Trainingsstunden (Woche)', v: w.hrs!=null ? w.hrs.toFixed(1)+' h' : '-'},
+      {k:'Trainingstage gesamt (Woche)', v: val(w.planDays)},
+      {k:'Trainingstage mit Doku (Woche)', v: val(w.days)},
+      {k:'Load kumuliert (Woche)', v: (w.days && w.load) ? Math.round(w.load) : '-'},
+      {k:'Durchschnittliche Motivation (Woche)', v: w.mot!=null ? w.mot.toFixed(1) : '-'},
+      {k:'Durchschnittliche Erschöpfung zu Beginn (Woche)', v: w.eb!=null ? w.eb.toFixed(1) : '-'},
+      {k:'Durchschnittlicher Load (Woche)', v: avgLoadWk!=null ? avgLoadWk.toFixed(1) : '-'},
+      {k:'Durchschnittliche Fitness nach Gefühl (Woche)', v: w.fit!=null ? w.fit.toFixed(1) : '-'},
+      {k:'Prozentsatz genaue Umsetzung (Woche)', v: w.umPct!=null ? w.umPct.toFixed(0)+'%' : '-'},
+    ];
+  } else {
+    const dk = plan && plan.doku ? plan.doku : null;
+    if(!dk) return '';
+    rows = [
+      {k:'Durchschnittliche Motivation (Woche)', v: dk.avgMotivation!=null ? dk.avgMotivation.toFixed(1) : '-'},
+      {k:'Durchschnittliche Trainingsdauer (Woche)', v: dk.avgTrainingsdauer!=null ? dk.avgTrainingsdauer.toFixed(2)+' h' : '-'},
+      {k:'Durchschnittlicher Load (Woche)', v: dk.avgLoad!=null ? dk.avgLoad.toFixed(1) : '-'},
+    ];
+  }
+  return `
+    <div class="roster" style="margin-top:14px">
+      <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">Doku diese Woche</span>
+      ${rows.map(t=>`<div style="display:flex;align-items:baseline;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(10,50,80,.08)"><span style="font:400 12px/1 Archivo,sans-serif;color:${MU}">${esc(t.k)}</span><span style="font:600 13px/1 'Roboto Mono',monospace">${esc(t.v)}</span></div>`).join('')}
+    </div>`;
 }
 
 function renderKurz(days, di){
@@ -638,10 +677,7 @@ function renderStatistik(view){
   const filled = W.filter(w=>w.load>0);
   const showLoad = filled.length >= 10;
 
-  const loadNote = isSolo
-    ? `Load-Verlauf gibt es nur, wo RPE und Trainingsdauer nach jeder Einheit vollständig dokumentiert werden (aktuell: Adrian Kathan). Bei ${esc(view.id)} reicht die Doku-Abdeckung dafür noch nicht.`
-    : `Gruppenpläne erfassen kein individuelles RPE/Trainingsdauer pro Athlet:in — Load-Verlauf gibt es daher nur bei Einzelplänen mit vollständiger Doku (aktuell: Adrian Kathan).`;
-  let loadSection = `<div class="dashed">${loadNote}</div>`;
+  let loadSection = '';
   if(showLoad){
     const maxV = Math.max(1, ...W.map(w=>w.load||0));
     const last4 = filled.slice(-4);
@@ -660,17 +696,27 @@ function renderStatistik(view){
     ? `Trainingsstunden bei Gruppen sind geschätzt: ${esc(ss.estHoursPerDay)} h × Trainingstage (Gruppen erfassen keine echte Dauer). Ein Trainingstag zählt, wenn an dem Tag mindestens eine Kategorie unterhalb "Trainingsort" befüllt ist — Notizen zählen nicht.`
     : null;
 
+  const dk = ss.doku || {};
   const totals = isSolo
     ? [
-        {k:'Trainingsstunden (Saison)', v: W.length ? W.reduce((a,b)=>a+(b.hrs||0),0).toFixed(1)+' h' : '-'},
-        {k:'Trainingstage dokumentiert', v: W.length ? W.reduce((a,b)=>a+(b.days||0),0) : '-'},
-        {k:'Load kumuliert', v: showLoad ? Math.round(W.reduce((a,b)=>a+(b.load||0),0)) : '-'},
-        {k:'Wochen ohne Load-Eintrag', v: showLoad ? (W.length-filled.length) : '-'},
+        {k:'Trainingsstunden Saison', v: dk.hrsSaison!=null ? dk.hrsSaison.toFixed(1)+' h' : '-'},
+        {k:'Trainingstage gesamt', v: dk.planDaysSaison!=null ? dk.planDaysSaison : '-'},
+        {k:'Trainingstage mit Doku', v: dk.dokuDays!=null ? dk.dokuDays : '-'},
+        {k:'Load kumuliert', v: dk.loadSaison!=null ? Math.round(dk.loadSaison) : '-'},
+        {k:'Durchschnittliche Motivation (Saison)', v: dk.avgMotivation!=null ? dk.avgMotivation.toFixed(1) : '-'},
+        {k:'Durchschnittliche Erschöpfung zu Beginn', v: dk.avgErschoepfungBeginn!=null ? dk.avgErschoepfungBeginn.toFixed(1) : '-'},
+        {k:'Durchschnittlicher Load (Saison)', v: dk.avgLoad!=null ? dk.avgLoad.toFixed(1) : '-'},
+        {k:'Durchschnittliche Fitness nach Gefühl (Saison)', v: dk.avgFitness!=null ? dk.avgFitness.toFixed(1) : '-'},
+        {k:'Prozentsatz genaue Umsetzung', v: dk.pctUmsetzung!=null ? dk.pctUmsetzung.toFixed(0)+'%' : '-'},
       ]
     : [
-        {k:'Trainingsstunden (Saison, geschätzt)', v: ss.estHours!=null ? ss.estHours.toFixed(1)+' h' : '-'},
-        {k:'Trainingstage dokumentiert', v: ss.trainingDays!=null ? ss.trainingDays : '-'},
+        {k:'Durchschnittliche Motivation (Saison)', v: dk.avgMotivation!=null ? dk.avgMotivation.toFixed(1) : '-'},
+        {k:'Durchschnittliche Trainingsdauer (Saison)', v: dk.avgTrainingsdauer!=null ? dk.avgTrainingsdauer.toFixed(2)+' h' : '-'},
+        {k:'Durchschnittlicher Load (Saison)', v: dk.avgLoad!=null ? dk.avgLoad.toFixed(1) : '-'},
       ];
+  const dokuGapNote = (dk.dokuDays > 0 && dk.hrsSaison==null)
+    ? 'Trainingsdauer/Load fehlen: Das Doku-Formular erfasst aktuell keine Trainingsdauer.'
+    : (!isSolo && !dk.avgMotivation ? 'Noch keine Doku-Einträge von Athlet:innen dieser Gruppe für diese Saison.' : null);
 
   return `
     <div style="display:flex;align-items:baseline;justify-content:space-between">
@@ -692,6 +738,7 @@ function renderStatistik(view){
       <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">Saison ${esc(season)} Gesamt</span>
       ${totals.map(t=>`<div style="display:flex;align-items:baseline;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(10,50,80,.08)"><span style="font:400 12px/1 Archivo,sans-serif;color:${MU}">${esc(t.k)}</span><span style="font:600 13px/1 'Roboto Mono',monospace">${esc(t.v)}</span></div>`).join('')}
       ${grpEstNote ? `<div class="footNote" style="padding-top:6px">${esc(grpEstNote)}</div>` : ''}
+      ${dokuGapNote ? `<div class="footNote" style="padding-top:6px">${esc(dokuGapNote)}</div>` : ''}
     </div>
   `;
 }
