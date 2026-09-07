@@ -9,10 +9,10 @@ Kein Wert wird erfunden: fehlt eine Angabe in Excel, wird null geschrieben
 und die App zeigt "-" an.
 """
 import openpyxl, json, re, subprocess, sys, glob, os
-from datetime import date
+from datetime import date, timedelta
 
-BASE = '/mnt/user-data/uploads/Testspace/'
-OUT = '/home/claude/tpapp/design/tp-data.js'
+BASE = "/sessions/rcw-0151s7tv8hxkojd4a1uavrle/mnt/Testspace/"
+OUT = "/sessions/rcw-0151s7tv8hxkojd4a1uavrle/mnt/Trainingsplan-KVV/tp-data.js"
 
 def resolve_file(*candidates):
     """Nimmt den ersten existierenden Pfad; wenn ein Kandidat nicht exakt
@@ -240,13 +240,171 @@ GROUP_EST_HOURS_PER_DAY = 2.75
 
 # ------------------------------------------------------- Einheitenplanung --
 
+def _next_iso_week(year, kw):
+    """(year,kw) der unmittelbar folgenden ISO-Kalenderwoche - korrekt auch über
+    Jahresgrenzen mit 52 vs. 53 Wochen hinweg (date.fromisocalendar statt naivem +1)."""
+    d = date.fromisocalendar(year, kw, 1) + timedelta(days=7)
+    c = d.isocalendar()
+    return c[0], c[1]
+
 def iso(d):
     if not d:
         return None
     c = d.isocalendar()
     return (c[0], c[1])
 
-def parse_individual(path, athlete_name, catalog, ex, cats_counter):
+def norm_name(s):
+    return re.sub(r'\s+', ' ', str(s or '').strip()).lower()
+
+def load_forms_doku(path, valid_names):
+    """Liest die Microsoft-Forms-Antworten-Excel 'Trainingsdoku KVV.xlsx'.
+    Eine Zeile = eine Selbstauskunft (Athlet:in + Datum + Session). Namen
+    werden auf die echte Kaderliste normalisiert (Groß/Kleinschreibung,
+    doppelte Leerzeichen) gematcht; nicht zuordenbare Namen werden NICHT
+    verworfen, sondern unter 'unmatched' zurückgegeben (kein Erfinden,
+    aber auch kein stillschweigendes Verlieren von Daten)."""
+    name_lookup = {norm_name(n): n for n in valid_names}
+    by_name = {}
+    unmatched = []
+    try:
+        wb = openpyxl.load_workbook(path, data_only=True)
+    except Exception:
+        return {}, ['<Datei nicht lesbar: ' + path + '>']
+    ws = wb[wb.sheetnames[0]]
+    headers = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
+    def col_idx(*needles):
+        for i, h in enumerate(headers, start=1):
+            if h and all(n.lower() in str(h).lower() for n in needles):
+                return i
+        return None
+    c_name = col_idx('dein name')
+    c_datum = col_idx('datum')
+    c_sess = col_idx('session heute')
+    c_dauer = col_idx('dauer der session')
+    c_mot = col_idx('motivation')
+    c_eb = col_idx('erschöpfung beginn')
+    c_ee = col_idx('erschöpfung ende')
+    c_fit = col_idx('fitness nach gefühl')
+    c_um = col_idx('umgesetzt')
+    c_notiz = col_idx('notizen')
+    if not (c_name and c_datum):
+        return {}, ['<Erwartete Spalten nicht gefunden in ' + path + '>']
+    def parse_num(v):
+        # Forms liefert Dezimalzahlen z.T. als String mit Komma (deutsches Format)
+        if v is None or v == '':
+            return None
+        if isinstance(v, (int, float)):
+            return float(v)
+        try:
+            return float(str(v).strip().replace(',', '.'))
+        except (ValueError, TypeError):
+            return None
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        raw_name = row[c_name - 1] if c_name else None
+        dt = row[c_datum - 1] if c_datum else None
+        if not raw_name or not dt:
+            continue
+        key = norm_name(raw_name)
+        real_name = name_lookup.get(key)
+        if not real_name:
+            if str(raw_name).strip() not in unmatched:
+                unmatched.append(str(raw_name).strip())
+            continue
+        dt_date = dt.date() if hasattr(dt, 'date') else dt
+        sess_raw = row[c_sess - 1] if c_sess else None
+        session = 1 if (sess_raw and '1' in str(sess_raw)) else (2 if (sess_raw and '2' in str(sess_raw)) else None)
+        um_raw = row[c_um - 1] if c_um else None
+        umsetzung = True if (um_raw and str(um_raw).strip().lower() == 'ja') else (False if (um_raw and str(um_raw).strip().lower() == 'nein') else None)
+        rec = {
+            'date': dt_date.isoformat(), 'session': session,
+            'dur': parse_num(row[c_dauer - 1]) if c_dauer else None,
+            'mot': row[c_mot - 1] if c_mot else None,
+            'eb': row[c_eb - 1] if c_eb else None,
+            'ee': row[c_ee - 1] if c_ee else None,
+            'fitness': row[c_fit - 1] if c_fit else None,
+            'umsetzung': umsetzung,
+            'notiz': row[c_notiz - 1] if c_notiz else None,
+        }
+        by_name.setdefault(real_name, []).append(rec)
+    return by_name, unmatched
+
+def aggregate_doku_records(records):
+    """Aus einer flachen Liste von Doku-Records (Forms und/oder Excel-Tage,
+    jeweils mit optionalem dur=Trainingsdauer in h) die Kennzahlen fürs
+    Statistik-Tab berechnen. Nichts wird erfunden: fehlende Werte fließen
+    nicht in den jeweiligen Durchschnitt ein."""
+    if not records:
+        return None
+    dur_recs = [r for r in records if r.get('dur') is not None]
+    hrs = sum(r['dur'] for r in dur_recs)
+    load_recs = [r for r in records if r.get('ee') is not None and r.get('dur') is not None]
+    load_sum = sum(r['ee'] * r['dur'] for r in load_recs)
+    dates_with_doku = set(r['date'] for r in records if r.get('date'))
+    mot_vals = [r['mot'] for r in records if r.get('mot') is not None]
+    eb_vals = [r['eb'] for r in records if r.get('eb') is not None]
+    fit_vals = [r['fitness'] for r in records if r.get('fitness') is not None]
+    um_yes = sum(1 for r in records if r.get('umsetzung') is True)
+    um_no = sum(1 for r in records if r.get('umsetzung') is False)
+    return {
+        'hrsSaison': round(hrs, 2) if dur_recs else None,
+        'dokuDays': len(dates_with_doku),
+        'loadSaison': round(load_sum, 1) if load_recs else None,
+        'avgLoad': round(load_sum / len(load_recs), 2) if load_recs else None,
+        'avgMotivation': round(sum(mot_vals) / len(mot_vals), 2) if mot_vals else None,
+        'avgErschoepfungBeginn': round(sum(eb_vals) / len(eb_vals), 2) if eb_vals else None,
+        'avgFitness': round(sum(fit_vals) / len(fit_vals), 2) if fit_vals else None,
+        'pctUmsetzung': round(100 * um_yes / (um_yes + um_no), 1) if (um_yes + um_no) > 0 else None,
+    }
+
+def aggregate_group_doku_season(athlete_names, forms_by_athlete):
+    """Gruppen-Statistik (Saison) aus den rohen Forms-Records aller Athlet:innen
+    einer Gruppe. Trainingsdauer/Load bleiben None, solange die Forms keine
+    Trainingsdauer erfassen (kein Erfinden) - das gilt aktuell für alle Gruppen,
+    da es für U15 I/II auch keine Einzelplan-Excel mit Dauer-Zellen gibt."""
+    recs = []
+    for n in athlete_names:
+        recs.extend(forms_by_athlete.get(n, []))
+    if not recs:
+        return None
+    dur_recs = [r for r in recs if r.get('dur') is not None]
+    load_recs = [r for r in recs if r.get('ee') is not None and r.get('dur') is not None]
+    mot_vals = [r['mot'] for r in recs if r.get('mot') is not None]
+    return {
+        'avgMotivation': round(sum(mot_vals) / len(mot_vals), 2) if mot_vals else None,
+        'avgTrainingsdauer': round(sum(r['dur'] for r in dur_recs) / len(dur_recs), 2) if dur_recs else None,
+        'avgLoad': round(sum(r['ee'] * r['dur'] for r in load_recs) / len(load_recs), 2) if load_recs else None,
+        'nAthletesWithDoku': len(set(n for n in athlete_names if forms_by_athlete.get(n))),
+    }
+
+def aggregate_group_doku_weeks(athlete_names, forms_by_athlete):
+    """Wie aggregate_group_doku_season, aber pro (year,kw) Woche gebucketed -
+    für 'Woche Kompakt' bei Gruppenplänen. Liefert {(year,kw): {...}}."""
+    by_week = {}
+    for n in athlete_names:
+        for r in forms_by_athlete.get(n, []):
+            dt = r.get('date')
+            if not dt:
+                continue
+            try:
+                yk = iso(date.fromisoformat(dt))
+            except Exception:
+                continue
+            if not yk:
+                continue
+            by_week.setdefault(yk, []).append(r)
+    out = {}
+    for yk, recs in by_week.items():
+        dur_recs = [r for r in recs if r.get('dur') is not None]
+        load_recs = [r for r in recs if r.get('ee') is not None and r.get('dur') is not None]
+        mot_vals = [r['mot'] for r in recs if r.get('mot') is not None]
+        out[yk] = {
+            'avgMotivation': round(sum(mot_vals) / len(mot_vals), 2) if mot_vals else None,
+            'avgTrainingsdauer': round(sum(r['dur'] for r in dur_recs) / len(dur_recs), 2) if dur_recs else None,
+            'avgLoad': round(sum(r['ee'] * r['dur'] for r in load_recs) / len(load_recs), 2) if load_recs else None,
+        }
+    return out
+
+def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_records=None):
     wb = openpyxl.load_workbook(path, data_only=True)
     sheetname = None
     for cand in ['Einheitenplanung 26_27']:
@@ -259,8 +417,12 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter):
     maxc = ws.max_column
     row_labels = {r: ws.cell(row=r, column=1).value for r in range(1, 41)}
     weeks = {}   # (year,kw) -> {days:[...], span, source}
-    week_stats = {}  # (year,kw) -> accumulate load/hrs/rpe/fit/days
+    week_stats = {}  # (year,kw) -> accumulate load/hrs/rpe/eb/mot/fit/umsetzung/days/planDays
     old_idx = build_old_individual_index(wb)
+    forms_by_date = {}
+    for r in (forms_records or []):
+        forms_by_date.setdefault(r['date'], []).append(r)
+    all_doku_records = []
 
     c = 2
     while c <= maxc:
@@ -306,29 +468,83 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter):
                 fallback = old_individual_day_session(old_idx, dt, catalog, ex, cats_counter)
                 if fallback:
                     sessions.append(fallback)
-            mot = ws.cell(row=35, column=col).value
-            eb = ws.cell(row=36, column=col).value
-            ee = ws.cell(row=37, column=col).value
+            mot_x = ws.cell(row=35, column=col).value
+            eb_x = ws.cell(row=36, column=col).value
+            ee_x = ws.cell(row=37, column=col).value
             d1 = ws.cell(row=38, column=col).value
             d2 = ws.cell(row=39, column=col).value
+            um_x = ws.cell(row=40, column=col).value
+            um_x_bool = True if (um_x and str(um_x).strip().lower() == 'ja') else (False if (um_x and str(um_x).strip().lower() == 'nein') else None)
+            d1n = float(d1) if isinstance(d1, (int, float)) else None
+            d2n = float(d2) if isinstance(d2, (int, float)) else None
+            date_str = dt.isoformat() if dt else None
+            day_forms = forms_by_date.get(date_str, []) if date_str else []
+
+            day_records = []  # merged Doku-Records fuer diesen Tag (Forms bevorzugt, sonst Excel)
+            if day_forms:
+                for fr in day_forms:
+                    # Trainingsdauer: bevorzugt direkt aus dem Forms (seit 04.09. abgefragt),
+                    # sonst Fallback auf die Excel-Zellen Dauer S1/S2 (kein Erfinden).
+                    dur_excel = d1n if fr.get('session') == 1 else (d2n if fr.get('session') == 2 else None)
+                    dur = fr.get('dur') if fr.get('dur') is not None else dur_excel
+                    day_records.append({**fr, 'dur': dur, 'source': 'forms'})
+            elif any(v is not None for v in (mot_x, eb_x, ee_x, d1, d2, um_x)):
+                dur = (d1n or 0) + (d2n or 0)
+                day_records.append({
+                    'date': date_str, 'session': None, 'mot': mot_x, 'eb': eb_x, 'ee': ee_x,
+                    'fitness': None, 'umsetzung': um_x_bool, 'notiz': None,
+                    'dur': dur if dur else None, 'source': 'excel',
+                })
+
             doku = None
-            if any(v is not None for v in (mot, eb, ee, d1, d2)):
-                doku = {'mot': mot, 'eb': eb, 'ee': ee, 'd1': d1, 'd2': d2}
-                hrs = (float(d1) if isinstance(d1, (int, float)) else 0) + (float(d2) if isinstance(d2, (int, float)) else 0)
-                load = hrs * ee if isinstance(ee, (int, float)) else None
-                stat = week_stats.setdefault(yk, {'load': 0, 'hrs': 0, 'rpe_sum': 0, 'rpe_n': 0, 'fit_sum': 0, 'fit_n': 0, 'days': 0})
-                stat['hrs'] += hrs
-                if load is not None:
-                    stat['load'] += load
-                if isinstance(ee, (int, float)):
-                    stat['rpe_sum'] += ee
-                    stat['rpe_n'] += 1
-                if isinstance(mot, (int, float)):
-                    stat['fit_sum'] += mot
-                    stat['fit_n'] += 1
+            if day_records:
+                mots = [r['mot'] for r in day_records if r.get('mot') is not None]
+                ebs = [r['eb'] for r in day_records if r.get('eb') is not None]
+                ees = [r['ee'] for r in day_records if r.get('ee') is not None]
+                fits = [r['fitness'] for r in day_records if r.get('fitness') is not None]
+                notizen = [str(r['notiz']).strip() for r in day_records if r.get('notiz')]
+                ums = [r['umsetzung'] for r in day_records if r.get('umsetzung') is not None]
+                doku = {
+                    'mot': round(sum(mots) / len(mots), 1) if mots else None,
+                    'eb': round(sum(ebs) / len(ebs), 1) if ebs else None,
+                    'ee': round(sum(ees) / len(ees), 1) if ees else None,
+                    'fitness': round(sum(fits) / len(fits), 1) if fits else None,
+                    'd1': d1, 'd2': d2,
+                    'umsetzung': (False if False in ums else (True if ums else None)),
+                    'notiz': ' / '.join(notizen) if notizen else None,
+                    'sessions': [{'session': r.get('session'), 'mot': r.get('mot'), 'eb': r.get('eb'),
+                                  'ee': r.get('ee'), 'fitness': r.get('fitness'), 'umsetzung': r.get('umsetzung'),
+                                  'notiz': r.get('notiz'), 'source': r.get('source')} for r in day_records],
+                }
+                all_doku_records.extend(day_records)
+                stat = week_stats.setdefault(yk, {'load': 0, 'hrs': 0, 'rpe_sum': 0, 'rpe_n': 0, 'mot_sum': 0, 'mot_n': 0,
+                                                   'eb_sum': 0, 'eb_n': 0, 'fit_sum': 0, 'fit_n': 0, 'um_yes': 0, 'um_n': 0,
+                                                   'days': 0, 'planDays': 0})
+                for r in day_records:
+                    if r.get('dur') is not None:
+                        stat['hrs'] += r['dur']
+                        if r.get('ee') is not None:
+                            stat['load'] += r['ee'] * r['dur']
+                    if r.get('ee') is not None:
+                        stat['rpe_sum'] += r['ee']; stat['rpe_n'] += 1
+                    if r.get('mot') is not None:
+                        stat['mot_sum'] += r['mot']; stat['mot_n'] += 1
+                    if r.get('eb') is not None:
+                        stat['eb_sum'] += r['eb']; stat['eb_n'] += 1
+                    if r.get('fitness') is not None:
+                        stat['fit_sum'] += r['fitness']; stat['fit_n'] += 1
+                    if r.get('umsetzung') is True:
+                        stat['um_yes'] += 1; stat['um_n'] += 1
+                    elif r.get('umsetzung') is False:
+                        stat['um_n'] += 1
                 stat['days'] += 1
+            if sessions:
+                stat = week_stats.setdefault(yk, {'load': 0, 'hrs': 0, 'rpe_sum': 0, 'rpe_n': 0, 'mot_sum': 0, 'mot_n': 0,
+                                                   'eb_sum': 0, 'eb_n': 0, 'fit_sum': 0, 'fit_n': 0, 'um_yes': 0, 'um_n': 0,
+                                                   'days': 0, 'planDays': 0})
+                stat['planDays'] += 1
             days.append({
-                'dow': dow, 'dom': dt.strftime('%d.%m.') if dt else '?', 'date': dt.isoformat() if dt else None,
+                'dow': dow, 'dom': dt.strftime('%d.%m.') if dt else '?', 'date': date_str,
                 'ort': next((s['ort'] for s in sessions if s.get('ort')), None),
                 'sessions': sessions, 'doku': doku, 'notiz': None,
             })
@@ -342,10 +558,17 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter):
             'year': yk[0], 'kw': yk[1],
             'load': round(st['load'], 1), 'hrs': round(st['hrs'], 2),
             'rpe': round(st['rpe_sum'] / st['rpe_n'], 2) if st['rpe_n'] else None,
+            'mot': round(st['mot_sum'] / st['mot_n'], 2) if st['mot_n'] else None,
+            'eb': round(st['eb_sum'] / st['eb_n'], 2) if st['eb_n'] else None,
             'fit': round(st['fit_sum'] / st['fit_n'], 2) if st['fit_n'] else None,
+            'umPct': round(100 * st['um_yes'] / st['um_n'], 1) if st['um_n'] else None,
             'days': st['days'],
+            'planDays': st['planDays'],
         })
-    return weeks, weeks_out
+    doku_stats = aggregate_doku_records(all_doku_records)
+    if doku_stats is not None:
+        doku_stats['planDaysSaison'] = sum(w['planDays'] for w in weeks_out)
+    return weeks, weeks_out, doku_stats
 
 # Trainingsort-Zellfarbe -> Sessionsart, 1:1 wie von Floyd vorgegeben (dieselben
 # Farbcodes wie im Gruppen-Jahresplan "Fokus": Grün=Lead, Blau=Bouldern,
@@ -458,7 +681,8 @@ def parse_season_individual(path, season_weeks=None):
             col += 1
             continue
         kw = int(kw_val)
-        stat = {'load': 0.0, 'hrs': 0.0, 'rpe_sum': 0.0, 'rpe_n': 0, 'fit_sum': 0.0, 'fit_n': 0, 'days': 0}
+        stat = {'load': 0.0, 'hrs': 0.0, 'rpe_sum': 0.0, 'rpe_n': 0, 'fit_sum': 0.0, 'fit_n': 0, 'days': 0,
+                'um_yes': 0, 'um_n': 0, 'planDays': 0}
         week_year = None
         any_real_day = False
         for i in range(7):
@@ -476,15 +700,21 @@ def parse_season_individual(path, season_weeks=None):
             if is_example:
                 continue
             any_real_day = True
+            day_has_content = False
             for cat_name, rows in IND_SEASON_CAT_ROWS.items():
                 for r in rows:
                     if ws.cell(row=r, column=c).value:
                         cat_counts[cat_name] += 1
+                        day_has_content = True
+            if day_has_content:
+                stat['planDays'] += 1
             rpe = ws.cell(row=25, column=c).value
             dauer = ws.cell(row=26, column=c).value
             fit = ws.cell(row=28, column=c).value
             load = ws.cell(row=32, column=c).value
             done = ws.cell(row=24, column=c).value
+            done_bool = True if (done and str(done).strip().lower() in ('ja', 'yes', 'true', '1')) else (
+                False if (done and str(done).strip().lower() in ('nein', 'no', 'false', '0')) else None)
             if isinstance(dauer, (int, float)):
                 stat['hrs'] += dauer
             if isinstance(load, (int, float)):
@@ -497,6 +727,10 @@ def parse_season_individual(path, season_weeks=None):
             if isinstance(fit, (int, float)):
                 stat['fit_sum'] += fit
                 stat['fit_n'] += 1
+            if done_bool is True:
+                stat['um_yes'] += 1; stat['um_n'] += 1
+            elif done_bool is False:
+                stat['um_n'] += 1
             if done or isinstance(rpe, (int, float)) or isinstance(dauer, (int, float)):
                 stat['days'] += 1
         if any_real_day and week_year is not None:
@@ -510,13 +744,34 @@ def parse_season_individual(path, season_weeks=None):
             'load': round(st['load'], 1) if st['load'] else (0 if st['days'] else None),
             'hrs': round(st['hrs'], 2),
             'rpe': round(st['rpe_sum'] / st['rpe_n'], 2) if st['rpe_n'] else None,
+            'mot': None, 'eb': None,
             'fit': round(st['fit_sum'] / st['fit_n'], 2) if st['fit_n'] else None,
+            'umPct': round(100 * st['um_yes'] / st['um_n'], 1) if st['um_n'] else None,
             'days': st['days'],
+            'planDays': st['planDays'],
         })
+    hrs_sum = sum(w['hrs'] for w in weeks_out)
+    load_vals = [w['load'] for w in weeks_out if w.get('load') is not None]
+    fit_vals = [w['fit'] for w in weeks_out if w.get('fit') is not None]
+    dokudays_sum = sum(w['days'] for w in weeks_out)
+    um_yes_total = sum(st['um_yes'] for st in week_stats.values())
+    um_n_total = sum(st['um_n'] for st in week_stats.values())
+    doku_stats = {
+        'hrsSaison': round(hrs_sum, 2) if weeks_out else None,
+        'dokuDays': dokudays_sum,
+        'planDaysSaison': sum(w['planDays'] for w in weeks_out),
+        'loadSaison': round(sum(load_vals), 1) if load_vals else None,
+        'avgLoad': round(sum(load_vals) / dokudays_sum, 2) if (load_vals and dokudays_sum) else None,
+        'avgMotivation': None,  # in der alten Saison 25/26 nicht erfasst
+        'avgErschoepfungBeginn': None,  # dito
+        'avgFitness': round(sum(fit_vals) / len(fit_vals), 2) if fit_vals else None,
+        'pctUmsetzung': round(100 * um_yes_total / um_n_total, 1) if um_n_total else None,
+    } if weeks_out else None
     return {
         'catCounts': [{'name': c, 'count': cat_counts[c]} for c in CAT_ORDER],
         'weeks': weeks_out,
         'sheet': sheetname,
+        'doku': doku_stats,
     }
 
 def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label):
@@ -598,19 +853,21 @@ def parse_season_group(path, season_weeks=None):
 BENCH_STRUCTURE = [
     ('Technik+Taktik', 'mitlaufend', [
         'Rotpunkt K1', 'Onsight K1', 'Rotpunkt Fels', 'Onsight Fels',
-        'Kilterboard Max', 'Kilterboard Flash', 'Kilterboard Base', 'Steinblock DB Max',
+        'Kilterboard Max', 'Kilterboard Flash',
     ]),
-    ('Motorik', 'mitlaufend', ['Anzahl Bälle Jonglieren', 'Alternate Wall Toss']),
-    ('Physisches Klettertraining', 'mitlaufend', ['Anzahl Aufbauboulder Sessions', 'Doppellänge Max']),
-    ('Athletik', 'regelmäßig', [
-        '90° Block Einarmig', 'Half Crimp langer Arm', 'PinchPower', 'Einarmer Ja/Nein',
-        'Klimmzug Kraftausdauer', 'Spagat Seite Abstand Wand', 'Jump and Reach Test', 'Handstand frei in Sekunden',
-    ]),
+    ('Physisches Klettertraining', 'mitlaufend', ['Anzahl Aufbauboulder Sessions']),
 ]
+# Weitere Rubriken/Items (Kilterboard Base, Steinblock DB Max, Motorik, Athletik)
+# sind bewusst ausgeblendet (Floyd, 07.09.) — kommen erst nach und nach zurück,
+# sobald echte Werte da sind und er sie für sinnvoll hält.
 
 def load_bench_source():
-    """Liest die bestehende Benchmarks.xlsx (nur Adrian real gepflegt)."""
-    wb = openpyxl.load_workbook(BASE + 'Zusatzinfos/Benchmarks.xlsx', data_only=True)
+    """Liest die alte Einzeldatei Zusatzinfos/Benchmarks.xlsx (nur Adrian, historisch
+    gepflegt) als Fallback für Items, zu denen das neue Forms noch keinen Wert hat."""
+    try:
+        wb = openpyxl.load_workbook(BASE + 'Zusatzinfos/Benchmarks.xlsx', data_only=True)
+    except Exception:
+        return {}
     ws = wb['Tabelle1']
     vals = {}
     for r in range(2, ws.max_row + 1):
@@ -621,7 +878,69 @@ def load_bench_source():
             vals[key] = v
     return vals
 
-def build_bench_for(athlete_name, src_vals, aufbau_count=None):
+def load_bench_source_forms(path, valid_names):
+    """Liest die Microsoft-Forms-Antworten-Excel 'Benchmark Update.xlsx'. Eine Zeile
+    = eine Selbstauskunft (Athlet:in + Datum, meist nur wenige Felder ausgefüllt —
+    alles andere bleibt leer). Pro Athlet:in/Item wird der Wert aus der Zeile mit dem
+    NEUESTEN Datum übernommen (leere Zellen zählen nicht, überschreiben also keinen
+    älteren echten Wert). Namen werden wie bei der Doku auf die Kaderliste gematcht;
+    nicht zuordenbare Namen gehen nicht verloren, sondern kommen in 'unmatched'."""
+    name_lookup = {norm_name(n): n for n in valid_names}
+    by_athlete = {}  # name -> {item_key: (date, value)}
+    unmatched = []
+    try:
+        wb = openpyxl.load_workbook(path, data_only=True)
+    except Exception:
+        return {}, ['<Datei nicht lesbar: ' + path + '>']
+    ws = wb[wb.sheetnames[0]]
+    headers = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
+    def col_idx(*needles):
+        for i, h in enumerate(headers, start=1):
+            if h and all(n.lower() in str(h).lower() for n in needles):
+                return i
+        return None
+    c_name = col_idx('dein name')
+    c_datum = col_idx('datum')
+    if not (c_name and c_datum):
+        return {}, ['<Erwartete Spalten nicht gefunden in ' + path + '>']
+    # Item-Spalten: alle BENCH_STRUCTURE-Items (auch ausgeblendete) gegen die
+    # Forms-Überschriften matchen, damit später wieder eingeblendete Items
+    # rückwirkend die schon gesammelten Werte haben.
+    all_items = ['Rotpunkt K1', 'Onsight K1', 'Rotpunkt Fels', 'Onsight Fels', 'Kilterboard Max',
+                 'Kilterboard Flash', 'Kilterboard Base', 'Steinblock DB Max', 'Anzahl Bälle Jonglieren',
+                 'Alternate Wall Toss', 'Doppellänge Max', '90° Block Einarmig', 'Half Crimp langer Arm',
+                 'PinchPower', 'Einarmer Ja/Nein', 'Klimmzug Kraftausdauer', 'Spagat Seite Abstand Wand',
+                 'Jump and Reach Test', 'Handstand frei in Sekunden']
+    item_cols = {}
+    for it in all_items:
+        idx = col_idx(it.lower())
+        if idx:
+            item_cols[it] = idx
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        raw_name = row[c_name - 1] if c_name else None
+        dt = row[c_datum - 1] if c_datum else None
+        if not raw_name or not dt:
+            continue
+        key = norm_name(raw_name)
+        real_name = name_lookup.get(key)
+        if not real_name:
+            if str(raw_name).strip() not in unmatched:
+                unmatched.append(str(raw_name).strip())
+            continue
+        dt_date = dt.date() if hasattr(dt, 'date') else dt
+        athlete_vals = by_athlete.setdefault(real_name, {})
+        for it, idx in item_cols.items():
+            v = row[idx - 1]
+            if v is None or str(v).strip() == '':
+                continue
+            prev = athlete_vals.get(norm(it))
+            if prev is None or dt_date >= prev[0]:
+                athlete_vals[norm(it)] = (dt_date, v)
+    # auf reine {item_key: value} verkürzen
+    out = {name: {k: v[1] for k, v in items.items()} for name, items in by_athlete.items()}
+    return out, unmatched
+
+def build_bench_for(athlete_name, forms_vals, legacy_vals, aufbau_count=None):
     cats_out = []
     any_val = False
     for cat_name, rhythm, items in BENCH_STRUCTURE:
@@ -631,14 +950,16 @@ def build_bench_for(athlete_name, src_vals, aufbau_count=None):
             if auto:
                 v = aufbau_count
             else:
-                v = src_vals.get(norm(it)) if src_vals else None
+                v = (forms_vals or {}).get(norm(it))
+                if v is None:
+                    v = (legacy_vals or {}).get(norm(it))
             if v is not None:
                 any_val = True
             its.append({'k': it, 'v': v if v is not None else None, 'p': None, 't': 0, 'auto': auto})
         cats_out.append({'name': cat_name, 'rhythm': rhythm, 'items': its})
     if not any_val:
         return None
-    return {'stand': '27.08.2026', 'cats': cats_out}
+    return {'stand': date.today().strftime('%d.%m.%Y'), 'cats': cats_out}
 
 def count_aufbau_sessions(weeks):
     """Zählt reale Vorkommen von 'Aufbau Boulder'-Übungen (gematcht über die
@@ -826,12 +1147,21 @@ def parse_jahresplanung(path):
     prev_kw = None
     for c in range(3, ws.max_column + 1):
         v = ws.cell(row=kw_row, column=c).value
-        if not isinstance(v, (int, float)):
-            continue
-        kw = int(v)
-        if prev_kw is not None and kw < prev_kw - 5:
-            year += 1
-        prev_kw = kw
+        if isinstance(v, (int, float)):
+            kw = int(v)
+            if prev_kw is not None and kw < prev_kw - 5:
+                year += 1
+            prev_kw = kw
+        else:
+            # Monats-Trennspalte ohne eigene KW-Nummer: sitzt in Floyds Excel exakt
+            # auf der dazwischenliegenden, sonst übersprungenen Kalenderwoche (z.B.
+            # "Nov" zwischen KW43 und KW45 = KW44) - Phase/Notizen dort NICHT
+            # verwerfen, sondern der errechneten KW zuordnen (04.09. Fix: vorher
+            # gingen so ganze Wochen samt Phase/Notiz verloren).
+            if prev_kw is None:
+                continue
+            year, kw = _next_iso_week(year, prev_kw)
+            prev_kw = kw
         phase_raw = cellstr(phase_row, c)
         phase_color = get_fill_hex(ws.cell(row=phase_row, column=c))
         phase_norm = normalize_phase(phase_raw)
@@ -930,12 +1260,18 @@ def parse_group_jahresplanung(path):
     prev_kw = None
     for c in range(3, ws.max_column + 1):
         v = ws.cell(row=kw_row, column=c).value
-        if not isinstance(v, (int, float)):
-            continue
-        kw = int(v)
-        if prev_kw is not None and kw < prev_kw - 5:
-            year += 1
-        prev_kw = kw
+        if isinstance(v, (int, float)):
+            kw = int(v)
+            if prev_kw is not None and kw < prev_kw - 5:
+                year += 1
+            prev_kw = kw
+        else:
+            # Monats-Trennspalte = dazwischenliegende, sonst übersprungene KW
+            # (siehe parse_jahresplanung) - nicht verwerfen, sondern zuordnen.
+            if prev_kw is None:
+                continue
+            year, kw = _next_iso_week(year, prev_kw)
+            prev_kw = kw
         phase_raw = cellstr(phase_row, c)
         phase_color = get_fill_hex(ws.cell(row=phase_row, column=c))
         resolved_phase = phase_raw or (color_label_map.get(phase_color) if phase_color else None)
@@ -1027,16 +1363,26 @@ def main():
     JAHRESPLAN_GROUP_SOURCE = {}
     SEASON_STATS = {'25/26': {}, '26/27': {}}
 
+    # Trainingsdoku (Forms) - einmal für alle Athlet:innen laden, gegen die
+    # komplette Kaderliste (aus load_kader()) matchen. Kein Erfinden: Namen,
+    # die nicht zugeordnet werden können, landen in DOKU_UNMATCHED statt
+    # stillschweigend zu verschwinden.
+    ALL_ROSTER_NAMES = sorted(set(a['n'] for g in groups_kader for a in g['athletes']))
+    FORMS_BY_ATHLETE, DOKU_UNMATCHED = load_forms_doku(BASE + 'Trainingsdoku KVV.xlsx', ALL_ROSTER_NAMES)
+    BENCH_FORMS_BY_ATHLETE, BENCH_UNMATCHED = load_bench_source_forms(BASE + 'Benchmark Update.xlsx', ALL_ROSTER_NAMES)
+
     for name, fname in INDIVIDUAL_FILES.items():
         fpath = INDIVIDUAL_PATHS[name]
         cats_counter = {}
-        weeks, weeks_out = parse_individual(fpath, name, catalog, ex, cats_counter)
+        weeks, weeks_out, doku_stats = parse_individual(
+            fpath, name, catalog, ex, cats_counter, forms_records=FORMS_BY_ATHLETE.get(name))
         PLANS['a:' + name] = weeks
         WEEKS_BY_ATHLETE[name] = weeks_out
         CATS_BY_ATHLETE['a:' + name] = cats_counter
         SOURCE_INFO['a:' + name] = 'Einheitenplanung 26_27 · ' + os.path.basename(fpath)
         aufbau_n = count_aufbau_sessions(weeks)
-        b = build_bench_for(name, bench_src if name == 'Adrian Kathan' else None, aufbau_count=(aufbau_n or None))
+        b = build_bench_for(name, BENCH_FORMS_BY_ATHLETE.get(name),
+                             bench_src if name == 'Adrian Kathan' else None, aufbau_count=(aufbau_n or None))
         if b:
             BENCH[name] = b
         jp = parse_jahresplanung(fpath)
@@ -1053,6 +1399,7 @@ def main():
                 'catCounts': [{'name': c, 'count': cats_counter.get(c, 0)} for c in CAT_ORDER],
                 'weeks': weeks_out,
                 'sheet': 'Einheitenplanung 26_27',
+                'doku': doku_stats,
             }
 
     for gid, (relpath, sheet_cands) in GROUP_FILES.items():
@@ -1065,8 +1412,26 @@ def main():
         if ss:
             SEASON_STATS['25/26']['g:' + gid] = ss
         ss27 = build_group_season_stats_from_weeks(weeks, SEASON_WEEKS_2627, sheetname or 'Einheitenplanung 26_27')
+        # Gruppen-Doku (26/27 = aktuelle/laufende Saison): Motivation/Trainingsdauer/Load
+        # über alle Athlet:innen der Gruppe, aus allen Forms-Antworten - bewusst NICHT
+        # auf SEASON_WEEKS_2627 (KW38+) gefiltert, da Live-Doku (wie bei den Einzelplänen)
+        # unabhängig vom Kalender-Saisonstart gezählt wird (sonst fehlen z.B. Testeinträge
+        # von vor KW38 komplett, obwohl sie real und aktuell sind).
+        group_names = [a['n'] for a in next((g['athletes'] for g in groups_kader if g['id'] == gid), [])]
+        forms_2627 = {n: FORMS_BY_ATHLETE[n] for n in group_names if FORMS_BY_ATHLETE.get(n)}
+        group_doku_season = aggregate_group_doku_season(group_names, forms_2627)
+        group_doku_weeks = aggregate_group_doku_weeks(group_names, forms_2627)
         if ss27:
+            ss27['doku'] = group_doku_season
             SEASON_STATS['26/27']['g:' + gid] = ss27
+        elif group_doku_season:
+            SEASON_STATS['26/27']['g:' + gid] = {
+                'catCounts': [{'name': c, 'count': cats_counter.get(c, 0)} for c in CAT_ORDER],
+                'weeks': [], 'sheet': sheetname or 'Einheitenplanung 26_27', 'doku': group_doku_season,
+            }
+        for wk_key, wk_entry in weeks.items():
+            yk = (wk_entry.get('year'), wk_entry.get('kw'))
+            wk_entry['doku'] = group_doku_weeks.get(yk)
         jp_path = GROUP_JAHRESPLAN_FILES.get(gid)
         if jp_path:
             jpg = parse_group_jahresplanung(BASE + jp_path)
@@ -1112,6 +1477,9 @@ def main():
     print('athletes with plans:', {k: len(v) for k, v in PLANS.items() if k.startswith('a:')})
     print('groups with plans:', {k: len(v) for k, v in PLANS.items() if k.startswith('g:')})
     print('bench:', list(BENCH.keys()))
+    print('doku: athletes with forms-daten:', sorted(FORMS_BY_ATHLETE.keys()))
+    if DOKU_UNMATCHED:
+        print('doku: NICHT zugeordnete Namen in Trainingsdoku KVV.xlsx:', DOKU_UNMATCHED)
 
 if __name__ == '__main__':
     main()

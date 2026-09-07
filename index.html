@@ -201,6 +201,7 @@
 <script>
 const AM='#00588f', LI='#128089', TX='#0f2436', MU='#6b8496', DI='#9db0bd';
 const DOKU_FORMS_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=NGKrNpwXUEOM-qEM82Zuq0rnuv3di_ZEn2AfUPm3tJdUMlgxSzhTUDQ2TUo0OEFEWEZHWVZPVFczWi4u';
+const BENCHMARK_FORMS_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=NGKrNpwXUEOM-qEM82Zuq0rnuv3di_ZEn2AfUPm3tJdURUEzSDJJMFA5WUdYTlJNVEYxQ0JLV1RBNy4u';
 // Trainingsort-Farbe, 1:1 wie von Floyd vorgegeben und identisch zur Farbe im
 // Jahr-Ribbon der Gruppen: Grün=Lead, Blau=Bouldern, Gelb=Speed.
 const ORT_COLORS = { Lead: '#78b83f', Bouldern: '#0090c9', Speed: '#c9a227' };
@@ -747,16 +748,21 @@ function renderBenchmarks(view){
   const isSolo = view.t==='a';
   if(!isSolo) return `<div class="empty"><div class="t1">Nur für Einzelpläne</div><div class="t2">Benchmarks gibt es für die 8 SPOGY-Athlet:innen.</div></div>`;
   const bench = D.BENCH[view.id];
+  const benchmarkBtn = `<a href="${BENCHMARK_FORMS_URL}" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;gap:5px;padding:8px 12px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Benchmark</a>`;
   if(!bench){
     return `<div class="empty">
       <div class="t1">Noch keine Werte für ${esc(view.id)}</div>
-      <div class="t2">Struktur steht: Technik+Taktik, Motorik, Physisches Klettertraining, Athletik. Sobald Werte in der Benchmark-Excel stehen, erscheinen sie hier.</div>
+      <div class="t2">Struktur steht: Technik+Taktik, Physisches Klettertraining. Sobald Werte in der Benchmark-Excel stehen, erscheinen sie hier.</div>
+      <div style="margin-top:12px">${benchmarkBtn}</div>
     </div>`;
   }
   return `
-    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap">
       <span class="sectionTitle">Benchmarks</span>
-      <span class="subMeta">STAND ${esc(bench.stand)}</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="subMeta">STAND ${esc(bench.stand)}</span>
+        ${benchmarkBtn}
+      </div>
     </div>
     ${bench.cats.map(c=>`
       <div class="card">
