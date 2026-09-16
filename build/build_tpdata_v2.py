@@ -9,7 +9,7 @@ Kein Wert wird erfunden: fehlt eine Angabe in Excel, wird null geschrieben
 und die App zeigt "-" an.
 """
 import openpyxl, json, re, subprocess, sys, glob, os
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 BASE = "/sessions/rcw-0151s7tv8hxkojd4a1uavrle/mnt/Testspace/"
 OUT = "/sessions/rcw-0151s7tv8hxkojd4a1uavrle/mnt/Trainingsplan-KVV/tp-data.js"
@@ -1451,7 +1451,7 @@ def main():
     gk = load_gk()
 
     data = {
-        'GENERATED': '2026-08-27',
+        'GENERATED': datetime.now().strftime('%d.%m.%Y, %H:%M'),
         'GROUPS': groups_kader,
         'COACHES': coaches,
         'EX': ex,
