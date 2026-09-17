@@ -291,6 +291,11 @@ const ROTATION_OVERRIDE = {
   'U11II': { '2026-10-09': 'Floyd' },
   'U11I':  { '2026-10-23': 'Floyd' },
 };
+// Regulaere/r Trainer:in je Gruppe (fuer die Anzeige "Floyd statt X" in der
+// Rotation-Ansicht) -- Quelle: v9-Herleitung (build_rotation_pdf_v9.py).
+const REGULAR_TRAINER = {
+  'U9': 'Florian', 'U11 I': 'Nemo', 'U11 II': 'Kathi', 'U13 I': 'Andi', 'U13 II': 'Martin',
+};
 function trainerDisplay(groupId, dd){
   if(!dd) return null;
   // Ueberschreibt den Trainernamen nur, wenn an diesem Tag laut Excel
@@ -879,7 +884,7 @@ function renderRotation(){
           <span style="flex:1;font:400 12.5px/1.2 Archivo,sans-serif;color:${TX}">
             ${esc(e.group)}${e.note ? `<span style="display:block;font:400 10px/1.3 Archivo,sans-serif;color:${MU}">${esc(e.note)}</span>` : ''}
           </span>
-          <span class="roleChip head">${esc(e.trainer)}</span>
+          <span class="roleChip head">${esc(e.trainer)} statt ${esc(REGULAR_TRAINER[e.group]||'?')}</span>
         </div>`).join('') : `<div class="footNote">Keine \u00dcbernahme diese Woche</div>`;
     return `
       <div class="roster" style="margin-top:0">
@@ -895,7 +900,6 @@ function renderRotation(){
       <span class="sectionTitle">Landestrainer-Rotation</span>
       <span class="subMeta">FLOYD \u00dcBERNIMMT TURNUSM\u00c4SSIG · KW 38\u201344 / 2026</span>
     </div>
-    <div class="footNote" style="padding:2px 0 4px">Manuell gepflegt, nicht aus Excel abgeleitet \u2014 in der Wochenansicht der jeweiligen Gruppe erscheint an diesen Tagen \u201eFloyd\u201c statt des/der regul\u00e4ren Trainer:in.</div>
     ${weekCards}
   `;
 }
