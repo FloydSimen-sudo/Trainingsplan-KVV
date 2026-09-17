@@ -17,6 +17,7 @@ const html = fs.readFileSync('index-live.html', 'utf8');
 const appScript = html.match(/<script>\n([\s\S]*)<\/script>\n<\/body>/)[1];
 
 const tests = `
+applyTPData(window.TPDATA); // Passwort-Gate umgehen -- Tests laufen mit den echten (unverschluesselten) Testdaten
 function check(name, fn) {
   try { fn(); console.log('OK  ', name); }
   catch (e) { console.log('FAIL', name, '->', e.message); console.log(e.stack.split('\\n').slice(0,4).join('\\n')); }
@@ -324,3 +325,38 @@ console.log('DONE');
 `;
 
 vm.runInContext(tpdata + '\n' + appScript + '\n' + tests, sandbox, { filename: 'combined.js' });
+
+// -----------------------------------------------------------------------
+// Zusaetzlicher Test: Passwort-Verschluesselung (tp-data.enc.js). Prueft die
+// tatsaechliche Kompatibilitaet Node-Verschluesselung (build/encrypt_tpdata.js)
+// <-> Browser-Entschluesselung (index.html: decryptTPData(), WebCrypto). Laeuft
+// ausserhalb der vm-Sandbox, direkt mit Node's eingebauter WebCrypto-API.
+(async () => {
+  const b64ToBytesSrc = appScript.match(/function b64ToBytes\(b64\)\{[\s\S]*?\n\}/)[0];
+  const decryptSrc = appScript.match(/async function decryptTPData\(password\)\{[\s\S]*?\n\}\n(?=function renderGate)/)[0];
+  // eslint-disable-next-line no-eval
+  eval(b64ToBytesSrc + '\n' + decryptSrc + '\nglobalThis.__decryptTPData = decryptTPData;');
+
+  let encRaw;
+  try { encRaw = fs.readFileSync('tp-data.enc.js', 'utf8'); }
+  catch (e) {
+    console.log('SKIP Passwort-Verschluesselung: tp-data.enc.js fehlt (node build/encrypt_tpdata.js zuerst ausfuehren) ->', e.message);
+    return;
+  }
+  const encJson = JSON.parse(encRaw.slice('window.TPDATA_ENC = '.length).replace(/;\s*$/, ''));
+  global.window = { TPDATA_ENC: encJson };
+
+  const testPw = process.env.TP_PASSWORD;
+  if (!testPw) {
+    console.log('SKIP Passwort-Verschluesselung: TP_PASSWORD nicht gesetzt (nur bei lokalem Test-Build bekannt)');
+    return;
+  }
+  const good = await global.__decryptTPData(testPw);
+  if (!good || !good.GROUPS) { console.log('FAIL Passwort-Verschluesselung: richtiges Passwort hat NICHT entschluesselt'); return; }
+  const orig = JSON.parse(tpdata.slice('window.TPDATA = '.length).replace(/;\s*$/, ''));
+  if (JSON.stringify(good) !== JSON.stringify(orig)) { console.log('FAIL Passwort-Verschluesselung: entschluesselte Daten weichen vom Original ab'); return; }
+  const bad = await global.__decryptTPData(testPw + 'x');
+  if (bad !== null) { console.log('FAIL Passwort-Verschluesselung: falsches Passwort haette null liefern muessen'); return; }
+  console.log('OK   Passwort-Verschluesselung: richtiges Passwort entschluesselt exakt auf Original, falsches Passwort liefert null');
+})();
+

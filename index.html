@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="./tp-data.js"></script>
+<script src="./tp-data.enc.js"></script>
 <style>
   :root{
     --bg:#eef3f7; --bg2:#ffffff; --panel:#f5f8fb; --panel2:#e9eff5; --panel3:#e0e8f0; --panel4:#f7fafc;
@@ -277,8 +277,14 @@ const NOW_TODAY = (() => {
 })();
 
 // ---- State ----
-const D = (window.TPDATA || {GROUPS:[],COACHES:[],EX:{},PLANS:{},CATS_BY_VIEW:{},WEEKS_BY_ATHLETE:{},BENCH:{},GK:{},SOURCE_INFO:{}});
-const spogy = D.GROUPS.find(g=>g.id==='SPOGY Gruppe');
+let D = {GROUPS:[],COACHES:[],EX:{},PLANS:{},CATS_BY_VIEW:{},WEEKS_BY_ATHLETE:{},BENCH:{},GK:{},SOURCE_INFO:{}};
+let spogy = null;
+// Fuellt D/spogy mit den entschluesselten Trainingsdaten (Passwort-Gate, siehe
+// bootstrap()/decryptTPData() ganz unten) bzw. mit Testdaten (test.js).
+function applyTPData(data){
+  Object.assign(D, data);
+  spogy = D.GROUPS.find(g=>g.id==='SPOGY Gruppe');
+}
 
 // --- Landestrainer-Rotationsplan (manuell von Floyd freigegeben, KW38-44/2026) ---
 // Ueberschreibt NUR die Anzeige des Trainernamens am jeweiligen Tag der
@@ -1093,7 +1099,83 @@ function wireEvents(){
   });
 }
 
-render();
+// ---- Passwort-Gate (Trainingsdaten liegen AES-256-GCM-verschluesselt in
+// tp-data.enc.js -- siehe build/encrypt_tpdata.js. Ohne korrektes Passwort
+// bleiben Trainingsdoku/Benchmarks/Trainingsinhalte im Quelltext Zeichensalat.
+// Ein einziges, geteiltes Passwort fuer alle -- kein Ersatz fuer echte
+// Zugriffskontrolle, aber verhindert das zufaellige Einsehen ueber den Link.) ----
+function b64ToBytes(b64){
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+async function decryptTPData(password){
+  const enc = window.TPDATA_ENC;
+  if(!enc) return null;
+  try{
+    const salt = b64ToBytes(enc.salt), iv = b64ToBytes(enc.iv), ct = b64ToBytes(enc.ct);
+    const keyMat = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), {name:'PBKDF2'}, false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey(
+      {name:'PBKDF2', salt, iterations: enc.iterations, hash: enc.hash || 'SHA-256'},
+      keyMat, {name:'AES-GCM', length:256}, false, ['decrypt']);
+    const plainBuf = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, ct);
+    return JSON.parse(new TextDecoder().decode(plainBuf));
+  }catch(e){
+    return null; // falsches Passwort oder korrupte Daten -> einheitlich "geht nicht"
+  }
+}
+function renderGate(msg, busy){
+  return `
+    <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center">
+      <span style="font:600 19px/1.2 Archivo,sans-serif;color:${TX}">Trainingspläne KVV</span>
+      <span style="font:500 12.5px/1.4 Archivo,sans-serif;color:${MU};max-width:280px">Bitte Passwort eingeben, um die Trainingspläne zu öffnen.</span>
+      <form id="gateForm" style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:260px">
+        <input id="gatePw" type="password" autocomplete="current-password" placeholder="Passwort" ${busy?'disabled':''}
+          style="font:500 15px/1 Archivo,sans-serif;padding:12px 14px;border-radius:10px;border:1px solid ${DI};outline:none">
+        <button type="submit" ${busy?'disabled':''}
+          style="font:600 14px/1 Archivo,sans-serif;padding:12px;border-radius:10px;border:none;background:${AM};color:#fff;cursor:pointer">${busy?'Wird geprüft …':'Öffnen'}</button>
+        ${msg ? `<span style="font:500 12px/1.3 Archivo,sans-serif;color:#d20028">${esc(msg)}</span>` : ''}
+      </form>
+    </div>`;
+}
+function showGate(msg, busy){
+  const el = document.getElementById('app');
+  el.innerHTML = renderGate(msg, busy);
+  const form = document.getElementById('gateForm');
+  if(!form) return;
+  form.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const pw = document.getElementById('gatePw').value;
+    showGate('', true);
+    tryPassword(pw);
+  });
+  const pwField = document.getElementById('gatePw');
+  if(pwField && pwField.focus) pwField.focus();
+}
+async function tryPassword(password){
+  const data = await decryptTPData(password);
+  if(!data){ showGate('Falsches Passwort, bitte erneut versuchen.', false); return; }
+  try{ sessionStorage.setItem('tpPw', password); }catch(e){}
+  applyTPData(data);
+  render();
+}
+async function bootstrap(){
+  if(!window.TPDATA_ENC){
+    // Kein verschluesseltes Datenpaket vorhanden (z.B. lokaler Testlauf ohne
+    // Build-Schritt) -> ohne Passwort-Gate starten, D bleibt ggf. leer.
+    render();
+    return;
+  }
+  let cached = null;
+  try{ cached = sessionStorage.getItem('tpPw'); }catch(e){}
+  if(cached){
+    const data = await decryptTPData(cached);
+    if(data){ applyTPData(data); render(); return; }
+  }
+  showGate('', false);
+}
+bootstrap();
 </script>
 </body>
 </html>
