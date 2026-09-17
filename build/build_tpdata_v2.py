@@ -291,12 +291,16 @@ def load_forms_doku(path, valid_names):
         return {}, ['<Erwartete Spalten nicht gefunden in ' + path + '>']
     def parse_num(v):
         # Forms liefert Dezimalzahlen z.T. als String mit Komma (deutsches Format)
+        # und/oder mit angehaengter Einheit ("3h", "2 Std", "1,5h ") -- Einheit wird
+        # vor dem Parsen abgeschnitten, kein Wert wird dadurch erfunden, nur die
+        # vom Menschen ohnehin gemeinte Zahl robuster erkannt.
         if v is None or v == '':
             return None
         if isinstance(v, (int, float)):
             return float(v)
+        s = re.sub(r'(?i)\s*(h|std\.?|stunden?)\s*$', '', str(v).strip()).strip()
         try:
-            return float(str(v).strip().replace(',', '.'))
+            return float(s.replace(',', '.'))
         except (ValueError, TypeError):
             return None
     for row in ws.iter_rows(min_row=2, values_only=True):
