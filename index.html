@@ -280,6 +280,46 @@ const NOW_TODAY = (() => {
 const D = (window.TPDATA || {GROUPS:[],COACHES:[],EX:{},PLANS:{},CATS_BY_VIEW:{},WEEKS_BY_ATHLETE:{},BENCH:{},GK:{},SOURCE_INFO:{}});
 const spogy = D.GROUPS.find(g=>g.id==='SPOGY Gruppe');
 
+// --- Landestrainer-Rotationsplan (manuell von Floyd freigegeben, KW38-44/2026) ---
+// Ueberschreibt NUR die Anzeige des Trainernamens am jeweiligen Tag der
+// betroffenen Gruppe; die Excel-Quelle bleibt unveraendert (Floyd wollte
+// bewusst seinen Namen statt des urspruenglichen Trainers sehen).
+const ROTATION_OVERRIDE = {
+  'U13 I': { '2026-09-16': 'Floyd', '2026-09-30': 'Floyd', '2026-10-28': 'Floyd' },
+  'U9':    { '2026-09-23': 'Floyd', '2026-10-21': 'Floyd' },
+  'U13II': { '2026-10-02': 'Floyd', '2026-10-30': 'Floyd' },
+  'U11II': { '2026-10-09': 'Floyd' },
+  'U11I':  { '2026-10-23': 'Floyd' },
+};
+function trainerDisplay(groupId, dd){
+  if(!dd) return null;
+  // Ueberschreibt den Trainernamen nur, wenn an diesem Tag laut Excel
+  // bereits ein Training eingetragen ist (Ort/Zeit/Trainer/Sessions) --
+  // erfindet nie einen Trainingstag, der in Excel noch leer ist.
+  const hasContent = !!(dd.ort || dd.trainer || dd.zeit || (dd.sessions && dd.sessions.length));
+  const ov = groupId ? ROTATION_OVERRIDE[groupId] : null;
+  if(hasContent && ov && dd.date && ov[dd.date]) return ov[dd.date];
+  return dd.trainer || null;
+}
+// Vollstaendige Wochenuebersicht fuer die Rotation-Ansicht (Tab/Button).
+// Quelle: Testspace/Rotation U9-U13/Regeln fuer Rotationsprinzip.docx,
+// angewendet gemaess Floyds Vorgaben (siehe Chat-Verlauf 16./17.09.2026),
+// genehmigt als "v9". Faellt eine neue Woche an, muss sie hier manuell
+// nachgetragen werden -- wird NICHT automatisch aus Excel abgeleitet.
+const ROTATION_PLAN = {
+  weeks: [
+    { kw: 38, range: '14.09.\u201320.09.', event: 'Westcup',     entries: [ {group:'U13 I', gid:'U13 I', day:'Mi', trainer:'Floyd', note:'heutige Ausnahme'} ] },
+    { kw: 39, range: '21.09.\u201327.09.', event: 'Talent Days', entries: [ {group:'U9',    gid:'U9',    day:'Mi', trainer:'Floyd'} ] },
+    { kw: 40, range: '28.09.\u201304.10.', event: 'A-Cup',       entries: [ {group:'U13 I', gid:'U13 I', day:'Mi', trainer:'Floyd', note:'von KW39 verschoben'}, {group:'U13 II', gid:'U13II', day:'Fr', trainer:'Floyd', note:'vorgezogen, vor Schladming'} ] },
+    { kw: 41, range: '05.10.\u201311.10.', event: '\u00d6M',         entries: [ {group:'U11 II', gid:'U11II', day:'Fr', trainer:'Floyd', note:'von KW40 verschoben'} ] },
+    { kw: 42, range: '12.10.\u201318.10.', event: 'Arge Alp',    entries: [] },
+    { kw: 43, range: '19.10.\u201325.10.', event: 'normal',      entries: [ {group:'U9', gid:'U9', day:'Mi', trainer:'Floyd'}, {group:'U11 I', gid:'U11I', day:'Fr', trainer:'Floyd', note:'von KW39 verschoben'} ] },
+    { kw: 44, range: '26.10.\u201301.11.', event: 'normal',      entries: [ {group:'U13 I', gid:'U13 I', day:'Mi', trainer:'Floyd', note:'von KW42 verschoben'}, {group:'U13 II', gid:'U13II', day:'Fr', trainer:'Floyd', note:'regul\u00e4rer Turnus'} ] },
+  ]
+};
+
+
+
 const state = {
   view: null,
   tab: 'Woche',
@@ -325,6 +365,23 @@ function renderApp(){
       ${state.picker ? renderPicker() : ''}
     `;
   }
+  if(state.view.t === 'rotation'){
+    return `
+      <div class="header">
+        <img class="brandMark" src="${MARK_IMG}" alt="Startseite" data-act="goHome" style="cursor:pointer">
+        <button class="headerBtn" data-act="goHome" style="flex:1">
+          <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+            <span class="viewName">Landestrainer-Rotation</span>
+            <span class="viewSub">FLOYD &middot; KW 38-44 / 2026</span>
+          </span>
+        </button>
+        <img class="headerLogo" src="${LOGO_IMG}" alt="Austria Climbing Vorarlberg">
+      </div>
+      <div class="content">
+        ${renderRotation()}
+      </div>
+    `;
+  }
   const view = state.view;
   const isSolo = view.t === 'a';
   const group = !isSolo ? D.GROUPS.find(g=>g.id===view.id) : null;
@@ -351,6 +408,7 @@ function renderApp(){
         <span class="caret">▾</span>
       </button>
       <a href="${DOKU_FORMS_URL}" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;gap:5px;padding:8px 12px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Doku</a>
+      <button data-act="openRotation" style="flex:none;display:flex;align-items:center;gap:5px;padding:8px 12px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap;border:none;cursor:pointer">Rotation</button>
       <img class="headerLogo" src="${LOGO_IMG}" alt="Austria Climbing Vorarlberg">
     </div>
     <div class="syncbar">
@@ -402,7 +460,8 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
   const dayMeta = [];
   if(day && day.ort) dayMeta.push({k:'Ort', v:day.ort, c: ORT_COLORS[day.ortType]});
   if(day && day.zeit) dayMeta.push({k:'Zeit', v:day.zeit});
-  if(day && day.trainer) dayMeta.push({k:'Trainer', v:day.trainer});
+  const dayTrainerVal = day ? trainerDisplay(isSolo ? null : view.id, day) : null;
+  if(dayTrainerVal) dayMeta.push({k:'Trainer', v:dayTrainerVal});
 
   const renderItem = (it) => {
     const m = it.match;
@@ -469,7 +528,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
         <button class="weekviewBtn ${state.weekView==='kurz'?'sel':''}" data-act="weekview" data-wv="kurz">Woche kompakt</button>
       </div>
       ${state.weekView==='kurz' ? `
-        <div class="kurzTable">${renderKurz(days, di)}</div>
+        <div class="kurzTable">${renderKurz(days, di, isSolo ? null : view.id)}</div>
         ${renderWeekStats(view, isSolo)}
       ` : `
       <div class="dayChips">${dayChips}</div>
@@ -534,7 +593,7 @@ function renderWeekStats(view, isSolo){
     </div>`;
 }
 
-function renderKurz(days, di){
+function renderKurz(days, di, groupId){
   return (days||[]).map((dd,i)=>{
     const hasSessions = dd.sessions && dd.sessions.length;
     let body = `<span class="kurzNone">-</span>`;
@@ -553,7 +612,8 @@ function renderKurz(days, di){
     const metaBits = [];
     if(dd.ort) metaBits.push(esc(dd.ort));
     if(dd.zeit) metaBits.push(esc(dd.zeit));
-    if(dd.trainer) metaBits.push(esc(dd.trainer));
+    const trV = trainerDisplay(groupId, dd);
+    if(trV) metaBits.push(esc(trV));
     return `<button class="kurzRow ${i===di?'today':''}" data-act="day" data-i="${i}" style="${oc?`border-left:4px solid ${oc}`:''}">
       <div class="kurzDay"><span class="dow">${esc((dd.dow||'').slice(0,2).toUpperCase())}</span><span class="dom">${esc(dd.dom)}</span></div>
       <div class="kurzBody">
@@ -811,6 +871,35 @@ function renderKader(){
   `;
 }
 
+function renderRotation(){
+  const weekCards = ROTATION_PLAN.weeks.map(w=>{
+    const rows = w.entries.length ? w.entries.map(e=>`
+        <div class="rosterRow">
+          <span class="initials" style="background:${AM};color:#fff">${esc(e.day)}</span>
+          <span style="flex:1;font:400 12.5px/1.2 Archivo,sans-serif;color:${TX}">
+            ${esc(e.group)}${e.note ? `<span style="display:block;font:400 10px/1.3 Archivo,sans-serif;color:${MU}">${esc(e.note)}</span>` : ''}
+          </span>
+          <span class="roleChip head">${esc(e.trainer)}</span>
+        </div>`).join('') : `<div class="footNote">Keine \u00dcbernahme diese Woche</div>`;
+    return `
+      <div class="roster" style="margin-top:0">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+          <span style="font:600 12px/1 Archivo,sans-serif">KW ${w.kw} \u00b7 ${esc(w.range)}</span>
+          <span style="font:600 9px/1 'Roboto Mono',monospace;letter-spacing:.06em;color:${w.event==='normal'?DI:AM};text-transform:uppercase">${esc(w.event)}</span>
+        </div>
+        ${rows}
+      </div>`;
+  }).join('');
+  return `
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <span class="sectionTitle">Landestrainer-Rotation</span>
+      <span class="subMeta">FLOYD \u00dcBERNIMMT TURNUSM\u00c4SSIG · KW 38\u201344 / 2026</span>
+    </div>
+    <div class="footNote" style="padding:2px 0 4px">Manuell gepflegt, nicht aus Excel abgeleitet \u2014 in der Wochenansicht der jeweiligen Gruppe erscheint an diesen Tagen \u201eFloyd\u201c statt des/der regul\u00e4ren Trainer:in.</div>
+    ${weekCards}
+  `;
+}
+
 // "Training gesamt": eine Ansicht auf gleicher Ebene wie Gruppen-/Einzelplan,
 // zeigt IMMER GENAU EINEN TAG auf einmal — ALLE Gruppen und ALLE
 // Einzelathlet:innen für diesen einen Tag, zuerst Abschnitt Gruppenpläne
@@ -837,12 +926,12 @@ function renderTrainingGesamt(){
   const groupRows = D.GROUPS.filter(g=>g.id!=='SPOGY Gruppe').map(g=>{
     const plan = (D.PLANS['g:'+g.id] || {})[wkKey] || null;
     const dd = plan && plan.days ? plan.days[dayIdx] : null;
-    return renderGesamtRow(GNAME[g.id]||g.id, dd);
+    return renderGesamtRow(GNAME[g.id]||g.id, dd, g.id);
   }).join('');
   const athleteRows = (spogy ? spogy.athletes : []).map(a=>{
     const plan = (D.PLANS['a:'+a.n] || {})[wkKey] || null;
     const dd = plan && plan.days ? plan.days[dayIdx] : null;
-    return renderGesamtRow(a.n, dd);
+    return renderGesamtRow(a.n, dd, null);
   }).join('');
 
   return `
@@ -865,7 +954,7 @@ function renderTrainingGesamt(){
   `;
 }
 
-function renderGesamtRow(name, dd){
+function renderGesamtRow(name, dd, groupId){
   if(!dd){
     return `
       <div class="gesamtBlock">
@@ -893,7 +982,8 @@ function renderGesamtRow(name, dd){
   const metaBits = [];
   if(dd.ort) metaBits.push(esc(dd.ort));
   if(dd.zeit) metaBits.push(esc(dd.zeit));
-  if(dd.trainer) metaBits.push(esc(dd.trainer));
+  const trV2 = trainerDisplay(groupId, dd);
+  if(trV2) metaBits.push(esc(trV2));
   return `
     <div class="gesamtBlock" style="${oc?`border-left:4px solid ${oc}`:''}">
       <div class="gesamtName">
@@ -954,6 +1044,7 @@ function renderLanding(){
       <div class="landingTitle">Trainingspläne</div>
       <div class="landingSub">Wähle einen Gruppen- oder Einzelplan</div>
       <a href="${DOKU_FORMS_URL}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:5px;padding:9px 16px;border-radius:10px;background:${AM};color:#fff;font:600 13px/1 Archivo,sans-serif;white-space:nowrap;margin-top:4px">Doku</a>
+      <button data-act="openRotation" style="display:flex;align-items:center;gap:5px;padding:9px 16px;border-radius:10px;background:${AM};color:#fff;font:600 13px/1 Archivo,sans-serif;white-space:nowrap;margin-top:4px;border:none;cursor:pointer">Rotation</button>
       <div class="landingBody">
         <div>
           ${allOpt}
@@ -976,6 +1067,7 @@ function wireEvents(){
     elm.addEventListener('click', ()=>{
       const act = elm.getAttribute('data-act');
       if(act==='openPicker') setState({picker:true});
+      else if(act==='openRotation') setState({view:{t:'rotation'}, picker:false});
       else if(act==='closePicker') setState({picker:false});
       else if(act==='goHome') setState({view:null, picker:false});
       else if(act==='tab') setState({tab: elm.getAttribute('data-tab')});
