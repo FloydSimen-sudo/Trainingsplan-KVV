@@ -256,6 +256,66 @@ def iso(d):
 def norm_name(s):
     return re.sub(r'\s+', ' ', str(s or '').strip()).lower()
 
+# Wortzahlen fuer die Dauer-Erkennung ("zwei einhalb", "zweieinhalb" -> 2.5).
+# Athlet:innen (teils Kinder) tragen die Trainingsdauer manchmal in Worten statt
+# in Zahlen ein -- das wird hier sinngemaess verstanden, nie erfunden: schlaegt
+# die Erkennung fehl, bleibt der Wert None (Excel-Grundsatz "-" statt Erfindung).
+DAUER_WORDNUM = {
+    'ein': 1, 'eine': 1, 'eins': 1, 'zwei': 2, 'drei': 3, 'vier': 4, 'fuenf': 5, 'fünf': 5,
+    'sechs': 6, 'sieben': 7, 'acht': 8, 'neun': 9, 'zehn': 10,
+}
+
+def parse_num(v):
+    # Dezimalzahlen z.T. als String mit Komma (deutsches Format) und/oder mit
+    # angehaengter Einheit ("3h", "2 Std", "1,5h "). Einheit wird vor dem
+    # Parsen abgeschnitten -- kein Wert wird dadurch erfunden, nur die vom
+    # Menschen ohnehin gemeinte Zahl robuster erkannt.
+    if v is None or v == '':
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    s = re.sub(r'(?i)\s*(h|std\.?|stunden?)\s*$', '', str(v).strip()).strip()
+    try:
+        return float(s.replace(',', '.'))
+    except (ValueError, TypeError):
+        return None
+
+def parse_dauer(v):
+    """Wie parse_num, aber versteht zusaetzlich in Worten geschriebene halbe
+    Stunden ("zweieinhalb", "zwei einhalb", "2 einhalb" -> 2.5; "anderthalb"/
+    "eineinhalb" -> 1.5). Wird NUR fuer Trainingsdauer-Felder verwendet, nicht
+    fuer Skalenwerte (Motivation/Erschoepfung), wo Zahlen erwartet werden."""
+    n = parse_num(v)
+    if n is not None:
+        return n
+    if v is None:
+        return None
+    s = str(v).strip().lower()
+    if not s:
+        return None
+    if s in ('anderthalb', 'eineinhalb'):
+        return 1.5
+    m = re.match(r'^([a-zäöü]+?)einhalb$', s)
+    if m and m.group(1) in DAUER_WORDNUM:
+        return DAUER_WORDNUM[m.group(1)] + 0.5
+    m = re.match(r'^(\d+(?:[.,]\d+)?|[a-zäöü]+)\s*(?:und\s*)?einhalb$', s)
+    if m:
+        tok = m.group(1)
+        if re.match(r'^\d', tok):
+            try:
+                return float(tok.replace(',', '.')) + 0.5
+            except ValueError:
+                pass
+        elif tok in DAUER_WORDNUM:
+            return DAUER_WORDNUM[tok] + 0.5
+    m = re.match(r'^(halbe stunde|eine halbe stunde)$', s)
+    if m:
+        return 0.5
+    m = re.match(r'^([a-zäöü]+)$', s)
+    if m and m.group(1) in DAUER_WORDNUM:
+        return float(DAUER_WORDNUM[m.group(1)])
+    return None
+
 def load_forms_doku(path, valid_names):
     """Liest die Microsoft-Forms-Antworten-Excel 'Trainingsdoku KVV.xlsx'.
     Eine Zeile = eine Selbstauskunft (Athlet:in + Datum + Session). Namen
@@ -289,20 +349,6 @@ def load_forms_doku(path, valid_names):
     c_notiz = col_idx('notizen')
     if not (c_name and c_datum):
         return {}, ['<Erwartete Spalten nicht gefunden in ' + path + '>']
-    def parse_num(v):
-        # Forms liefert Dezimalzahlen z.T. als String mit Komma (deutsches Format)
-        # und/oder mit angehaengter Einheit ("3h", "2 Std", "1,5h ") -- Einheit wird
-        # vor dem Parsen abgeschnitten, kein Wert wird dadurch erfunden, nur die
-        # vom Menschen ohnehin gemeinte Zahl robuster erkannt.
-        if v is None or v == '':
-            return None
-        if isinstance(v, (int, float)):
-            return float(v)
-        s = re.sub(r'(?i)\s*(h|std\.?|stunden?)\s*$', '', str(v).strip()).strip()
-        try:
-            return float(s.replace(',', '.'))
-        except (ValueError, TypeError):
-            return None
     for row in ws.iter_rows(min_row=2, values_only=True):
         raw_name = row[c_name - 1] if c_name else None
         dt = row[c_datum - 1] if c_datum else None
@@ -321,7 +367,7 @@ def load_forms_doku(path, valid_names):
         umsetzung = True if (um_raw and str(um_raw).strip().lower() == 'ja') else (False if (um_raw and str(um_raw).strip().lower() == 'nein') else None)
         rec = {
             'date': dt_date.isoformat(), 'session': session,
-            'dur': parse_num(row[c_dauer - 1]) if c_dauer else None,
+            'dur': parse_dauer(row[c_dauer - 1]) if c_dauer else None,
             'mot': row[c_mot - 1] if c_mot else None,
             'eb': row[c_eb - 1] if c_eb else None,
             'ee': row[c_ee - 1] if c_ee else None,
@@ -479,8 +525,13 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_record
             d2 = ws.cell(row=39, column=col).value
             um_x = ws.cell(row=40, column=col).value
             um_x_bool = True if (um_x and str(um_x).strip().lower() == 'ja') else (False if (um_x and str(um_x).strip().lower() == 'nein') else None)
-            d1n = float(d1) if isinstance(d1, (int, float)) else None
-            d2n = float(d2) if isinstance(d2, (int, float)) else None
+            # parse_dauer statt strengem isinstance-Check: versteht auch Komma-
+            # Dezimalzahlen, "3h"/"2 Std" und in Worten geschriebene Dauern
+            # ("zwei einhalb" -> 2.5) -- sonst wurden solche Eintraege in den
+            # eigenen Dauer-S1/S2-Zellen der Einzelplan-Excel stillschweigend
+            # als "keine Angabe" behandelt.
+            d1n = parse_dauer(d1)
+            d2n = parse_dauer(d2)
             date_str = dt.isoformat() if dt else None
             day_forms = forms_by_date.get(date_str, []) if date_str else []
 
@@ -508,12 +559,25 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_record
                 fits = [r['fitness'] for r in day_records if r.get('fitness') is not None]
                 notizen = [str(r['notiz']).strip() for r in day_records if r.get('notiz')]
                 ums = [r['umsetzung'] for r in day_records if r.get('umsetzung') is not None]
+                # d1/d2 fuers Anzeigen: die TATSAECHLICH verwendete (Forms-bevorzugte,
+                # bereits robust geparste) Dauer je Session -- nicht mehr die rohe
+                # Excel-Zelle, damit Anzeige und Load-Berechnung nie auseinanderlaufen.
+                if day_forms:
+                    d1_disp = next((r['dur'] for r in day_records if r.get('session') == 1 and r.get('dur') is not None), None)
+                    d2_disp = next((r['dur'] for r in day_records if r.get('session') == 2 and r.get('dur') is not None), None)
+                else:
+                    d1_disp, d2_disp = d1n, d2n
+                # Load bereits hier (Backend) berechnen -- nicht mehr im Frontend
+                # nachrechnen, das faellt bei Komma-Dezimalzahlen ("2,5") auf
+                # JS parseFloat rein und lieferte falsche Werte.
+                loadable = [r for r in day_records if r.get('ee') is not None and r.get('dur') is not None]
+                load_val = round(sum(r['ee'] * r['dur'] for r in loadable), 1) if loadable else None
                 doku = {
                     'mot': round(sum(mots) / len(mots), 1) if mots else None,
                     'eb': round(sum(ebs) / len(ebs), 1) if ebs else None,
                     'ee': round(sum(ees) / len(ees), 1) if ees else None,
                     'fitness': round(sum(fits) / len(fits), 1) if fits else None,
-                    'd1': d1, 'd2': d2,
+                    'd1': d1_disp, 'd2': d2_disp, 'load': load_val,
                     'umsetzung': (False if False in ums else (True if ums else None)),
                     'notiz': ' / '.join(notizen) if notizen else None,
                     'sessions': [{'session': r.get('session'), 'mot': r.get('mot'), 'eb': r.get('eb'),

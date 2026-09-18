@@ -87,6 +87,7 @@
   .noteBlock{border-radius:16px;background:var(--panel4);border:1px dashed var(--border2);padding:12px 14px;display:flex;flex-direction:column;gap:6px}
   .noteBlock .l{font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:var(--di);text-transform:uppercase}
   .noteBlock .t{font:400 12.5px/1.45 Archivo,sans-serif;color:var(--mu);text-wrap:pretty}
+  .noteBlock .t.trainerNote{color:var(--am);font-weight:700}
   .tabs{display:flex;gap:3px;padding:8px 10px calc(10px + env(safe-area-inset-bottom));background:var(--bg2);border-top:1px solid var(--border);position:sticky;bottom:0}
   .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 0;border-radius:12px;border:1px solid transparent;background:transparent;color:var(--di);cursor:pointer}
   .tab.sel{border-color:rgba(0,88,143,.35);background:rgba(0,88,143,.1);color:var(--am)}
@@ -506,7 +507,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
     </div>
     <div class="noteBlock">
       <span class="l">Notizen</span>
-      <span class="t">${s.notiz ? esc(s.notiz) : '-'}</span>
+      <span class="t${s.notiz ? ' trainerNote' : ''}">${s.notiz ? esc(s.notiz) : '-'}</span>
     </div>`).join('');
 
   const dk = day && day.doku ? day.doku : null;
@@ -517,8 +518,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       <div class="cells">${Array.from({length:10},(_,i)=>`<div class="cell ${i<n?'on':''}"></div>`).join('')}</div>
     </div>`;
   };
-  const dl = dk ? (parseFloat(dk.d1)||0) + (parseFloat(dk.d2)||0) : 0;
-  const dayLoad = (dk && typeof dk.ee === 'number') ? Math.round(dl*dk.ee*10)/10 : null;
+  const dayLoad = (dk && typeof dk.load === 'number') ? dk.load : null;
 
   return `
     <div class="weekNav">
@@ -562,6 +562,10 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
             <div class="durBox"><span class="k">Dauer S2</span><span class="v">${val(dk.d2)}${dk.d2!=null?' h':''}</span></div>
           </div>
           <div class="loadRow"><span class="k">Load</span><span class="v">${val(dayLoad)}</span></div>
+          ${dk.notiz ? `<div class="noteBlock" style="margin-top:2px">
+            <span class="l">Notiz aus der Trainingsdoku</span>
+            <span class="t">${esc(dk.notiz)}</span>
+          </div>` : ''}
         </div>` : ''}
       `}
     `}

@@ -261,6 +261,24 @@ check('Technikfokus wird wörtlich übernommen, ohne erfundene Min/Sätze/Pause-
   }
 });
 
+check('Trainer-Notiz aus Excel wird blau/fett hervorgehoben (trainerNote-Klasse)', () => {
+  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.weekView='tage';
+  state.year = 2026; state.kw = 38; state.day = 2;
+  const out = renderApp();
+  if (!out.includes('class="t trainerNote"')) throw new Error('trainerNote-Klasse fehlt bei vorhandener Trainer-Notiz: ' + out.slice(0,900));
+});
+
+check('Doku-Ansicht (Einheit): Dauer/Load zuverlässig aus Backend, Notiz der/des Athlet:in sichtbar (Adrian, Do 17.09.)', () => {
+  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.weekView='tage';
+  state.year = 2026; state.kw = 38; state.day = 3;
+  const out = renderApp();
+  if (!out.includes('Notiz aus der Trainingsdoku')) throw new Error('Athlet:innen-Notiz aus der Trainingsdoku fehlt: ' + out.slice(0,900));
+  if (!out.includes('Aktivierungs session')) throw new Error('Notiz-Text fehlt: ' + out.slice(0,900));
+  const iLoad = out.indexOf('loadRow');
+  const loadSnippet = out.slice(iLoad, iLoad + 120);
+  if (!loadSnippet.includes('>3<')) throw new Error('Load sollte 3 sein (RPE 3 x Dauer 1h), Backend-Wert nicht korrekt übernommen: ' + loadSnippet);
+});
+
 check('Jakob Burtscher (30.08. Fix: veraltete Root-Datei überschrieb echte Konfliktkopie): KW37/38 zeigen echte Orte/Sessions statt leer', () => {
   state.view = {t:'a', id:'Jakob Burtscher'}; state.tab='Woche'; state.weekView='tage';
   state.year = 2026; state.kw = 38; state.day = 0;
