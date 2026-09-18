@@ -582,7 +582,9 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_record
                     'notiz': ' / '.join(notizen) if notizen else None,
                     'sessions': [{'session': r.get('session'), 'mot': r.get('mot'), 'eb': r.get('eb'),
                                   'ee': r.get('ee'), 'fitness': r.get('fitness'), 'umsetzung': r.get('umsetzung'),
-                                  'notiz': r.get('notiz'), 'source': r.get('source')} for r in day_records],
+                                  'notiz': r.get('notiz'), 'source': r.get('source'), 'dur': r.get('dur'),
+                                  'load': round(r['ee'] * r['dur'], 1) if (r.get('ee') is not None and r.get('dur') is not None) else None}
+                                 for r in day_records],
                 }
                 all_doku_records.extend(day_records)
                 stat = week_stats.setdefault(yk, {'load': 0, 'hrs': 0, 'rpe_sum': 0, 'rpe_n': 0, 'mot_sum': 0, 'mot_n': 0,

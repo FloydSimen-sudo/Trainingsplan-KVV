@@ -279,6 +279,29 @@ check('Doku-Ansicht (Einheit): Dauer/Load zuverlässig aus Backend, Notiz der/de
   if (!loadSnippet.includes('>3<')) throw new Error('Load sollte 3 sein (RPE 3 x Dauer 1h), Backend-Wert nicht korrekt übernommen: ' + loadSnippet);
 });
 
+check('Doku pro Session (Mariella, Do 17.09., zwei dokumentierte Sessions): je Session ein eigener Doku-Block direkt unter der Planung, Gesamt-Load am Ende', () => {
+  state.view = {t:'a', id:'Mariella Vierhauser'}; state.tab='Woche'; state.weekView='tage';
+  state.year = 2026; state.kw = 38; state.day = 3;
+  const out = renderApp();
+  const iS1card = out.indexOf('Session 1</span>');
+  const iD1 = out.indexOf('Doku Session 1');
+  const iS2card = out.indexOf('Session 2</span>');
+  const iD2 = out.indexOf('Doku Session 2');
+  const iGesamt = out.indexOf('Gesamt-Load');
+  if (iS1card < 0 || iD1 < 0 || iS2card < 0 || iD2 < 0 || iGesamt < 0)
+    throw new Error('Nicht alle erwarteten Bloecke gefunden: ' + JSON.stringify({iS1card, iD1, iS2card, iD2, iGesamt}));
+  if (!(iS1card < iD1 && iD1 < iS2card && iS2card < iD2 && iD2 < iGesamt))
+    throw new Error('Reihenfolge falsch -- erwartet: Session1-Karte, Doku S1, Session2-Karte, Doku S2, Gesamt-Load am Ende: ' + JSON.stringify({iS1card, iD1, iS2card, iD2, iGesamt}));
+  const d1Snippet = out.slice(iD1, iS2card);
+  if (!d1Snippet.includes('>15<')) throw new Error('Load Session 1 sollte 15 sein: ' + d1Snippet.slice(0,900));
+  if (!d1Snippet.includes('Nur ein hangelboulder')) throw new Error('Notiz Session 1 fehlt: ' + d1Snippet.slice(0,900));
+  const d2Snippet = out.slice(iD2, iGesamt);
+  if (!d2Snippet.includes('>15<')) throw new Error('Load Session 2 sollte 15 sein: ' + d2Snippet.slice(0,900));
+  if (!d2Snippet.includes('Schlechte ausdauer')) throw new Error('Notiz Session 2 fehlt: ' + d2Snippet.slice(0,900));
+  const gesamtSnippet = out.slice(iGesamt, iGesamt + 120);
+  if (!gesamtSnippet.includes('>30<')) throw new Error('Gesamt-Load sollte 30 sein (15+15): ' + gesamtSnippet);
+});
+
 check('Jakob Burtscher (30.08. Fix: veraltete Root-Datei überschrieb echte Konfliktkopie): KW37/38 zeigen echte Orte/Sessions statt leer', () => {
   state.view = {t:'a', id:'Jakob Burtscher'}; state.tab='Woche'; state.weekView='tage';
   state.year = 2026; state.kw = 38; state.day = 0;
