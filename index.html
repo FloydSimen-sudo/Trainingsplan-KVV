@@ -488,11 +488,11 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
   };
 
   const dk = day && day.doku ? day.doku : null;
-  const scale = (label, v)=>{
+  const scale = (label, v, max=10)=>{
     const n = (typeof v === 'number') ? Math.round(v) : 0;
     return `<div style="display:flex;flex-direction:column;gap:7px">
-      <div class="scaleLabel"><span class="l">${label}</span><span class="v">${val(v)} / 10</span></div>
-      <div class="cells">${Array.from({length:10},(_,i)=>`<div class="cell ${i<n?'on':''}"></div>`).join('')}</div>
+      <div class="scaleLabel"><span class="l">${label}</span><span class="v">${val(v)} / ${max}</span></div>
+      <div class="cells">${Array.from({length:max},(_,i)=>`<div class="cell ${i<n?'on':''}"></div>`).join('')}</div>
     </div>`;
   };
   const dayLoad = (dk && typeof dk.load === 'number') ? dk.load : null;
@@ -510,9 +510,10 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
           <span style="font:400 9px/1 'Roboto Mono',monospace;color:${DI}">aus Excel</span>
         </div>
       </div>
-      ${scale('Motivation', sr.mot)}
+      ${scale('Motivation', sr.mot, 5)}
       ${scale('Erschöpfung Beginn', sr.eb)}
       ${scale('Erschöpfung Ende', sr.ee)}
+      ${scale('Fitness nach Gefühl', sr.fitness)}
       <div class="durRow">
         <div class="durBox"><span class="k">Dauer</span><span class="v">${val(sr.dur)}${sr.dur!=null?' h':''}</span></div>
         <div class="durBox"><span class="k">Load</span><span class="v">${val(sr.load)}</span></div>
@@ -582,9 +583,10 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
               <span style="font:400 9px/1 'Roboto Mono',monospace;color:${DI}">aus Excel</span>
             </div>
           </div>
-          ${scale('Motivation', dk.mot)}
+          ${scale('Motivation', dk.mot, 5)}
           ${scale('Erschöpfung Beginn', dk.eb)}
           ${scale('Erschöpfung Ende', dk.ee)}
+          ${scale('Fitness nach Gefühl', dk.fitness)}
           <div class="durRow">
             <div class="durBox"><span class="k">Dauer S1</span><span class="v">${val(dk.d1)}${dk.d1!=null?' h':''}</span></div>
             <div class="durBox"><span class="k">Dauer S2</span><span class="v">${val(dk.d2)}${dk.d2!=null?' h':''}</span></div>

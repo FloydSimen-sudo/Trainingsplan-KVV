@@ -302,6 +302,22 @@ check('Doku pro Session (Mariella, Do 17.09., zwei dokumentierte Sessions): je S
   if (!gesamtSnippet.includes('>30<')) throw new Error('Gesamt-Load sollte 30 sein (15+15): ' + gesamtSnippet);
 });
 
+check('Doku pro Session zeigt Fitness nach Gefühl, Motivation korrekt auf Skala 1-5 (Mariella, 17.09.)', () => {
+  state.view = {t:'a', id:'Mariella Vierhauser'}; state.tab='Woche'; state.weekView='tage';
+  state.year = 2026; state.kw = 38; state.day = 3;
+  const out = renderApp();
+  const iD1 = out.indexOf('Doku Session 1');
+  const iD2 = out.indexOf('Doku Session 2');
+  if (iD1 < 0 || iD2 < 0) throw new Error('Doku-Bloecke fehlen: ' + JSON.stringify({iD1, iD2}));
+  const d1 = out.slice(iD1, iD2);
+  if (!d1.includes('>5 / 5<')) throw new Error('Motivation Session 1 sollte auf Skala 1-5 als "5 / 5" angezeigt werden: ' + d1.slice(0,600));
+  if (!d1.includes('Fitness nach Gefühl')) throw new Error('Fitness nach Gefühl fehlt in Doku pro Session: ' + d1.slice(0,900));
+  const iMotCells = d1.indexOf('Motivation');
+  const motCellsSnippet = d1.slice(iMotCells, iMotCells + 400);
+  if ((motCellsSnippet.match(/class="cell /g) || []).length !== 5)
+    throw new Error('Motivation sollte 5 Zellen zeigen (Skala 1-5), nicht 10: ' + motCellsSnippet);
+});
+
 check('Jakob Burtscher (30.08. Fix: veraltete Root-Datei überschrieb echte Konfliktkopie): KW37/38 zeigen echte Orte/Sessions statt leer', () => {
   state.view = {t:'a', id:'Jakob Burtscher'}; state.tab='Woche'; state.weekView='tage';
   state.year = 2026; state.kw = 38; state.day = 0;
