@@ -120,6 +120,35 @@ def fuzzy_match(text, catalog, ex_full):
 # Feste Kategorien laut Floyd (immer alle 8, unabhängig von Einzel-/Gruppenplan):
 CAT_ORDER = ['Theorie', 'Aufwärmen', 'Motorik', 'Technikfokus', 'Technik/Taktik', 'Physis Klettern', 'Athletik + Mentales', 'Spezial']
 
+# "Tage mit Training an der Wand" (Floyd, 20.09.): ein Tag zaehlt, wenn an
+# diesem Tag mindestens ein echter Eintrag bei Technik/Taktik ODER Physis
+# Klettern steht -- inkl. der alten Sheet-Bezeichnungen Skill/Physis Wand,
+# die in den *_ROWS-Mappings weiter unten bereits auf diese beiden neuen
+# Kategorien abgebildet sind (kein Extra-Mapping noetig).
+WALL_CATS = ('Technik/Taktik', 'Physis Klettern')
+
+def count_wall_days_from_weeks(weeks, season_weeks=None):
+    """Zaehlt Tage (nicht Eintraege) mit mindestens einem echten Eintrag
+    in WALL_CATS, aus der bereits geparsten Tages-/Sessions-Struktur
+    (funktioniert gleich fuer Einzel- und Gruppenplaene)."""
+    count = 0
+    values = weeks.values() if isinstance(weeks, dict) else weeks
+    for wk in values:
+        if season_weeks is not None and (wk.get('year'), wk.get('kw')) not in season_weeks:
+            continue
+        for day in wk.get('days', []):
+            has_wall = False
+            for sess in day.get('sessions', []):
+                for cat in sess.get('cats', []):
+                    if cat.get('name') in WALL_CATS and cat.get('items'):
+                        has_wall = True
+                        break
+                if has_wall:
+                    break
+            if has_wall:
+                count += 1
+    return count
+
 # Individuelle Einheitenplanung: Zeilen-Offsets relativ zum Session-Basiswert
 # (base=4 für Session 1, base=19 für Session 2) — siehe Kopfzeilen-Dump.
 IND_CAT_ROWS = {
@@ -752,7 +781,7 @@ def parse_season_individual(path, season_weeks=None):
             continue
         kw = int(kw_val)
         stat = {'load': 0.0, 'hrs': 0.0, 'rpe_sum': 0.0, 'rpe_n': 0, 'fit_sum': 0.0, 'fit_n': 0, 'days': 0,
-                'um_yes': 0, 'um_n': 0, 'planDays': 0}
+                'um_yes': 0, 'um_n': 0, 'planDays': 0, 'wallDays': 0}
         week_year = None
         any_real_day = False
         for i in range(7):
@@ -771,13 +800,18 @@ def parse_season_individual(path, season_weeks=None):
                 continue
             any_real_day = True
             day_has_content = False
+            day_has_wall = False
             for cat_name, rows in IND_SEASON_CAT_ROWS.items():
                 for r in rows:
                     if ws.cell(row=r, column=c).value:
                         cat_counts[cat_name] += 1
                         day_has_content = True
+                        if cat_name in WALL_CATS:
+                            day_has_wall = True
             if day_has_content:
                 stat['planDays'] += 1
+            if day_has_wall:
+                stat['wallDays'] += 1
             rpe = ws.cell(row=25, column=c).value
             dauer = ws.cell(row=26, column=c).value
             fit = ws.cell(row=28, column=c).value
@@ -842,6 +876,7 @@ def parse_season_individual(path, season_weeks=None):
         'weeks': weeks_out,
         'sheet': sheetname,
         'doku': doku_stats,
+        'wallDays': sum(st.get('wallDays', 0) for st in week_stats.values()),
     }
 
 def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label):
@@ -872,6 +907,7 @@ def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label):
         'trainingDays': training_days,
         'estHoursPerDay': GROUP_EST_HOURS_PER_DAY,
         'estHours': round(training_days * GROUP_EST_HOURS_PER_DAY, 1),
+        'wallDays': count_wall_days_from_weeks(weeks, season_weeks),
     }
 
 def parse_season_group(path, season_weeks=None):
@@ -890,6 +926,7 @@ def parse_season_group(path, season_weeks=None):
     maxc = ws.max_column
     cat_counts = {c: 0 for c in CAT_ORDER}
     training_days = 0
+    wall_days = 0
     all_cat_rows = sorted(set(r for rows in GRP_SEASON_CAT_ROWS.values() for r in rows))
     for col in range(2, maxc + 1):
         dt_cell = ws.cell(row=3, column=col).value
@@ -899,16 +936,21 @@ def parse_season_group(path, season_weeks=None):
         if iso(dt) not in season_weeks:
             continue
         day_has_entry = False
+        day_has_wall = False
         for cat_name, rows in GRP_SEASON_CAT_ROWS.items():
             for r in rows:
                 if ws.cell(row=r, column=col).value:
                     cat_counts[cat_name] += 1
+                    if cat_name in WALL_CATS:
+                        day_has_wall = True
         for r in all_cat_rows:
             if ws.cell(row=r, column=col).value:
                 day_has_entry = True
                 break
         if day_has_entry:
             training_days += 1
+        if day_has_wall:
+            wall_days += 1
     return {
         'catCounts': [{'name': c, 'count': cat_counts[c]} for c in CAT_ORDER],
         'weeks': [],
@@ -916,6 +958,7 @@ def parse_season_group(path, season_weeks=None):
         'trainingDays': training_days,
         'estHoursPerDay': GROUP_EST_HOURS_PER_DAY,
         'estHours': round(training_days * GROUP_EST_HOURS_PER_DAY, 1),
+        'wallDays': wall_days,
     }
 
 # -------------------------------------------------------------- Benchmarks --
@@ -1470,6 +1513,7 @@ def main():
                 'weeks': weeks_out,
                 'sheet': 'Einheitenplanung 26_27',
                 'doku': doku_stats,
+                'wallDays': count_wall_days_from_weeks(weeks, SEASON_WEEKS_2627),
             }
 
     for gid, (relpath, sheet_cands) in GROUP_FILES.items():
@@ -1498,6 +1542,7 @@ def main():
             SEASON_STATS['26/27']['g:' + gid] = {
                 'catCounts': [{'name': c, 'count': cats_counter.get(c, 0)} for c in CAT_ORDER],
                 'weeks': [], 'sheet': sheetname or 'Einheitenplanung 26_27', 'doku': group_doku_season,
+                'wallDays': 0,
             }
         for wk_key, wk_entry in weeks.items():
             yk = (wk_entry.get('year'), wk_entry.get('kw'))

@@ -831,6 +831,7 @@ function renderStatistik(view){
     ? [
         {k:'Trainingsstunden Saison', v: dk.hrsSaison!=null ? dk.hrsSaison.toFixed(1)+' h' : '-'},
         {k:'Trainingstage gesamt', v: dk.planDaysSaison!=null ? dk.planDaysSaison : '-'},
+        {k:'Tage mit Training an der Wand', v: ss.wallDays!=null ? ss.wallDays : '-'},
         {k:'Trainingstage mit Doku', v: dk.dokuDays!=null ? dk.dokuDays : '-'},
         {k:'Load kumuliert', v: dk.loadSaison!=null ? Math.round(dk.loadSaison) : '-'},
         {k:'Durchschnittliche Motivation (Saison)', v: dk.avgMotivation!=null ? dk.avgMotivation.toFixed(1) : '-'},
@@ -840,6 +841,7 @@ function renderStatistik(view){
         {k:'Prozentsatz genaue Umsetzung', v: dk.pctUmsetzung!=null ? dk.pctUmsetzung.toFixed(0)+'%' : '-'},
       ]
     : [
+        {k:'Tage mit Training an der Wand', v: ss.wallDays!=null ? ss.wallDays : '-'},
         {k:'Durchschnittliche Motivation (Saison)', v: dk.avgMotivation!=null ? dk.avgMotivation.toFixed(1) : '-'},
         {k:'Durchschnittliche Trainingsdauer (Saison)', v: dk.avgTrainingsdauer!=null ? dk.avgTrainingsdauer.toFixed(2)+' h' : '-'},
         {k:'Durchschnittlicher Load (Saison)', v: dk.avgLoad!=null ? dk.avgLoad.toFixed(1) : '-'},
