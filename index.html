@@ -394,6 +394,27 @@ function renderApp(){
       </div>
     `;
   }
+  if(state.view.t === 'spogy'){
+    return `
+      <div class="header">
+        <img class="brandMark" src="${MARK_IMG}" alt="Startseite" data-act="goHome" style="cursor:pointer">
+        <button class="headerBtn" data-act="goHome" style="flex:1">
+          <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+            <span class="viewName">SPOGY</span>
+            <span class="viewSub">EINZELPLÄNE &middot; ${(spogy ? spogy.athletes.length : 0)} ATHLET:INNEN</span>
+          </span>
+        </button>
+        <img class="headerLogo" src="${LOGO_IMG}" alt="Austria Climbing Vorarlberg">
+      </div>
+      <div class="content">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span class="sectionTitle">SPOGY – Einzelpläne</span>
+          <span class="subMeta">WÄHLE EINE ATHLETIN ODER EINEN ATHLETEN</span>
+        </div>
+        ${renderPickOpts(null).athleteOpts}
+      </div>
+    `;
+  }
   const view = state.view;
   const isSolo = view.t === 'a';
   const group = !isSolo ? D.GROUPS.find(g=>g.id===view.id) : null;
@@ -1043,6 +1064,7 @@ function renderGesamtRow(name, dd, groupId){
 
 function renderPickOpts(selView){
   const isSoloSel = selView && selView.t==='a';
+  const isSpogySel = selView && selView.t==='spogy';
   const groupOpts = D.GROUPS.filter(g=>g.id!=='SPOGY Gruppe').map(g=>`
     <button class="pickerOpt ${selView && !isSoloSel && selView.id===g.id?'sel':''}" data-act="pickView" data-t="g" data-id="${esc(g.id)}">
       <span class="info"><span class="n">${esc(GNAME[g.id]||g.id)}</span><span class="s">${g.athletes.length} Athlet:innen · ${esc(g.coaches||'-')}</span></span>
@@ -1051,15 +1073,19 @@ function renderPickOpts(selView){
     <button class="pickerOpt ${selView && isSoloSel && selView.id===a.n?'sel':''}" data-act="pickView" data-t="a" data-id="${esc(a.n)}">
       <span class="info"><span class="n">${esc(a.n)}</span><span class="s">WK-Klasse 27: ${esc(a.wk||'-')}</span></span>
     </button>`).join('');
+  const spogyOpt = `
+    <button class="pickerOpt ${isSpogySel || isSoloSel ? 'sel' : ''}" data-act="pickView" data-t="spogy">
+      <span class="info"><span class="n">SPOGY</span><span class="s">${spogy ? spogy.athletes.length : 0} Einzelpläne</span></span>
+    </button>`;
   const allOpt = `
     <button class="pickerOpt allOpt ${selView && selView.t==='all'?'sel':''}" data-act="pickView" data-t="all">
       <span class="info"><span class="n">Training gesamt</span><span class="s">Alle Gruppen &amp; Einzelpläne auf einen Blick</span></span>
     </button>`;
-  return { groupOpts, athleteOpts, allOpt };
+  return { groupOpts, athleteOpts, spogyOpt, allOpt };
 }
 
 function renderPicker(){
-  const { groupOpts, athleteOpts, allOpt } = renderPickOpts(state.view);
+  const { groupOpts, spogyOpt, allOpt } = renderPickOpts(state.view);
   return `
     <div class="overlay">
       <div class="overlayHead">
@@ -1073,10 +1099,7 @@ function renderPicker(){
         <div>
           <div class="pickerGroupLabel">Gruppenpläne</div>
           ${groupOpts}
-        </div>
-        <div>
-          <div class="pickerGroupLabel">Einzelpläne SPOGY</div>
-          ${athleteOpts}
+          ${spogyOpt}
         </div>
       </div>
     </div>
@@ -1084,7 +1107,7 @@ function renderPicker(){
 }
 
 function renderLanding(){
-  const { groupOpts, athleteOpts, allOpt } = renderPickOpts(null);
+  const { groupOpts, spogyOpt, allOpt } = renderPickOpts(null);
   return `
     <div class="landing">
       <img class="landingLogo" src="${LOGO_IMG}" alt="Austria Climbing Vorarlberg">
@@ -1099,10 +1122,7 @@ function renderLanding(){
         <div>
           <div class="pickerGroupLabel">Gruppenpläne</div>
           ${groupOpts}
-        </div>
-        <div>
-          <div class="pickerGroupLabel">Einzelpläne SPOGY</div>
-          ${athleteOpts}
+          ${spogyOpt}
         </div>
       </div>
     </div>
