@@ -638,6 +638,7 @@ function renderWeekStats(view, isSolo){
     rows = [
       {k:'Trainingsstunden (Woche)', v: w.hrs!=null ? w.hrs.toFixed(1)+' h' : '-'},
       {k:'Trainingstage gesamt (Woche)', v: val(w.planDays)},
+      {k:'Tage mit Training an der Wand (Woche)', v: w.wallDays!=null ? w.wallDays : '-'},
       {k:'Trainingstage mit Doku (Woche)', v: val(w.days)},
       {k:'Load kumuliert (Woche)', v: (w.days && w.load) ? Math.round(w.load) : '-'},
       {k:'Durchschnittliche Motivation (Woche)', v: w.mot!=null ? w.mot.toFixed(1) : '-'},

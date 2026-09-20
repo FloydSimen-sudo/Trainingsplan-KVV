@@ -653,6 +653,7 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_record
 
     weeks_out = []
     for yk, st in sorted(week_stats.items()):
+        wk_key = f'{yk[0]}-{yk[1]}'
         weeks_out.append({
             'year': yk[0], 'kw': yk[1],
             'load': round(st['load'], 1), 'hrs': round(st['hrs'], 2),
@@ -663,6 +664,7 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_record
             'umPct': round(100 * st['um_yes'] / st['um_n'], 1) if st['um_n'] else None,
             'days': st['days'],
             'planDays': st['planDays'],
+            'wallDays': count_wall_days_from_weeks([weeks[wk_key]]) if wk_key in weeks else 0,
         })
     doku_stats = aggregate_doku_records(all_doku_records)
     if doku_stats is not None:
