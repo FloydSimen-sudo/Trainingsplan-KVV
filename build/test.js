@@ -261,6 +261,19 @@ check('Technikfokus wird wörtlich übernommen, ohne erfundene Min/Sätze/Pause-
   }
 });
 
+check('Zeiten bei Trainingsinhalten: nur explizite Floyd-Zeit direkt uebernommen, Katalog-Zeit klar als "Standard" markiert (Adrian KW32 Mo)', () => {
+  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.weekView='tage';
+  state.year = 2026; state.kw = 32; state.day = 0;
+  const out = renderApp();
+  if (!out.includes('1-1,5h Spraywall Sib Max')) throw new Error('Explizite Übung fehlt: ' + out.slice(0,900));
+  if (!out.includes('>1,5h<')) throw new Error('Explizite Zeit "1,5h" wird nicht direkt uebernommen: ' + out.slice(0,900));
+  if (out.includes('120 min')) throw new Error('Katalog-Zeit (120 min) wird trotz expliziter Floyd-Zeit gezeigt: ' + out.slice(0,900));
+  if (!out.includes('BM Long Max Leiste')) throw new Error('Katalog-Uebung fehlt: ' + out.slice(0,900));
+  if (!out.includes('metaTag std">Standard') || !out.includes('30 min')) {
+    throw new Error('Katalog-Zeit ohne klare "Standard"-Markierung: ' + out.slice(0,900));
+  }
+});
+
 check('Trainer-Notiz aus Excel wird blau/fett hervorgehoben (trainerNote-Klasse)', () => {
   state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.weekView='tage';
   state.year = 2026; state.kw = 38; state.day = 2;

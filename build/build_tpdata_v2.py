@@ -116,6 +116,26 @@ def fuzzy_match(text, catalog, ex_full):
         return {'name': best, 'min': rec.get('min'), 'sets': rec.get('sets'), 'vol': rec.get('vol'), 'pause': rec.get('pause')}
     return None
 
+# Floyd (20.09.): Zeiten zu einzelnen Trainingsinhalten nur uebernehmen, wenn
+# er sie SELBST explizit in die Zelle geschrieben hat (z.B. "30 min", "2h",
+# "1,5 Std"). Ohne eigene Zeitangabe darf die App eine Zeit/Beschreibung aus
+# der Uebungssammlung ziehen, muss sie dann aber klar als "Standard" (aus dem
+# Katalog, nicht von ihm selbst) kennzeichnen -- nie stillschweigend so
+# anzeigen, als haette er sie so eingetragen.
+EXPLICIT_TIME_RE = re.compile(
+    r'(\d+(?:[.,]\d+)?)\s*(minuten|minute|min\.?|stunden|stunde|std\.?|h)\b',
+    re.IGNORECASE)
+
+def extract_explicit_time(text):
+    """Gibt die von Floyd selbst in die Zelle geschriebene Zeitangabe zurueck
+    (Original-Schreibweise, z.B. "30 min" oder "2h"), oder None, wenn keine
+    Zeit explizit im Text steht (dann kommt hoechstens ein Katalog-Standard-
+    wert infrage, nie eine erfundene Zeit)."""
+    if not text:
+        return None
+    m = EXPLICIT_TIME_RE.search(str(text))
+    return m.group(0).strip() if m else None
+
 # --------------------------------------------------------------- Content --
 # Feste Kategorien laut Floyd (immer alle 8, unabhängig von Einzel-/Gruppenplan):
 CAT_ORDER = ['Theorie', 'Aufwärmen', 'Motorik', 'Technikfokus', 'Technik/Taktik', 'Physis Klettern', 'Athletik + Mentales', 'Spezial']
@@ -198,7 +218,7 @@ def old_individual_day_session(old_idx, dt, catalog, ex, cats_counter):
             val = ws_old.cell(row=r, column=col).value
             if val:
                 m = fuzzy_match(str(val), catalog, ex) if cat_name != 'Technikfokus' else None
-                items.append({'ex': str(val), 'match': m})
+                items.append({'ex': str(val), 'match': m, 'explicitTime': extract_explicit_time(val)})
                 any_item = True
                 cats_counter[cat_name] = cats_counter.get(cat_name, 0) + 1
         cats.append({'name': cat_name, 'items': items})
@@ -534,7 +554,7 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_record
                         val = ws.cell(row=base + off, column=col).value
                         if val:
                             m = fuzzy_match(str(val), catalog, ex) if cat_name != 'Technikfokus' else None
-                            items.append({'ex': str(val), 'match': m})
+                            items.append({'ex': str(val), 'match': m, 'explicitTime': extract_explicit_time(val)})
                             any_item = True
                             cats_counter[cat_name] = cats_counter.get(cat_name, 0) + 1
                     cats.append({'name': cat_name, 'items': items})
@@ -725,7 +745,7 @@ def parse_group(path, sheet_candidates, catalog, ex, cats_counter):
                 val = ws.cell(row=r, column=col).value
                 if val:
                     m = fuzzy_match(str(val), catalog, ex) if cat_name != 'Technikfokus' else None
-                    items.append({'ex': str(val), 'match': m})
+                    items.append({'ex': str(val), 'match': m, 'explicitTime': extract_explicit_time(val)})
                     any_item = True
                     cats_counter[cat_name] = cats_counter.get(cat_name, 0) + 1
             cats.append({'name': cat_name, 'items': items})

@@ -66,6 +66,7 @@
   .slotMeta{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
   .metaTag{padding:3px 7px;border-radius:6px;font:500 9.5px/1 'Roboto Mono',monospace;letter-spacing:.03em;background:var(--panel3);color:var(--mu)}
   .metaTag.hi{background:rgba(18,128,137,.12);color:var(--li)}
+  .metaTag.std{background:transparent;color:var(--di);border:1px dashed var(--di);font-style:italic}
   .empty{border-radius:16px;background:var(--panel4);border:1px dashed var(--border2);padding:22px 16px;display:flex;flex-direction:column;gap:9px}
   .empty .t1{font:600 13px/1.2 Archivo,sans-serif;color:var(--tx3)}
   .empty .t2{font:400 12px/1.5 Archivo,sans-serif;color:var(--mu);text-wrap:pretty}
@@ -496,9 +497,17 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
   if(dayTrainerVal) dayMeta.push({k:'Trainer', v:dayTrainerVal});
 
   const renderItem = (it) => {
+    // Floyd (20.09.): Zeiten nur zeigen, wenn er sie selbst in die Zelle
+    // geschrieben hat (it.explicitTime). Ohne eigene Zeitangabe duerfen
+    // Zeit/Beschreibung aus der Uebungssammlung (it.match) einspringen,
+    // muessen dann aber klar als "Standard" markiert sein -- nie so
+    // dargestellt, als haette Floyd das selbst so eingetragen.
     const m = it.match;
     const chips = [];
-    if(m){
+    if(it.explicitTime){
+      chips.push(`<span class="metaTag hi">${esc(it.explicitTime)}</span>`);
+    } else if(m){
+      chips.push(`<span class="metaTag std">Standard</span>`);
       if(m.min!=null && m.min!=='') chips.push(`<span class="metaTag hi">${esc(m.min)} min</span>`);
       if(m.sets!=null && m.sets!=='' && m.sets!=='x') chips.push(`<span class="metaTag">${esc(m.sets)}</span>`);
       if(m.vol!=null && m.vol!=='' && m.vol!=='x') chips.push(`<span class="metaTag">${esc(m.vol)}</span>`);
