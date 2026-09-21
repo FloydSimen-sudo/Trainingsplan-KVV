@@ -63,6 +63,12 @@
   .slotRow:last-child{border-bottom:none}
   .slotK{font:500 9px/1.35 'Roboto Mono',monospace;letter-spacing:.06em;color:var(--di);text-transform:uppercase;padding-top:3px}
   .slotName{font:500 13px/1.35 Archivo,sans-serif;color:var(--tx);text-wrap:pretty}
+  .slotName.redFlag{color:var(--red);font-weight:700}
+  .metaPill.redFlag{border-color:var(--red)}
+  .metaPill.redFlag .v{color:var(--red);font-weight:700}
+  .noteBlock .t.redNote{color:var(--red);font-weight:700}
+  .kurzCat.redFlag{background:rgba(210,0,40,.12);color:var(--red);border:1px solid var(--red)}
+  span.redFlag{color:var(--red);font-weight:700}
   .slotMeta{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
   .metaTag{padding:3px 7px;border-radius:6px;font:500 9.5px/1 'Roboto Mono',monospace;letter-spacing:.03em;background:var(--panel3);color:var(--mu)}
   .metaTag.hi{background:rgba(18,128,137,.12);color:var(--li)}
@@ -491,10 +497,10 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
     </button>`;}).join('');
 
   const dayMeta = [];
-  if(day && day.ort) dayMeta.push({k:'Ort', v:day.ort, c: ORT_COLORS[day.ortType]});
-  if(day && day.zeit) dayMeta.push({k:'Zeit', v:day.zeit});
+  if(day && day.ort) dayMeta.push({k:'Ort', v:day.ort, c: ORT_COLORS[day.ortType], r: !!day.ortRed});
+  if(day && day.zeit) dayMeta.push({k:'Zeit', v:day.zeit, r: !!day.zeitRed});
   const dayTrainerVal = day ? trainerDisplay(isSolo ? null : view.id, day) : null;
-  if(dayTrainerVal) dayMeta.push({k:'Trainer', v:dayTrainerVal});
+  if(dayTrainerVal) dayMeta.push({k:'Trainer', v:dayTrainerVal, r: !!(day && day.trainerRed)});
 
   const renderItem = (it) => {
     // Floyd (20.09.): Zeiten nur zeigen, wenn er sie selbst in die Zelle
@@ -513,7 +519,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       if(m.vol!=null && m.vol!=='' && m.vol!=='x') chips.push(`<span class="metaTag">${esc(m.vol)}</span>`);
       if(m.pause!=null && m.pause!=='' && m.pause!=='x') chips.push(`<span class="metaTag">Pause ${esc(m.pause)}</span>`);
     }
-    return `<div class="slotName">${esc(it.ex)}</div>${chips.length ? `<div class="slotMeta">${chips.join('')}</div>` : ''}`;
+    return `<div class="slotName${it.red ? ' redFlag' : ''}">${esc(it.ex)}</div>${chips.length ? `<div class="slotMeta">${chips.join('')}</div>` : ''}`;
   };
 
   const dk = day && day.doku ? day.doku : null;
@@ -574,7 +580,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
     </div>
     <div class="noteBlock">
       <span class="l">Notizen</span>
-      <span class="t${s.notiz ? ' trainerNote' : ''}">${s.notiz ? esc(s.notiz) : '-'}</span>
+      <span class="t${s.notizRed ? ' redNote' : (s.notiz ? ' trainerNote' : '')}">${s.notiz ? esc(s.notiz) : '-'}</span>
     </div>
     ${perSessionMode ? sessionDokuHtml(s, i+1) : ''}`).join('');
 
@@ -602,7 +608,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       ` : `
       <div class="dayChips">${dayChips}</div>
       <div class="dayHead"><div class="dayTitle">${esc(day ? (day.dow+', '+day.dom) : '')}</div></div>
-      ${dayMeta.length ? `<div class="metaRow">${dayMeta.map(m=>`<div class="metaPill"${m.c?` style="border-color:${m.c}"`:''}>${m.c?`<span class="dotSm" style="background:${m.c}"></span>`:''}<span class="k">${esc(m.k)}</span><span class="v">${esc(m.v)}</span></div>`).join('')}</div>` : ''}
+      ${dayMeta.length ? `<div class="metaRow">${dayMeta.map(m=>`<div class="metaPill${m.r?' redFlag':''}"${(m.c && !m.r)?` style="border-color:${m.c}"`:''}>${(m.c && !m.r)?`<span class="dotSm" style="background:${m.c}"></span>`:''}<span class="k">${esc(m.k)}</span><span class="v">${esc(m.v)}</span></div>`).join('')}</div>` : ''}
       ${ (day && day.sessions && day.sessions.length) ? sessionsHtml : `<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>` }
       ${dk && !perSessionMode ? `
         <div class="dokuBlock">
@@ -677,22 +683,27 @@ function renderKurz(days, di, groupId){
     const hasSessions = dd.sessions && dd.sessions.length;
     let body = `<span class="kurzNone">-</span>`;
     if(hasSessions){
-      const catNames = [];
+      const catInfo = [];
       dd.sessions.forEach(s=>{
         (s.cats||[]).forEach(cat=>{
-          if(cat.items && cat.items.length && catNames.indexOf(cat.name)<0) catNames.push(cat.name);
+          if(cat.items && cat.items.length){
+            const isRed = cat.items.some(it=>it.red);
+            const found = catInfo.find(c=>c.name===cat.name);
+            if(!found) catInfo.push({name: cat.name, red: isRed});
+            else if(isRed) found.red = true;
+          }
         });
       });
-      body = catNames.length
-        ? `<div class="kurzCats">${catNames.map(n=>`<span class="kurzCat">${esc(n)}</span>`).join('')}</div>`
+      body = catInfo.length
+        ? `<div class="kurzCats">${catInfo.map(c=>`<span class="kurzCat${c.red?' redFlag':''}">${esc(c.name)}</span>`).join('')}</div>`
         : `<span class="kurzNone">-</span>`;
     }
     const oc = ORT_COLORS[dd.ortType];
     const metaBits = [];
-    if(dd.ort) metaBits.push(esc(dd.ort));
-    if(dd.zeit) metaBits.push(esc(dd.zeit));
+    if(dd.ort) metaBits.push(dd.ortRed ? `<span class="redFlag">${esc(dd.ort)}</span>` : esc(dd.ort));
+    if(dd.zeit) metaBits.push(dd.zeitRed ? `<span class="redFlag">${esc(dd.zeit)}</span>` : esc(dd.zeit));
     const trV = trainerDisplay(groupId, dd);
-    if(trV) metaBits.push(esc(trV));
+    if(trV) metaBits.push(dd.trainerRed ? `<span class="redFlag">${esc(trV)}</span>` : esc(trV));
     return `<button class="kurzRow ${i===di?'today':''}" data-act="day" data-i="${i}" style="${oc?`border-left:4px solid ${oc}`:''}">
       <div class="kurzDay"><span class="dow">${esc((dd.dow||'').slice(0,2).toUpperCase())}</span><span class="dom">${esc(dd.dom)}</span></div>
       <div class="kurzBody">
@@ -1050,7 +1061,7 @@ function renderGesamtRow(name, dd, groupId){
     dd.sessions.forEach(s=>{
       (s.cats||[]).forEach(cat=>{
         if(cat.items && cat.items.length){
-          const exList = cat.items.map(it=>esc(it.ex)).join(', ');
+          const exList = cat.items.map(it=>it.red ? `<span class="redFlag">${esc(it.ex)}</span>` : esc(it.ex)).join(', ');
           parts.push(`<span class="gesamtCat">${esc(cat.name)}</span> ${exList}`);
         }
       });
@@ -1060,10 +1071,10 @@ function renderGesamtRow(name, dd, groupId){
       : `<span class="kurzNone">Trainingsfrei / keine Einheit eingetragen</span>`;
   }
   const metaBits = [];
-  if(dd.ort) metaBits.push(esc(dd.ort));
-  if(dd.zeit) metaBits.push(esc(dd.zeit));
+  if(dd.ort) metaBits.push(dd.ortRed ? `<span class="redFlag">${esc(dd.ort)}</span>` : esc(dd.ort));
+  if(dd.zeit) metaBits.push(dd.zeitRed ? `<span class="redFlag">${esc(dd.zeit)}</span>` : esc(dd.zeit));
   const trV2 = trainerDisplay(groupId, dd);
-  if(trV2) metaBits.push(esc(trV2));
+  if(trV2) metaBits.push(dd.trainerRed ? `<span class="redFlag">${esc(trV2)}</span>` : esc(trV2));
   return `
     <div class="gesamtBlock" style="${oc?`border-left:4px solid ${oc}`:''}">
       <div class="gesamtName">

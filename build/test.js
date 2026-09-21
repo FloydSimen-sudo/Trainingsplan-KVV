@@ -274,6 +274,24 @@ check('Zeiten bei Trainingsinhalten: nur explizite Floyd-Zeit direkt uebernommen
   }
 });
 
+check('Rot markierte Zellen (z.B. "entfällt") werden in der App klar hervorgehoben (U13 I KW41 Fr)', () => {
+  state.view = {t:'g', id:'U13 I'}; state.tab='Woche'; state.weekView='tage';
+  state.year = 2026; state.kw = 41; state.day = 4;
+  const out = renderApp();
+  if (!out.includes('entfällt!')) throw new Error('"entfällt!"-Text fehlt: ' + out.slice(0,900));
+  if (!out.includes('metaPill redFlag')) throw new Error('Rot markierter Ort wird nicht als redFlag hervorgehoben: ' + out.slice(0,900));
+});
+
+check('Rot markierter Trainingsinhalt (Kategorie-Item) bekommt die redFlag-Klasse (Adrian KW34 Mo "Haut!")', () => {
+  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.weekView='tage';
+  state.year = 2026; state.kw = 34; state.day = 0;
+  const out = renderApp();
+  if (!out.includes('Haut!')) throw new Error('Rot markierter Trainingsinhalt-Text fehlt: ' + out.slice(0,900));
+  if (!out.includes('slotName redFlag') || !out.includes('Haut!')) {
+    throw new Error('Rot markierter Trainingsinhalt bekommt keine redFlag-Klasse: ' + out.slice(0,900));
+  }
+});
+
 check('Trainer-Notiz aus Excel wird blau/fett hervorgehoben (trainerNote-Klasse)', () => {
   state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.weekView='tage';
   state.year = 2026; state.kw = 38; state.day = 2;

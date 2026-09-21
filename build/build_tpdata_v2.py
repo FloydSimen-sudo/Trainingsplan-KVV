@@ -209,25 +209,29 @@ def old_individual_day_session(old_idx, dt, catalog, ex, cats_counter):
         return None
     ws_old, date_col = old_idx
     col = date_col[dt]
-    ort = ws_old.cell(row=OLD_IND_ORT_ROW, column=col).value
+    ort_cell_old = ws_old.cell(row=OLD_IND_ORT_ROW, column=col)
+    ort = ort_cell_old.value
+    ort_red = is_red_font(ort_cell_old)
     cats = []
     any_item = False
     for cat_name in CAT_ORDER:
         items = []
         for r in OLD_IND_CAT_ROWS[cat_name]:
-            val = ws_old.cell(row=r, column=col).value
+            cell = ws_old.cell(row=r, column=col)
+            val = cell.value
             if val:
                 m = fuzzy_match(str(val), catalog, ex) if cat_name != 'Technikfokus' else None
-                items.append({'ex': str(val), 'match': m, 'explicitTime': extract_explicit_time(val)})
+                items.append({'ex': str(val), 'match': m, 'explicitTime': extract_explicit_time(val), 'red': is_red_font(cell)})
                 any_item = True
                 cats_counter[cat_name] = cats_counter.get(cat_name, 0) + 1
         cats.append({'name': cat_name, 'items': items})
-    notiz_parts = [str(ws_old.cell(row=r, column=col).value).strip()
-                   for r in OLD_IND_NOTIZ_ROWS if ws_old.cell(row=r, column=col).value]
+    notiz_cells_old = [ws_old.cell(row=r, column=col) for r in OLD_IND_NOTIZ_ROWS if ws_old.cell(row=r, column=col).value]
+    notiz_parts = [str(c.value).strip() for c in notiz_cells_old]
     notiz = ' / '.join(notiz_parts) if notiz_parts else None
+    notiz_red = any(is_red_font(c) for c in notiz_cells_old)
     if not (ort or any_item or notiz):
         return None
-    return {'name': 'Session 1', 'time': '', 'ort': ort, 'cats': cats, 'notiz': notiz}
+    return {'name': 'Session 1', 'time': '', 'ort': ort, 'ortRed': ort_red, 'cats': cats, 'notiz': notiz, 'notizRed': notiz_red}
 
 # Gruppen-Einheitenplanung: absolute Zeilen (siehe Kopfzeilen-Dump U9).
 # Korrektur 27.08.: "Physis Wand" (14,15) und "Physis Boden" (16,17) sind laut
@@ -545,24 +549,28 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_record
             dt = block_dates[i]
             sessions = []
             for sess_num, base in [(1, 4), (2, 19)]:
-                ort = ws.cell(row=base + 2, column=col).value
+                ort_cell = ws.cell(row=base + 2, column=col)
+                ort = ort_cell.value
+                ort_red = is_red_font(ort_cell)
                 cats = []
                 any_item = False
                 for cat_name in CAT_ORDER:
                     items = []
                     for off in IND_CAT_ROWS[cat_name]:
-                        val = ws.cell(row=base + off, column=col).value
+                        cell = ws.cell(row=base + off, column=col)
+                        val = cell.value
                         if val:
                             m = fuzzy_match(str(val), catalog, ex) if cat_name != 'Technikfokus' else None
-                            items.append({'ex': str(val), 'match': m, 'explicitTime': extract_explicit_time(val)})
+                            items.append({'ex': str(val), 'match': m, 'explicitTime': extract_explicit_time(val), 'red': is_red_font(cell)})
                             any_item = True
                             cats_counter[cat_name] = cats_counter.get(cat_name, 0) + 1
                     cats.append({'name': cat_name, 'items': items})
-                notiz_parts = [str(ws.cell(row=base + off, column=col).value).strip()
-                               for off in IND_NOTIZ_OFFSETS if ws.cell(row=base + off, column=col).value]
+                notiz_cells = [ws.cell(row=base + off, column=col) for off in IND_NOTIZ_OFFSETS if ws.cell(row=base + off, column=col).value]
+                notiz_parts = [str(c.value).strip() for c in notiz_cells]
                 notiz = ' / '.join(notiz_parts) if notiz_parts else None
+                notiz_red = any(is_red_font(c) for c in notiz_cells)
                 if ort or any_item or notiz:
-                    sessions.append({'name': f'Session {sess_num}', 'time': '', 'ort': ort, 'cats': cats, 'notiz': notiz})
+                    sessions.append({'name': f'Session {sess_num}', 'time': '', 'ort': ort, 'ortRed': ort_red, 'cats': cats, 'notiz': notiz, 'notizRed': notiz_red})
             if not sessions:
                 fallback = old_individual_day_session(old_idx, dt, catalog, ex, cats_counter)
                 if fallback:
@@ -731,10 +739,15 @@ def parse_group(path, sheet_candidates, catalog, ex, cats_counter):
         key = f'{yk[0]}-{yk[1]}'
         wk_entry = weeks.setdefault(key, {'days': [], 'year': yk[0], 'kw': yk[1]})
         dow = ws.cell(row=2, column=col).value
-        trainer = ws.cell(row=hdr['trainer'], column=col).value
-        zeit = ws.cell(row=hdr['zeit'], column=col).value
+        trainer_cell = ws.cell(row=hdr['trainer'], column=col)
+        trainer = trainer_cell.value
+        trainer_red = is_red_font(trainer_cell)
+        zeit_cell = ws.cell(row=hdr['zeit'], column=col)
+        zeit = zeit_cell.value
+        zeit_red = is_red_font(zeit_cell)
         ort_cell = ws.cell(row=hdr['ort'], column=col)
         ort = ort_cell.value
+        ort_red = is_red_font(ort_cell)
         ort_color = get_fill_hex(ort_cell)
         ort_type = ORT_COLOR_MAP.get(ort_color) if ort_color else None
         cats = []
@@ -742,21 +755,28 @@ def parse_group(path, sheet_candidates, catalog, ex, cats_counter):
         for cat_name in CAT_ORDER:
             items = []
             for r in cat_rows[cat_name]:
-                val = ws.cell(row=r, column=col).value
+                cell = ws.cell(row=r, column=col)
+                val = cell.value
                 if val:
                     m = fuzzy_match(str(val), catalog, ex) if cat_name != 'Technikfokus' else None
-                    items.append({'ex': str(val), 'match': m, 'explicitTime': extract_explicit_time(val)})
+                    items.append({'ex': str(val), 'match': m, 'explicitTime': extract_explicit_time(val), 'red': is_red_font(cell)})
                     any_item = True
                     cats_counter[cat_name] = cats_counter.get(cat_name, 0) + 1
             cats.append({'name': cat_name, 'items': items})
-        notiz_parts = [str(ws.cell(row=r, column=col).value).strip() for r in notiz_rows if ws.cell(row=r, column=col).value]
+        notiz_cells = [ws.cell(row=r, column=col) for r in notiz_rows if ws.cell(row=r, column=col).value]
+        notiz_parts = [str(c.value).strip() for c in notiz_cells]
         notiz = ' / '.join(notiz_parts) if notiz_parts else None
+        notiz_red = any(is_red_font(c) for c in notiz_cells)
         sessions = []
         if ort or trainer or any_item or notiz:
-            sessions.append({'name': 'Einheit', 'time': str(zeit) if zeit else '', 'trainer': trainer, 'ort': ort, 'cats': cats, 'notiz': notiz})
+            sessions.append({'name': 'Einheit', 'time': str(zeit) if zeit else '', 'timeRed': zeit_red,
+                              'trainer': trainer, 'trainerRed': trainer_red, 'ort': ort, 'ortRed': ort_red,
+                              'cats': cats, 'notiz': notiz, 'notizRed': notiz_red})
         wk_entry['days'].append({
             'dow': dow, 'dom': dt.strftime('%d.%m.'), 'date': dt.isoformat(),
-            'ort': ort, 'ortType': ort_type, 'trainer': trainer, 'zeit': str(zeit) if zeit else None,
+            'ort': ort, 'ortType': ort_type, 'ortRed': ort_red,
+            'trainer': trainer, 'trainerRed': trainer_red,
+            'zeit': str(zeit) if zeit else None, 'zeitRed': zeit_red,
             'sessions': sessions, 'doku': None, 'notiz': None,
         })
         col += 1
@@ -1214,6 +1234,20 @@ def get_fill_hex(cell):
     if rgb[:2] == '00':
         return None
     return '#' + rgb[2:]
+
+def is_red_font(cell):
+    """True, wenn Floyd den Zellentext selbst rot eingefaerbt hat (Schriftfarbe
+    der Zelle, nicht Zellfuellung) -- sein eigenes Signal fuer "wichtig/
+    geaendert" (z.B. "entfaellt", geaenderte Uhrzeiten, Sondernotizen). Muss
+    in der App genauso auffallen wie in seiner Excel-Datei."""
+    try:
+        c = cell.font.color if cell.font else None
+        rgb = c.rgb if (c is not None and c.type == 'rgb') else None
+    except Exception:
+        rgb = None
+    if not isinstance(rgb, str) or len(rgb) != 8:
+        return False
+    return rgb[-6:].upper() == 'FF0000'
 
 def parse_jahresplanung(path):
     """Liest den echten Jahresplan (Phase/Trainingsumfang/WK-Termine Boulder+Lead/
