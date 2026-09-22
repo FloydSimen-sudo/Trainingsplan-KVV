@@ -511,13 +511,17 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
     const m = it.match;
     const chips = [];
     if(it.explicitTime){
+      // Von Floyd selbst in die Zelle geschrieben -> weiterhin deutlich hervorgehoben.
       chips.push(`<span class="metaTag hi">${esc(it.explicitTime)}</span>`);
     } else if(m){
+      // Aus der Uebungssammlung gezogen, nicht von Floyd selbst eingetragen ->
+      // bewusst zurueckhaltend/grau, klar als "Standard" gekennzeichnet, damit
+      // es nicht mit seinen eigenen Angaben verwechselt wird (Floyd, 22.09.).
       chips.push(`<span class="metaTag std">Standard</span>`);
-      if(m.min!=null && m.min!=='') chips.push(`<span class="metaTag hi">${esc(m.min)} min</span>`);
-      if(m.sets!=null && m.sets!=='' && m.sets!=='x') chips.push(`<span class="metaTag">${esc(m.sets)}</span>`);
-      if(m.vol!=null && m.vol!=='' && m.vol!=='x') chips.push(`<span class="metaTag">${esc(m.vol)}</span>`);
-      if(m.pause!=null && m.pause!=='' && m.pause!=='x') chips.push(`<span class="metaTag">Pause ${esc(m.pause)}</span>`);
+      if(m.min!=null && m.min!=='') chips.push(`<span class="metaTag std">${esc(m.min)} min</span>`);
+      if(m.sets!=null && m.sets!=='' && m.sets!=='x') chips.push(`<span class="metaTag std">${esc(m.sets)}</span>`);
+      if(m.vol!=null && m.vol!=='' && m.vol!=='x') chips.push(`<span class="metaTag std">${esc(m.vol)}</span>`);
+      if(m.pause!=null && m.pause!=='' && m.pause!=='x') chips.push(`<span class="metaTag std">Pause ${esc(m.pause)}</span>`);
     }
     return `<div class="slotName${it.red ? ' redFlag' : ''}">${esc(it.ex)}</div>${chips.length ? `<div class="slotMeta">${chips.join('')}</div>` : ''}`;
   };

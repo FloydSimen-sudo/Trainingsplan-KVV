@@ -272,6 +272,12 @@ check('Zeiten bei Trainingsinhalten: nur explizite Floyd-Zeit direkt uebernommen
   if (!out.includes('metaTag std">Standard') || !out.includes('30 min')) {
     throw new Error('Katalog-Zeit ohne klare "Standard"-Markierung: ' + out.slice(0,900));
   }
+  if (!out.includes('metaTag std">30 min')) {
+    throw new Error('Katalog-Zeit ist nicht grau/zurueckhaltend (std) dargestellt: ' + out.slice(0,900));
+  }
+  if (out.includes('metaTag hi">30 min') || out.includes('metaTag hi">120 min')) {
+    throw new Error('Katalog-Zeit wird faelschlich hervorgehoben (hi) statt grau (std): ' + out.slice(0,900));
+  }
 });
 
 check('Rot markierte Zellen (z.B. "entfällt") werden in der App klar hervorgehoben (U13 I KW41 Fr)', () => {
