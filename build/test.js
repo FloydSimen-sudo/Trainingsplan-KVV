@@ -251,9 +251,9 @@ check('Header zeigt Austria-Climbing-Bildmarke, Vorarlberg-Logo und echte Tab-Ic
   if (!out.includes('<svg')) throw new Error('Tab-Icons (SVG) fehlen, evtl. noch leere Rechtecke');
 });
 
-check('Technikfokus wird wörtlich übernommen, ohne erfundene Min/Sätze/Pause-Chips (Adrian KW38 Mi)', () => {
+check('Technikfokus wird wörtlich übernommen, ohne erfundene Min/Sätze/Pause-Chips (Adrian KW38 Di)', () => {
   state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.weekView='tage';
-  state.year = 2026; state.kw = 38; state.day = 2;
+  state.year = 2026; state.kw = 38; state.day = 1;
   const out = renderApp();
   if (!out.includes('Vorbereitung auf Go')) throw new Error('Technikfokus-Text fehlt: ' + out.slice(0,600));
   if (out.includes('90 min') || out.includes('Boulder a 8 Züge') || out.includes('Gos pro Boulder')) {
