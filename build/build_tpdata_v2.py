@@ -1609,8 +1609,11 @@ def main():
         group_doku_weeks = aggregate_group_doku_weeks(group_names, forms_2627)
         # Pro-Athlet:in Doku-Abgabequote (Balken im Statistik-Tab): Doku-Tage
         # im Verhaeltnis zu den Tagen mit Training an der Wand der Gruppe.
+        # Ausdruecklich nur fuer U15 I und U15 II (Floyds Vorgabe, 30.09.26) -
+        # bewusst nicht generisch fuer alle Gruppen.
+        ATHLETE_DOKU_GROUPS = ('U15I', 'U15 II')
         wall_days_27 = ss27['wallDays'] if ss27 else 0
-        athlete_doku = aggregate_group_athlete_doku(group_names, FORMS_BY_ATHLETE, wall_days_27)
+        athlete_doku = aggregate_group_athlete_doku(group_names, FORMS_BY_ATHLETE, wall_days_27) if gid in ATHLETE_DOKU_GROUPS else None
         if ss27:
             ss27['doku'] = group_doku_season
             ss27['athleteDoku'] = athlete_doku

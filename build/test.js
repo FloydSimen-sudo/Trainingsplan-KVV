@@ -145,6 +145,10 @@ check('Statistik Gruppen: Trainingsdoku-Abgabequote pro Person als Balken (U15 I
   state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Statistik'; state.statSeason='26/27';
   const outSolo = renderApp();
   if (outSolo.includes('Trainingsdoku-Abgabequote')) throw new Error('Abgabequote-Balken sind Gruppen-Feature, sollten bei Einzelplänen nicht erscheinen');
+
+  state.view = {t:'g', id:'U9'}; state.tab='Statistik'; state.statSeason='26/27';
+  const outU9 = renderApp();
+  if (outU9.includes('Trainingsdoku-Abgabequote')) throw new Error('Abgabequote-Balken sollen laut Floyd (30.09.26) nur bei U15 I und U15 II erscheinen, nicht bei U9');
 });
 
 check('Statistik: Saison-Toggle nur im Statistik-Tab, andere Tabs (Woche/Jahr/Benchmarks) bleiben unbeeinflusst von statSeason', () => {
