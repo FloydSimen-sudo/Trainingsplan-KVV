@@ -875,6 +875,21 @@ function renderStatistik(view){
     ? 'Trainingsdauer/Load fehlen: Das Doku-Formular erfasst aktuell keine Trainingsdauer.'
     : (!isSolo && !dk.avgMotivation ? 'Noch keine Doku-Einträge von Athlet:innen dieser Gruppe für diese Saison.' : null);
 
+  let dokuComplianceSection = '';
+  if(!isSolo && ss.athleteDoku && ss.athleteDoku.length && ss.wallDays){
+    const barColor = pct => pct>=66 ? LI : (pct>=33 ? '#f1774e' : '#d20028');
+    dokuComplianceSection = `
+    <div class="barChart">
+      <div style="display:flex;align-items:baseline;justify-content:space-between"><span class="sectionTitle">Trainingsdoku-Abgabequote</span><span class="subMeta">PRO PERSON</span></div>
+      ${ss.athleteDoku.map(a=>`
+        <div class="distRow">
+          <div class="distTop"><span class="n">${esc(a.name)}</span><span class="c">${a.dokuDays}/${ss.wallDays} · ${a.pct==null?'-':a.pct.toFixed(0)+'%'}</span></div>
+          <div class="distBarBg"><div class="distBarFg" style="width:${Math.min(100,a.pct||0)}%;background:${barColor(a.pct||0)}"></div></div>
+        </div>`).join('')}
+      <div class="footNote">Anzahl Tage mit abgegebener Trainingsdoku im Verhältnis zu den Tagen mit Training an der Wand (${ss.wallDays}) dieser Gruppe, Saison ${esc(season)}. Sortiert nach niedrigster Quote zuerst.</div>
+    </div>`;
+  }
+
   return `
     <div style="display:flex;align-items:baseline;justify-content:space-between">
       <span class="sectionTitle">Statistik</span>
@@ -891,6 +906,7 @@ function renderStatistik(view){
         </div>`).join('')}
       <div class="footNote">Zählt reale Einträge in den Übungszellen der Einheitenplanung Saison ${esc(season)} (${esc(ss.sheet||'-')}) — keine Schätzung.</div>
     </div>
+    ${dokuComplianceSection}
     <div class="roster">
       <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">Saison ${esc(season)} Gesamt</span>
       ${totals.map(t=>`<div style="display:flex;align-items:baseline;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(10,50,80,.08)"><span style="font:400 12px/1 Archivo,sans-serif;color:${MU}">${esc(t.k)}</span><span style="font:600 13px/1 'Roboto Mono',monospace">${esc(t.v)}</span></div>`).join('')}

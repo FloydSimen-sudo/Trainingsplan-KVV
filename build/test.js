@@ -130,6 +130,23 @@ check('Statistik Gruppen: geschätzte Trainingsstunden (2,75h × echte Trainings
   if (outAdrian.includes('geschätzt')) throw new Error('Adrian sollte weiterhin echte (nicht geschätzte) Trainingsstunden zeigen');
 });
 
+check('Statistik Gruppen: Trainingsdoku-Abgabequote pro Person als Balken (U15 II, echte Zahlen)', () => {
+  state.view = {t:'g', id:'U15 II'}; state.tab='Statistik'; state.statSeason='26/27';
+  const out = renderApp();
+  if (!out.includes('Trainingsdoku-Abgabequote')) throw new Error('Abgabequote-Balken fehlen bei U15 II: ' + out.slice(0,500));
+  if (!out.includes('Emil Gächter')) throw new Error('Emil Gächter (höchste Quote) fehlt in der Liste');
+  if (!out.includes('6/15')) throw new Error('Erwartete Doku-Tage/WallDays-Zahl (6/15) fehlt für Emil Gächter');
+  if (!out.includes('40%')) throw new Error('Erwartete Prozentzahl (40%) fehlt');
+  const d = window.TPDATA;
+  const ss = d.SEASON_STATS['26/27']['g:U15 II'];
+  if (!Array.isArray(ss.athleteDoku) || !ss.athleteDoku.length) throw new Error('athleteDoku fehlt in SEASON_STATS');
+  if (ss.athleteDoku[0].pct > ss.athleteDoku[ss.athleteDoku.length-1].pct) throw new Error('athleteDoku sollte aufsteigend nach Quote sortiert sein (niedrigste zuerst)');
+
+  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Statistik'; state.statSeason='26/27';
+  const outSolo = renderApp();
+  if (outSolo.includes('Trainingsdoku-Abgabequote')) throw new Error('Abgabequote-Balken sind Gruppen-Feature, sollten bei Einzelplänen nicht erscheinen');
+});
+
 check('Statistik: Saison-Toggle nur im Statistik-Tab, andere Tabs (Woche/Jahr/Benchmarks) bleiben unbeeinflusst von statSeason', () => {
   const d = window.TPDATA;
   if (!Array.isArray(d.SEASONS) || d.SEASONS.length < 2) throw new Error('SEASONS fehlt/zu kurz: ' + JSON.stringify(d.SEASONS));

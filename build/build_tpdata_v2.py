@@ -479,6 +479,22 @@ def aggregate_group_doku_season(athlete_names, forms_by_athlete):
         'nAthletesWithDoku': len(set(n for n in athlete_names if forms_by_athlete.get(n))),
     }
 
+def aggregate_group_athlete_doku(athlete_names, forms_by_athlete, wall_days):
+    """Pro Athlet:in einer Gruppe: Anzahl Tage mit abgegebener Trainingsdoku
+    (distinkte Datumswerte aus den Forms-Records) im Verhaeltnis zu den
+    Tagen mit Training an der Wand der Gruppe (wallDays), als Prozent.
+    Kein Erfinden: ohne wallDays bleibt pct None statt 0/100 zu erfinden.
+    Athlet:innen ohne jede Doku erscheinen mit dokuDays=0, nicht weggelassen."""
+    rows = []
+    for n in athlete_names:
+        recs = forms_by_athlete.get(n, [])
+        dates = set(r['date'] for r in recs if r.get('date'))
+        doku_days = len(dates)
+        pct = round(100 * doku_days / wall_days, 1) if wall_days else None
+        rows.append({'name': n, 'dokuDays': doku_days, 'pct': pct})
+    rows.sort(key=lambda r: (r['pct'] if r['pct'] is not None else -1))
+    return rows
+
 def aggregate_group_doku_weeks(athlete_names, forms_by_athlete):
     """Wie aggregate_group_doku_season, aber pro (year,kw) Woche gebucketed -
     für 'Woche Kompakt' bei Gruppenplänen. Liefert {(year,kw): {...}}."""
@@ -1591,14 +1607,19 @@ def main():
         forms_2627 = {n: FORMS_BY_ATHLETE[n] for n in group_names if FORMS_BY_ATHLETE.get(n)}
         group_doku_season = aggregate_group_doku_season(group_names, forms_2627)
         group_doku_weeks = aggregate_group_doku_weeks(group_names, forms_2627)
+        # Pro-Athlet:in Doku-Abgabequote (Balken im Statistik-Tab): Doku-Tage
+        # im Verhaeltnis zu den Tagen mit Training an der Wand der Gruppe.
+        wall_days_27 = ss27['wallDays'] if ss27 else 0
+        athlete_doku = aggregate_group_athlete_doku(group_names, FORMS_BY_ATHLETE, wall_days_27)
         if ss27:
             ss27['doku'] = group_doku_season
+            ss27['athleteDoku'] = athlete_doku
             SEASON_STATS['26/27']['g:' + gid] = ss27
         elif group_doku_season:
             SEASON_STATS['26/27']['g:' + gid] = {
                 'catCounts': [{'name': c, 'count': cats_counter.get(c, 0)} for c in CAT_ORDER],
                 'weeks': [], 'sheet': sheetname or 'Einheitenplanung 26_27', 'doku': group_doku_season,
-                'wallDays': 0,
+                'wallDays': 0, 'athleteDoku': athlete_doku,
             }
         for wk_key, wk_entry in weeks.items():
             yk = (wk_entry.get('year'), wk_entry.get('kw'))
