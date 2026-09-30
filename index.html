@@ -321,7 +321,7 @@ function trainerDisplay(groupId, dd){
   return dd.trainer || null;
 }
 // Vollstaendige Wochenuebersicht fuer die Rotation-Ansicht (Tab/Button).
-// Quelle: Testspace/Rotation U9-U13/Regeln fuer Rotationsprinzip.docx,
+// Quelle: Trainingsplanung Live/Rotation U9-U13/Regeln fuer Rotationsprinzip.docx,
 // angewendet gemaess Floyds Vorgaben (siehe Chat-Verlauf 16./17.09.2026),
 // genehmigt als "v9". Faellt eine neue Woche an, muss sie hier manuell
 // nachgetragen werden -- wird NICHT automatisch aus Excel abgeleitet.
@@ -823,7 +823,7 @@ function renderStatistik(view){
   if(!ss){
     return `${seasonToggle}<div class="empty">
       <div class="t1">Keine Saison-Daten hinterlegt</div>
-      <div class="t2">Für Saison ${esc(season)} liegt keine Einheitenplanung im Testspace-Ordner vor.</div>
+      <div class="t2">Für Saison ${esc(season)} liegt keine Einheitenplanung im Trainingsplanung Live-Ordner vor.</div>
     </div>`;
   }
   const cats = ss.catCounts || [];

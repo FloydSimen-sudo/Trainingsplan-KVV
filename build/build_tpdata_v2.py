@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Trainingsplan KVV — Excel -> tp-data.js  (Version 2, Neuaufbau)
-Liest alle echten Quelldateien aus dem Testspace-Ordner und baut eine
+Liest alle echten Quelldateien aus dem Trainingsplanung Live-Ordner und baut eine
 tp-data.js im Schema, das die App (index.html) erwartet.
 
 Kein Wert wird erfunden: fehlt eine Angabe in Excel, wird null geschrieben
@@ -11,7 +11,7 @@ und die App zeigt "-" an.
 import openpyxl, json, re, subprocess, sys, glob, os
 from datetime import date, datetime, timedelta
 
-BASE = "/sessions/rcw-0151s7tv8hxkojd4a1uavrle/mnt/Testspace/"
+BASE = os.path.join(os.path.expanduser("~"), "mnt", "Trainingsplanung Live") + "/"
 OUT = "/sessions/rcw-0151s7tv8hxkojd4a1uavrle/mnt/Trainingsplan-KVV/tp-data.js"
 
 def resolve_file(*candidates):
@@ -1511,7 +1511,7 @@ def main():
         'Levi Strolz': 'Levi Strolz 26_27.xlsx',
     }
     # Individuen liegen jetzt im Unterordner "Einzelpläne/" (Floyd hat den
-    # Testspace-Ordner neu strukturiert); resolve_file fällt bei Bedarf auf
+    # Trainingsplanung Live-Ordner neu strukturiert); resolve_file fällt bei Bedarf auf
     # den alten Wurzelpfad zurück und toleriert OneDrive-Konfliktkopien
     # (z.B. "Name 2.xlsx").
     INDIVIDUAL_PATHS = {
@@ -1638,10 +1638,10 @@ def main():
     for missing in ['Levi Strolz']:
         if ('a:' + missing) not in PLANS:
             PLANS['a:' + missing] = {}
-            SOURCE_INFO['a:' + missing] = 'Keine Excel-Datei im Testspace-Ordner hinterlegt'
+            SOURCE_INFO['a:' + missing] = 'Keine Excel-Datei im Trainingsplanung Live-Ordner hinterlegt'
     if 'g:SPOGY Gruppe' not in PLANS:
         PLANS['g:SPOGY Gruppe'] = {}
-        SOURCE_INFO['g:SPOGY Gruppe'] = 'Keine Gruppen-Excel für SPOGY im Testspace-Ordner hinterlegt (Athlet:innen haben Einzelpläne)'
+        SOURCE_INFO['g:SPOGY Gruppe'] = 'Keine Gruppen-Excel für SPOGY im Trainingsplanung Live-Ordner hinterlegt (Athlet:innen haben Einzelpläne)'
 
     gk = load_gk()
 

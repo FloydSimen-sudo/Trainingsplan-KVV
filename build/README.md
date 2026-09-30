@@ -8,7 +8,7 @@ Die ausführliche Prozess-Doku (wann/wie/warum) steht im Obsidian-Vault unter `K
 
 ## Dateien
 
-- `build_tpdata_v2.py` — liest alle Excel-Quellen aus dem Testspace-Ordner und schreibt `tp-data.js`.
+- `build_tpdata_v2.py` — liest alle Excel-Quellen aus dem Trainingsplanung Live-Ordner und schreibt `tp-data.js`.
 - `test.js` — Node-basierter Test für `index.html` (liest `index.html` + `tp-data.js`, führt alle Checks in einer `vm`-Sandbox aus). Mit `node test.js` ausführen (Node ohne npm-Pakete nötig).
 
 ## Voraussetzungen zum Ausführen von `build_tpdata_v2.py`
@@ -21,11 +21,11 @@ Die ausführliche Prozess-Doku (wann/wie/warum) steht im Obsidian-Vault unter `K
 Am Kopf der Datei stehen zwei Pfade, die auf die Cowork-Cloud-Umgebung zeigen und in einer neuen Umgebung angepasst werden müssen:
 
 ```python
-BASE = '/mnt/user-data/uploads/Testspace/'   # wo die gestagten/kopierten Excel-Dateien liegen
+BASE = '/mnt/user-data/uploads/Trainingsplanung Live/'   # wo die gestagten/kopierten Excel-Dateien liegen
 OUT  = '/home/claude/tpapp/design/tp-data.js'  # wohin tp-data.js geschrieben wird
 ```
 
-`BASE` muss auf eine lokale Kopie des OneDrive-Ordners `KVV Trainingsplanung/Testspace` zeigen (Unterordner `Einzelpläne/`, `Gruppenpläne/<Gruppe>/`, `Zusatzinfos/`). `OUT` sollte auf `tp-data.js` im Repo-Wurzelverzeichnis zeigen, damit die erzeugte Datei direkt an der richtigen Stelle landet.
+`BASE` muss auf eine lokale Kopie des OneDrive-Ordners `KVV Trainingsplanung/Trainingsplanung Live` zeigen (Unterordner `Einzelpläne/`, `Gruppenpläne/<Gruppe>/`, `Zusatzinfos/`). `OUT` sollte auf `tp-data.js` im Repo-Wurzelverzeichnis zeigen, damit die erzeugte Datei direkt an der richtigen Stelle landet.
 
 ## Ausführen
 
