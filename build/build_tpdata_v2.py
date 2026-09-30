@@ -479,16 +479,36 @@ def aggregate_group_doku_season(athlete_names, forms_by_athlete):
         'nAthletesWithDoku': len(set(n for n in athlete_names if forms_by_athlete.get(n))),
     }
 
-def aggregate_group_athlete_doku(athlete_names, forms_by_athlete, wall_days):
+DOKU_QUOTE_START = '2026-09-04'  # Abgabequote zaehlt erst ab diesem Datum (Floyd, 30.09.2026)
+
+def count_wall_days_in_range(weeks, start_iso, end_iso):
+    """Wie count_wall_days_from_weeks, aber nur Tage mit start_iso <= date <= end_iso
+    (ISO-Strings). Zukuenftige, bereits geplante Tage zaehlen so nicht mit."""
+    count = 0
+    values = weeks.values() if isinstance(weeks, dict) else weeks
+    for wk in values:
+        for day in wk.get('days', []):
+            d = day.get('date')
+            if not d or d < start_iso or d > end_iso:
+                continue
+            if any(cat.get('name') in WALL_CATS and cat.get('items')
+                   for sess in day.get('sessions', []) for cat in sess.get('cats', [])):
+                count += 1
+    return count
+
+def aggregate_group_athlete_doku(athlete_names, forms_by_athlete, wall_days, start_iso=None, end_iso=None):
     """Pro Athlet:in einer Gruppe: Anzahl Tage mit abgegebener Trainingsdoku
     (distinkte Datumswerte aus den Forms-Records) im Verhaeltnis zu den
     Tagen mit Training an der Wand der Gruppe (wallDays), als Prozent.
+    Optional nur Doku-Datumswerte im Zeitraum start_iso..end_iso.
     Kein Erfinden: ohne wallDays bleibt pct None statt 0/100 zu erfinden.
     Athlet:innen ohne jede Doku erscheinen mit dokuDays=0, nicht weggelassen."""
     rows = []
     for n in athlete_names:
         recs = forms_by_athlete.get(n, [])
-        dates = set(r['date'] for r in recs if r.get('date'))
+        dates = set(r['date'] for r in recs if r.get('date')
+                    and (start_iso is None or r['date'] >= start_iso)
+                    and (end_iso is None or r['date'] <= end_iso))
         doku_days = len(dates)
         pct = round(100 * doku_days / wall_days, 1) if wall_days else None
         rows.append({'name': n, 'dokuDays': doku_days, 'pct': pct})
@@ -1612,11 +1632,13 @@ def main():
         # Ausdruecklich nur fuer U15 I und U15 II (Floyds Vorgabe, 30.09.26) -
         # bewusst nicht generisch fuer alle Gruppen.
         ATHLETE_DOKU_GROUPS = ('U15I', 'U15 II')
-        wall_days_27 = ss27['wallDays'] if ss27 else 0
-        athlete_doku = aggregate_group_athlete_doku(group_names, FORMS_BY_ATHLETE, wall_days_27) if gid in ATHLETE_DOKU_GROUPS else None
+        quote_end = date.today().isoformat()
+        quote_wall_days = count_wall_days_in_range(weeks, DOKU_QUOTE_START, quote_end) if gid in ATHLETE_DOKU_GROUPS else 0
+        athlete_doku = aggregate_group_athlete_doku(group_names, FORMS_BY_ATHLETE, quote_wall_days, DOKU_QUOTE_START, quote_end) if gid in ATHLETE_DOKU_GROUPS else None
         if ss27:
             ss27['doku'] = group_doku_season
             ss27['athleteDoku'] = athlete_doku
+            ss27['dokuQuote'] = {'from': DOKU_QUOTE_START, 'to': quote_end, 'wallDays': quote_wall_days} if athlete_doku is not None else None
             SEASON_STATS['26/27']['g:' + gid] = ss27
         elif group_doku_season:
             SEASON_STATS['26/27']['g:' + gid] = {

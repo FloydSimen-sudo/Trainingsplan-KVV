@@ -876,17 +876,20 @@ function renderStatistik(view){
     : (!isSolo && !dk.avgMotivation ? 'Noch keine Doku-Einträge von Athlet:innen dieser Gruppe für diese Saison.' : null);
 
   let dokuComplianceSection = '';
-  if(!isSolo && ss.athleteDoku && ss.athleteDoku.length && ss.wallDays){
+  const dq = ss.dokuQuote || null;
+  const dqWall = dq ? dq.wallDays : ss.wallDays;
+  const fmtD = iso => iso ? iso.slice(8,10)+'.'+iso.slice(5,7)+'.'+iso.slice(0,4) : '';
+  if(!isSolo && ss.athleteDoku && ss.athleteDoku.length && dqWall){
     const barColor = pct => pct>=66 ? LI : (pct>=33 ? '#f1774e' : '#d20028');
     dokuComplianceSection = `
     <div class="barChart">
       <div style="display:flex;align-items:baseline;justify-content:space-between"><span class="sectionTitle">Trainingsdoku-Abgabequote</span><span class="subMeta">PRO PERSON</span></div>
       ${ss.athleteDoku.map(a=>`
         <div class="distRow">
-          <div class="distTop"><span class="n">${esc(a.name)}</span><span class="c">${a.dokuDays}/${ss.wallDays} · ${a.pct==null?'-':a.pct.toFixed(0)+'%'}</span></div>
+          <div class="distTop"><span class="n">${esc(a.name)}</span><span class="c">${a.dokuDays}/${dqWall} · ${a.pct==null?'-':a.pct.toFixed(0)+'%'}</span></div>
           <div class="distBarBg"><div class="distBarFg" style="width:${Math.min(100,a.pct||0)}%;background:${barColor(a.pct||0)}"></div></div>
         </div>`).join('')}
-      <div class="footNote">Anzahl Tage mit abgegebener Trainingsdoku im Verhältnis zu den Tagen mit Training an der Wand (${ss.wallDays}) dieser Gruppe, Saison ${esc(season)}. Sortiert nach niedrigster Quote zuerst.</div>
+      <div class="footNote">Anzahl Tage mit abgegebener Trainingsdoku im Verhältnis zu den Tagen mit Training an der Wand (${dqWall}) dieser Gruppe, ${dq ? 'Zeitraum '+fmtD(dq.from)+' bis '+fmtD(dq.to) : 'Saison '+esc(season)}. Sortiert nach niedrigster Quote zuerst.</div>
     </div>`;
   }
 

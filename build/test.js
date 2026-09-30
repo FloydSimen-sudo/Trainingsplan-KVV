@@ -135,10 +135,12 @@ check('Statistik Gruppen: Trainingsdoku-Abgabequote pro Person als Balken (U15 I
   const out = renderApp();
   if (!out.includes('Trainingsdoku-Abgabequote')) throw new Error('Abgabequote-Balken fehlen bei U15 II: ' + out.slice(0,500));
   if (!out.includes('Emil Gächter')) throw new Error('Emil Gächter (höchste Quote) fehlt in der Liste');
-  if (!out.includes('6/15')) throw new Error('Erwartete Doku-Tage/WallDays-Zahl (6/15) fehlt für Emil Gächter');
-  if (!out.includes('40%')) throw new Error('Erwartete Prozentzahl (40%) fehlt');
   const d = window.TPDATA;
   const ss = d.SEASON_STATS['26/27']['g:U15 II'];
+  if (!ss.dokuQuote || ss.dokuQuote.from !== '2026-09-04') throw new Error('Abgabequote muss ab 04.09.2026 zaehlen');
+  const emil = ss.athleteDoku.find(a => a.name === 'Emil Gächter');
+  if (!out.includes(emil.dokuDays + '/' + ss.dokuQuote.wallDays)) throw new Error('Doku-Tage/WallDays ab 04.09. fehlen für Emil Gächter');
+  if (!out.includes('Zeitraum 04.09.2026')) throw new Error('Zeitraum-Hinweis ab 04.09.2026 fehlt');
   if (!Array.isArray(ss.athleteDoku) || !ss.athleteDoku.length) throw new Error('athleteDoku fehlt in SEASON_STATS');
   if (ss.athleteDoku[0].pct > ss.athleteDoku[ss.athleteDoku.length-1].pct) throw new Error('athleteDoku sollte aufsteigend nach Quote sortiert sein (niedrigste zuerst)');
 
