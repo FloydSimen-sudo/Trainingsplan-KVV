@@ -146,7 +146,10 @@ check('Statistik Gruppen: Trainingsdoku-Abgabequote pro Person als Balken (U15 I
 
   state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Statistik'; state.statSeason='26/27';
   const outSolo = renderApp();
-  if (outSolo.includes('Trainingsdoku-Abgabequote')) throw new Error('Abgabequote-Balken sind Gruppen-Feature, sollten bei Einzelplänen nicht erscheinen');
+  if (!outSolo.includes('Trainingsdoku-Abgabequote')) throw new Error('Abgabequote-Balken sollen auch bei Einzelplänen erscheinen (Adrian)');
+  const ssA = d.SEASON_STATS['26/27']['a:Adrian Kathan'];
+  if (!ssA.dokuQuote || ssA.dokuQuote.from !== '2026-09-04') throw new Error('Einzelplan-Quote muss ab 04.09.2026 zaehlen');
+  if (!outSolo.includes(ssA.athleteDoku[0].dokuDays + '/' + ssA.dokuQuote.wallDays)) throw new Error('Doku-Tage/WallDays fehlen bei Adrian');
 
   state.view = {t:'g', id:'U9'}; state.tab='Statistik'; state.statSeason='26/27';
   const outU9 = renderApp();

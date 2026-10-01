@@ -1607,6 +1607,11 @@ def main():
                 'doku': doku_stats,
                 'wallDays': count_wall_days_from_weeks(weeks, SEASON_WEEKS_2627),
             }
+            # Trainingsdoku-Abgabequote auch fuer Einzelplaene (Floyd, 01.10.2026)
+            q_end = date.today().isoformat()
+            q_wall = count_wall_days_in_range(weeks, DOKU_QUOTE_START, q_end)
+            SEASON_STATS['26/27']['a:' + name]['athleteDoku'] = aggregate_group_athlete_doku([name], FORMS_BY_ATHLETE, q_wall, DOKU_QUOTE_START, q_end)
+            SEASON_STATS['26/27']['a:' + name]['dokuQuote'] = {'from': DOKU_QUOTE_START, 'to': q_end, 'wallDays': q_wall}
 
     for gid, (relpath, sheet_cands) in GROUP_FILES.items():
         cats_counter = {}
