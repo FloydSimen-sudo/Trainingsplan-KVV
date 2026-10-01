@@ -302,9 +302,9 @@ const ROTATION_OVERRIDE = {
   'U13 I': { '2026-09-16': 'Floyd', '2026-09-30': 'Floyd', '2026-10-28': 'Floyd' },
   'U9':    { '2026-09-23': 'Floyd', '2026-10-21': 'Floyd' },
   'U13II': { '2026-10-02': 'Floyd', '2026-10-30': 'Floyd' },
-  'U11II': { '2026-10-06': 'Floyd', '2026-10-09': 'Kathi' },  // KW41: Floyd uebernimmt Di (statt Jo), Kathi Fr wie gewohnt (Floyd, 01.10.)
+  'U11II': { '2026-10-06': 'Floyd', '2026-10-09': 'Kathi', '2026-10-23': 'Floyd' },  // KW41: Floyd uebernimmt Di (statt Jo), Kathi Fr wie gewohnt (Floyd, 01.10.)
   'U15 II': { '2026-10-05': 'Jo' },  // KW41: Jo uebernimmt U15 II am Mo im Tausch (Floyd, 01.10.)
-  'U11I':  { '2026-10-23': 'Floyd' },
+  'U11I':  { '2026-10-16': 'Nemo' },  // Kalender maszgebend (Floyd, 01.10.): keine Uebernahme durch Floyd in KW42
 };
 // Regulaere/r Trainer:in je Gruppe (fuer die Anzeige "Floyd statt X" in der
 // Rotation-Ansicht) -- Quelle: v9-Herleitung (build_rotation_pdf_v9.py).
@@ -332,7 +332,7 @@ const ROTATION_PLAN = {
     { kw: 39, range: '21.09.\u201327.09.', event: 'Talent Days', entries: [ {group:'U9',    gid:'U9',    day:'Mi', trainer:'Floyd'} ] },
     { kw: 40, range: '28.09.\u201304.10.', event: 'A-Cup',       entries: [ {group:'U13 I', gid:'U13 I', day:'Mi', trainer:'Floyd'}, {group:'U13 II', gid:'U13II', day:'Fr', trainer:'Floyd'} ] },
     { kw: 41, range: '05.10.\u201311.10.', event: '\u00d6M',         entries: [ {group:'U11 II', gid:'U11II', day:'Di', trainer:'Floyd', replaces:'Jo'} ] },
-    { kw: 42, range: '12.10.\u201318.10.', event: 'Arge Alp',    entries: [ {group:'U11 I', gid:'U11I', day:'Fr', trainer:'Floyd'} ] },
+    { kw: 42, range: '12.10.\u201318.10.', event: 'Arge Alp',    entries: [] },
     { kw: 43, range: '19.10.\u201325.10.', event: 'normal',      entries: [ {group:'U9', gid:'U9', day:'Mi', trainer:'Floyd'}, {group:'U11 II', gid:'U11II', day:'Fr', trainer:'Floyd'} ] },
     { kw: 44, range: '26.10.\u201301.11.', event: 'normal',      entries: [ {group:'U13 I', gid:'U13 I', day:'Mi', trainer:'Floyd'}, {group:'U13 II', gid:'U13II', day:'Fr', trainer:'Floyd'} ] },
   ]
