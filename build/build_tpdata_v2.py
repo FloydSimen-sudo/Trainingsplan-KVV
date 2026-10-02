@@ -1177,7 +1177,7 @@ def count_aufbau_sessions(weeks):
 AGE_CLASSES = ['U9', 'U11', 'U13', 'U15', 'U17', 'U19']
 
 def load_gk():
-    wb = openpyxl.load_workbook(BASE + 'Zusatzinfos/Gesamtkalender 2025_2026 – aktuell.xlsx', data_only=True)
+    wb = openpyxl.load_workbook(BASE + 'Gesamtkalender 2025_2027 – aktuell.xlsx', data_only=True)
     ws = wb['MOAP']
     rows = []
     for r in range(3, 17):
@@ -1194,8 +1194,12 @@ def load_gk():
     def parse_start_date(rng, ref_year):
         m = re.findall(r'(\d+)\.(\d+)?\.?', rng.split('-')[0])
         try:
-            day = int(re.search(r'^(\d+)\.', rng).group(1))
-            monthmatch = re.search(r'\.(\d+)\.', rng.split('-')[0])
+            parts = rng.strip().split('-')
+            day = int(re.search(r'^\s*(\d+)\.', parts[0]).group(1))
+            monthmatch = re.search(r'\.(\d+)\.', parts[0])
+            if not monthmatch and len(parts) > 1:
+                # z.B. '6.-12.10.': Startmonat steht nur am Ende (gleicher Monat)
+                monthmatch = re.search(r'\.(\d+)\.', parts[1])
             month = int(monthmatch.group(1)) if monthmatch else None
             return day, month
         except Exception:
