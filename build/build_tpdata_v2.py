@@ -369,6 +369,12 @@ def parse_dauer(v):
         return float(DAUER_WORDNUM[m.group(1)])
     return None
 
+# Bekannte Tippfehler in der Forms-Namenseingabe -> echter Kadername
+# (Schluessel = norm_name des Tippfehlers). Nur eindeutige Faelle eintragen.
+DOKU_NAME_ALIASES = {
+    norm_name('Pablo Caamana-Pfister'): 'Pablo Caamano-Pfister',
+}
+
 def load_forms_doku(path, valid_names):
     """Liest die Microsoft-Forms-Antworten-Excel 'Trainingsdoku KVV.xlsx'.
     Eine Zeile = eine Selbstauskunft (Athlet:in + Datum + Session). Namen
@@ -408,7 +414,7 @@ def load_forms_doku(path, valid_names):
         if not raw_name or not dt:
             continue
         key = norm_name(raw_name)
-        real_name = name_lookup.get(key)
+        real_name = name_lookup.get(key) or name_lookup.get(norm_name(DOKU_NAME_ALIASES.get(key, '')))
         if not real_name:
             if str(raw_name).strip() not in unmatched:
                 unmatched.append(str(raw_name).strip())
@@ -1113,7 +1119,7 @@ def load_bench_source_forms(path, valid_names):
         if not raw_name or not dt:
             continue
         key = norm_name(raw_name)
-        real_name = name_lookup.get(key)
+        real_name = name_lookup.get(key) or name_lookup.get(norm_name(DOKU_NAME_ALIASES.get(key, '')))
         if not real_name:
             if str(raw_name).strip() not in unmatched:
                 unmatched.append(str(raw_name).strip())
