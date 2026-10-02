@@ -723,7 +723,10 @@ function renderJahr(view, isSolo, athlete, group){
   const jp = isSolo ? D.JAHRESPLAN[view.id] : D.JAHRESPLAN_GROUP[view.id];
   const src = isSolo ? D.JAHRESPLAN_SOURCE[view.id] : D.JAHRESPLAN_GROUP_SOURCE[view.id];
   if(jp && jp.length) return renderJahrPhasen(view, jp, src || '-');
-  return renderJahrEvents(view, isSolo, athlete, group);
+  return `<div class="empty">
+      <div class="t1">Noch kein Jahresplan hinterlegt</div>
+      <div class="t2">Sobald die Jahresplanung in der Excel gepflegt ist, erscheint sie hier.</div>
+    </div>`;
 }
 
 // Reine Grafik-Ansicht: Kalenderwochen fortlaufend (scrollbar), Phasenfarbe

@@ -1232,6 +1232,111 @@ def load_gk():
                     entry['items'].append({'c': label, 't': str(val)})
     return gk
 
+# Wettkampf-Check (Floyd, 02.10.2026): Gesamtkalender dient NICHT der App-Anzeige,
+# sondern als Pruefgrundlage. Meldet geplante Gruppentrainings an WK-Tagen der
+# passenden Klasse (inkl. Uebergangsregel: U15 I startet bei U13, U13 I bei U11).
+WK_CLASS_BY_GROUP = {
+    'U9': ['U9'], 'U11I': ['U11'], 'U11II': ['U11'],
+    'U13 I': ['U13', 'U11'], 'U13II': ['U13'],
+    'U15I': ['U15', 'U13'], 'U15 II': ['U15'],
+}
+
+def _wk_dates_from_text(txt, ref_date):
+    """Extrahiert konkrete Tage aus Freitext wie 'West Cup Telfs 19.09.',
+    'EYCH Augsburg 19.09.-20.09.', 'A-Cup Innsbruck 21/22.11.', 'EYC Imst 05.,06.09.'.
+    Jahr aus der KW-Spalte (ref_date); ohne erkennbares Datum -> leere Liste."""
+    out = set()
+    t = str(txt)
+    for m in re.finditer(r'(\d{1,2})\.?\s*[-/,]\s*(\d{1,2})\.(\d{1,2})\.', t):
+        d1, d2, mo = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        for d in range(min(d1, d2), max(d1, d2) + 1):
+            out.add((d, mo))
+    for m in re.finditer(r'(?<![\d./,-])(\d{1,2})\.(\d{1,2})\.', t):
+        out.add((int(m.group(1)), int(m.group(2))))
+    res = []
+    for d, mo in out:
+        for y in (ref_date.year, ref_date.year + 1, ref_date.year - 1):
+            try:
+                dt = date(y, mo, d)
+            except ValueError:
+                continue
+            if abs((dt - ref_date).days) <= 14:
+                res.append(dt)
+                break
+    return sorted(res)
+
+def load_gk_competitions():
+    """{klasse: {iso-date: [eventtext,...]}} aus den Wettkampf-Zeilen (Bouldern/Lead)."""
+    wb = openpyxl.load_workbook(BASE + 'Gesamtkalender 2025_2027 – aktuell.xlsx', data_only=True)
+    ws = wb['MOAP']
+    comp_rows = []
+    for r in range(16, 28):
+        cl = ws.cell(row=r, column=3).value
+        if cl and re.match(r'U\d+', str(cl).strip()):
+            comp_rows.append((r, str(cl).strip()))
+    res = {}
+    cur_year, last_month = 2025, 8
+    for c in range(4, ws.max_column + 1):
+        rng = ws.cell(row=2, column=c).value
+        if not rng:
+            continue
+        parts = str(rng).strip().split('-')
+        try:
+            day = int(re.search(r'^\s*(\d+)\.', parts[0]).group(1))
+            mm = re.search(r'\.(\d+)\.', parts[0]) or (re.search(r'\.(\d+)\.', parts[1]) if len(parts) > 1 else None)
+            month = int(mm.group(1))
+        except Exception:
+            continue
+        if month < last_month - 6:
+            cur_year += 1
+        last_month = month
+        try:
+            ref = date(cur_year, month, day)
+        except ValueError:
+            continue
+        for r, cl in comp_rows:
+            v = ws.cell(row=r, column=c).value
+            if not v:
+                continue
+            for dt in _wk_dates_from_text(v, ref):
+                res.setdefault(cl, {}).setdefault(dt.isoformat(), [])
+                if str(v).strip() not in res[cl][dt.isoformat()]:
+                    res[cl][dt.isoformat()].append(str(v).strip())
+    return res
+
+def check_wk_conflicts(plans, today=None):
+    today = today or date.today().isoformat()
+    try:
+        comps = load_gk_competitions()
+    except Exception as e:
+        print('WK-CHECK: Gesamtkalender nicht lesbar:', e)
+        return []
+    hits = []
+    for gid, classes in WK_CLASS_BY_GROUP.items():
+        for wk in (plans.get('g:' + gid) or {}).values():
+            for d in wk.get('days', []):
+                dt = d.get('date')
+                if not dt or dt < today:
+                    continue
+                evs = [(cl, e) for cl in classes for e in comps.get(cl, {}).get(dt, [])]
+                if not evs:
+                    continue
+                ort = str(d.get('ort') or '')
+                trainer = str(d.get('trainer') or '')
+                times = [s.get('time') for s in d.get('sessions', []) if s.get('time')]
+                low = (ort + ' ' + trainer).lower()
+                if 'entf' in low or not (times or trainer):
+                    continue
+                ev_tokens = {w.lower() for _, e in evs for w in re.findall(r'[A-Za-zÄÖÜäöü]{4,}', e)}
+                if ev_tokens & {w.lower() for w in re.findall(r'[A-Za-zÄÖÜäöü]{4,}', ort)}:
+                    continue  # Ort = der Wettkampf selbst, kein Training
+                hits.append((dt, gid, ort, trainer, ', '.join(times), sorted({e + ' (' + cl + ')' for cl, e in evs})))
+    for h in sorted(hits):
+        print('WK-CHECK: %s %s | Training: %s %s %s | Wettkampf: %s' % (h[0], h[1], h[2], h[3], h[4], '; '.join(h[5])))
+    if not hits:
+        print('WK-CHECK: keine Trainings an WK-Tagen gefunden')
+    return hits
+
 # ------------------------------------------------------------ Jahresplanung --
 
 # Bekannte kurze Phasen-Schlagworte -> normalisierte Kategorie (nur diese werden
@@ -1680,7 +1785,9 @@ def main():
         PLANS['g:SPOGY Gruppe'] = {}
         SOURCE_INFO['g:SPOGY Gruppe'] = 'Keine Gruppen-Excel für SPOGY im Trainingsplanung Live-Ordner hinterlegt (Athlet:innen haben Einzelpläne)'
 
-    gk = load_gk()
+    # Gesamtkalender: nur Pruefgrundlage, nicht mehr in der App angezeigt (Floyd, 02.10.2026)
+    check_wk_conflicts(PLANS)
+    gk = {}
 
     data = {
         'GENERATED': datetime.now().strftime('%d.%m.%Y, %H:%M'),
