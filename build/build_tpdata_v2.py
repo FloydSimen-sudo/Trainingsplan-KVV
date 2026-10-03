@@ -1331,6 +1331,47 @@ def check_wk_conflicts(plans, today=None):
                 if ev_tokens & {w.lower() for w in re.findall(r'[A-Za-zÄÖÜäöü]{4,}', ort)}:
                     continue  # Ort = der Wettkampf selbst, kein Training
                 hits.append((dt, gid, ort, trainer, ', '.join(times), sorted({e + ' (' + cl + ')' for cl, e in evs})))
+    # Einzelplaene: WK-Klasse aus der Kaderaufstellung (Spalte 'WK-Klasse 26' fuer
+    # Termine 2026, 'WK-Klasse 27' fuer 2027; 'U15 II' -> 'U15', 'AK' -> keine Jugendklasse).
+    try:
+        kws = openpyxl.load_workbook(KADER_FILE, data_only=True).worksheets[0]
+        kader_cls = {}
+        for r in kws.iter_rows(min_row=4, values_only=True):
+            if r[1] and r[2]:
+                def base(v):
+                    m = re.match(r'(U\d+)', str(v or '').strip())
+                    return m.group(1) if m else None
+                kader_cls[norm_name(f'{r[1]} {r[2]}')] = {2026: base(r[3]), 2027: base(r[4])}
+    except Exception as e:
+        print('WK-CHECK: Kaderaufstellung nicht lesbar:', e)
+        kader_cls = {}
+    for key, wks in plans.items():
+        if not key.startswith('a:'):
+            continue
+        name = key[2:]
+        cls_by_year = kader_cls.get(norm_name(name))
+        if not cls_by_year:
+            print('WK-CHECK: keine WK-Klasse in der Kaderaufstellung fuer', name)
+            continue
+        for wk in (wks or {}).values():
+            for d in wk.get('days', []):
+                dt = d.get('date')
+                if not dt or dt < today:
+                    continue
+                cl = cls_by_year.get(int(dt[:4]))
+                evs = [(cl, e) for e in comps.get(cl, {}).get(dt, [])] if cl else []
+                if not evs:
+                    continue
+                sess = [x for x in d.get('sessions', []) if x.get('ort') or any(c.get('items') for c in x.get('cats', []))]
+                if not sess:
+                    continue
+                orte = ' '.join(str(x.get('ort') or '') for x in sess)
+                if 'entf' in orte.lower() or 'pause' in orte.lower():
+                    continue
+                ev_tokens = {w.lower() for _, e in evs for w in re.findall(r'[A-Za-zÄÖÜäöü]{4,}', e)}
+                if ev_tokens & {w.lower() for w in re.findall(r'[A-Za-zÄÖÜäöü]{4,}', orte)}:
+                    continue
+                hits.append((dt, name, orte.strip() or '(ohne Ort)', '', '', sorted({e + ' (' + c + ')' for c, e in evs})))
     for h in sorted(hits):
         print('WK-CHECK: %s %s | Training: %s %s %s | Wettkampf: %s' % (h[0], h[1], h[2], h[3], h[4], '; '.join(h[5])))
     if not hits:
