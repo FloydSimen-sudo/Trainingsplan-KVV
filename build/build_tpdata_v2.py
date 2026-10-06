@@ -373,6 +373,9 @@ def parse_dauer(v):
 # (Schluessel = norm_name des Tippfehlers). Nur eindeutige Faelle eintragen.
 DOKU_NAME_ALIASES = {
     norm_name('Pablo Caamana-Pfister'): 'Pablo Caamano-Pfister',
+    norm_name('Pablo Caamana Pfister'): 'Pablo Caamano-Pfister',
+    norm_name('Pablo Caamano Pfister'): 'Pablo Caamano-Pfister',
+    norm_name('Pablo Caamana-Pfister'.replace('-', ' ')): 'Pablo Caamano-Pfister',
 }
 
 def load_forms_doku(path, valid_names):
