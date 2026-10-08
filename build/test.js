@@ -84,7 +84,7 @@ check('SPOGY Gruppe (missing group data) shows empty state', () => {
 check('Benchmarks: Maximalkraft-Testung (Bestwerte 23mm Leiste frei/halbaufgestellt, Einarmer) mit abs+rel, Testdatum, Vorzeichen -/+ und OHNE Koerpergewicht', () => {
   state.view = {t:'a', id:'Sophie Bickel'}; state.tab='Benchmarks';
   const o = renderApp();
-  ['Bestwert 23mm Leiste frei','Bestwert 23mm Leiste halbaufgestellt','Bestwert Einarmer','Test 08.10.2026','65,0 kg','107 %','-16,4 kg','73 %'].forEach(t=>{ if(!o.includes(t)) throw new Error('fehlt: '+t); });
+  ['Bestwert 23mm Leiste frei','Bestwert 23mm Leiste halbaufgestellt','Bestwert Einarmer','Test 08.10.2026','65,0 kg','107 %','57,0 kg','-16,4 kg','73 %'].forEach(t=>{ if(!o.includes(t)) throw new Error('fehlt: '+t); });
   if (/60,8/.test(o) || /Gewicht/.test(o.split('Maximalkraft')[1])) throw new Error('Koerpergewicht darf nicht erscheinen');
   state.view = {t:'a', id:'Adrian Kathan'}; const o2 = renderApp();
   if(!o2.includes('+2,5 kg')) throw new Error('Zusatzgewicht muss mit + markiert sein');

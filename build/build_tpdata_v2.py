@@ -1159,7 +1159,7 @@ def load_testungen(valid_names):
     """Liest alle Testtag-Dateien Testungen/SPOGY <TT.MM.JJJJ>.xlsx (Blatt 'Zeitplan':
     Hang-Block Spalten B-G, Zug/Tindeq-Block I-O; Blatt 'Athleten': Spalte 'Gewicht').
     Pro Athlet:in/Item zaehlt der Bestwert der NEUESTEN Testung, die einen Wert hat.
-    Bestwert = hoechster Einzelversuch (beide Arme). Hang: kg + % Koerpergewicht;
+    Bestwert = hoechster Einzelversuch; Hangs: je Arm (rechts+links), Einarmer: bester Arm. Hang: kg + % Koerpergewicht;
     Einarmer: Tindeq-Messwert (negativ = Entlastung, positiv = Zusatzgewicht) +
     (KG+Messwert)/KG in %. Koerpergewicht wird NICHT ausgegeben (Floyd-Vorgabe)."""
     import glob
@@ -1189,7 +1189,7 @@ def load_testungen(valid_names):
                 if n and isinstance(v, (int, float)):
                     real = name_lookup.get(norm_name(n))
                     if real: kg[real] = float(v)
-        best = {}   # (athlet,item) -> (wert, arm)
+        bestarm = {}   # (athlet,item,arm) -> hoechster Einzelversuch
         for r in range(1, ws.max_row + 1):
             for c0, vc in ((2, 6), (9, 14)):
                 a, t, arm = (ws.cell(r, c0 + k).value for k in range(3))
@@ -1198,18 +1198,25 @@ def load_testungen(valid_names):
                     continue
                 real = name_lookup.get(norm_name(a))
                 if not real: continue
-                k = (real, TEST_ITEM_MAP[t])
-                if k not in best or v > best[k][0]:
-                    best[k] = (float(v), arm)
-        for (real, item), (v, arm) in best.items():
+                k = (real, TEST_ITEM_MAP[t], arm)
+                if k not in bestarm or v > bestarm[k]:
+                    bestarm[k] = float(v)
+        items = {}
+        for (real, item, arm), v in bestarm.items():
+            items.setdefault((real, item), {})[arm] = v
+        for (real, item), arms in items.items():
             if real not in kg:        # ohne Gewicht keine Relativkraft -> ehrlich weglassen
                 continue
-            if item == 'Bestwert Einarmer':
-                absv = _fmt_kg(v, signed=True); rel = (kg[real] + v) / kg[real] * 100
-            else:
-                absv = _fmt_kg(v); rel = v / kg[real] * 100
-            out.setdefault(real, {})[item] = {
-                'abs': absv, 'rel': '%d %%' % round(rel), 'date': d.strftime('%d.%m.%Y'), 'arm': arm}
+            def rel_of(v):
+                return ((kg[real] + v) if item == 'Bestwert Einarmer' else v) / kg[real] * 100
+            if item == 'Bestwert Einarmer':   # ein Bestwert (bester Arm), Vorzeichen: - Entlastung, + Zusatz
+                arm, v = max(arms.items(), key=lambda kv: kv[1])
+                out.setdefault(real, {})[item] = {
+                    'abs': _fmt_kg(v, signed=True), 'rel': '%d %%' % round(rel_of(v)),
+                    'date': d.strftime('%d.%m.%Y'), 'arm': arm}
+            else:                             # Max Hangs: Bestwert je Arm (rechts + links)
+                armsout = {a: {'abs': _fmt_kg(v), 'rel': '%d %%' % round(rel_of(v))} for a, v in arms.items()}
+                out.setdefault(real, {})[item] = {'arms': armsout, 'date': d.strftime('%d.%m.%Y')}
     return out
 
 def build_bench_for(athlete_name, forms_vals, legacy_vals, aufbau_count=None, test_vals=None):
@@ -1221,7 +1228,11 @@ def build_bench_for(athlete_name, forms_vals, legacy_vals, aufbau_count=None, te
             auto = 'Sessions' in it
             if it in TEST_ITEM_MAP.values():
                 tv = (test_vals or {}).get(it)
-                if tv:
+                if tv and 'arms' in tv:
+                    any_val = True
+                    its.append({'k': it, 'v': None, 'arms': tv['arms'], 'date': tv['date'], 'abs': None, 'rel': None,
+                                'arm': None, 'p': None, 't': 0, 'auto': False})
+                elif tv:
                     any_val = True
                     its.append({'k': it, 'v': tv['abs'], 'abs': tv['abs'], 'rel': tv['rel'],
                                 'date': tv['date'], 'arm': tv['arm'], 'p': None, 't': 0, 'auto': False})

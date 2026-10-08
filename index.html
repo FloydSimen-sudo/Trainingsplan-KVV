@@ -950,12 +950,14 @@ function renderBenchmarks(view){
         <div>${c.items.map(it=>`
           <div class="benchItem">
             <span class="benchK">${esc(it.k)}${it.auto?' (automatisch)':''}${it.date?`<br><span class="benchSub">Test ${esc(it.date)}${it.arm?' · '+esc(it.arm):''}</span>`:''}</span>
-            ${it.rel!==undefined
+            ${it.arms
+              ? `<span class="benchV" style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">${['rechts','links'].map(a=>`<span style="display:flex;gap:8px;align-items:baseline"><span class="benchSub">${a}</span><span>${it.arms[a]?esc(it.arms[a].abs):'-'}</span><span style="font-weight:500;font-size:12px;color:var(--di);min-width:50px;text-align:right">${it.arms[a]?esc(it.arms[a].rel)+' rel.':'-'}</span></span>`).join('')}</span>`
+              : it.rel!==undefined
               ? `<span class="benchV" style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span>${val(it.abs)}</span><span style="font-weight:500;font-size:12px;color:var(--di)">${it.rel?esc(it.rel)+' rel.':'-'}</span></span>`
               : `<span class="benchV">${val(it.v)}</span>`}
           </div>`).join('')}</div>
       </div>`).join('')}
-    <div class="footNote">Werte kommen aus der Benchmark-Excel bzw. den Testtag-Dateien (Maximalkraft: Bestwert, absolut und relativ; Tindeq-Einarmer: − = Entlastung, + = Zusatzgewicht). Fehlt ein Wert, steht hier "-" statt einer Erfindung.</div>
+    <div class="footNote">Werte kommen aus der Benchmark-Excel bzw. den Testtag-Dateien (Maximalkraft: Bestwert (Hangs je Arm), absolut und relativ; Tindeq-Einarmer: − = Entlastung, + = Zusatzgewicht). Fehlt ein Wert, steht hier "-" statt einer Erfindung.</div>
   `;
 }
 
