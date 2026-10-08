@@ -209,7 +209,9 @@ check('Woche kompakt (Kurzform) view renders week-at-a-glance without throw, all
   state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.year=2026; state.kw=36; state.day=1; state.weekView='kurz';
   const out = renderApp();
   if (!out.includes('kurzTable')) throw new Error('kurz view did not render: ' + out.slice(0,500));
-  if (!out.includes('Technik/Taktik')) throw new Error('expected category tag for Dienstag in kurz view');
+  if (!out.includes('2-3 Onsight Gos')) throw new Error('expected Inhalt fuer Dienstag in kurz view');
+  if (!out.includes('class="kurzItem"')) throw new Error('expected farbig hinterlegte Inhalte in kurz view');
+  if (out.includes('class="kurzCat"')) throw new Error('Kategorienamen sollen in kurz view nicht mehr erscheinen');
   state.weekView='tage';
 });
 

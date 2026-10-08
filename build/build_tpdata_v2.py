@@ -401,11 +401,11 @@ def load_forms_doku(path, valid_names):
         return None
     c_name = col_idx('dein name')
     c_datum = col_idx('datum')
-    c_sess = col_idx('session heute')
+    c_sess = col_idx('session heute') or col_idx('trainingseinheit an diesem tag')
     c_dauer = col_idx('dauer der session')
     c_mot = col_idx('motivation')
     c_eb = col_idx('erschöpfung beginn')
-    c_ee = col_idx('erschöpfung ende')
+    c_ee = col_idx('erschöpfung ende') or col_idx('intensität')  # Forms-Spalte 'Intensität (RPE)' ersetzt 'Erschöpfung Ende' (Okt 2026)
     c_fit = col_idx('fitness nach gefühl')
     c_um = col_idx('umgesetzt')
     c_notiz = col_idx('notizen')
@@ -427,8 +427,10 @@ def load_forms_doku(path, valid_names):
         session = 1 if (sess_raw and '1' in str(sess_raw)) else (2 if (sess_raw and '2' in str(sess_raw)) else None)
         um_raw = row[c_um - 1] if c_um else None
         umsetzung = True if (um_raw and str(um_raw).strip().lower() == 'ja') else (False if (um_raw and str(um_raw).strip().lower() == 'nein') else None)
+        # Option "Ungeplantes selbststaendiges Training" zaehlt nicht in die Abgabequote
+        ungeplant = bool(um_raw and str(um_raw).strip().lower().startswith('ungeplant'))
         rec = {
-            'date': dt_date.isoformat(), 'session': session,
+            'date': dt_date.isoformat(), 'session': session, 'ungeplant': ungeplant,
             'dur': parse_dauer(row[c_dauer - 1]) if c_dauer else None,
             'mot': row[c_mot - 1] if c_mot else None,
             'eb': row[c_eb - 1] if c_eb else None,
@@ -515,7 +517,7 @@ def aggregate_group_athlete_doku(athlete_names, forms_by_athlete, wall_days, sta
     rows = []
     for n in athlete_names:
         recs = forms_by_athlete.get(n, [])
-        dates = set(r['date'] for r in recs if r.get('date')
+        dates = set(r['date'] for r in recs if r.get('date') and not r.get('ungeplant')
                     and (start_iso is None or r['date'] >= start_iso)
                     and (end_iso is None or r['date'] <= end_iso))
         doku_days = len(dates)

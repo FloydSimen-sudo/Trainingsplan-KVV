@@ -181,6 +181,7 @@
   .kurzCat{padding:3px 7px;border-radius:6px;font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.02em;background:var(--panel3);color:var(--tx3)}
   .kurzCatBlock{display:flex;flex-direction:column;gap:2px}
   .kurzCat{display:inline-block;align-self:flex-start}
+  .kurzItem{font:400 10px/1.35 Archivo,sans-serif;padding:3px 7px;border-radius:6px;align-self:stretch}
   .kurzItems{font:400 10px/1.35 Archivo,sans-serif;color:var(--tx);padding-left:2px}
   .kurzItems .redFlag{color:var(--red)}
   .kurzNone{font:400 12px/1.4 Archivo,sans-serif;color:var(--di)}
@@ -219,14 +220,14 @@ const BENCHMARK_FORMS_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.as
 // Jahr-Ribbon der Gruppen: Grün=Lead, Blau=Bouldern, Gelb=Speed.
 // Kategorie-Farben 1:1 wie die Zeilenfarben in der Einheitenplanung (Excel).
 const CAT_COLORS = {
-  'Theorie':{bg:'#dae3f3',bd:'#8faadc'},
-  'Aufwärmen':{bg:'#d9d9d9',bd:'#a6a6a6'},
-  'Motorik':{bg:'#ffccff',bd:'#e08fe0'},
-  'Technikfokus':{bg:'#fde951',bd:'#d9c21c'},
-  'Technik/Taktik':{bg:'#eef95d',bd:'#c4cf1f'},
-  'Physis Klettern':{bg:'#f4b183',bd:'#d9824a'},
-  'Athletik + Mentales':{bg:'#ff3300',bd:'#cc2900',fg:'#fff'},
-  'Spezial':{bg:'#ffccff',bd:'#e08fe0'}
+  'Theorie':{bg:'#e8eef8',bd:'#c3d2ec'},
+  'Aufwärmen':{bg:'#ececec',bd:'#d2d2d2'},
+  'Motorik':{bg:'#f6e6f6',bd:'#e6c8e6'},
+  'Technikfokus':{bg:'#f8f0c4',bd:'#e8dc9c'},
+  'Technik/Taktik':{bg:'#f1f5cf',bd:'#dbe3a6'},
+  'Physis Klettern':{bg:'#f8dfcc',bd:'#ebc3a4'},
+  'Athletik + Mentales':{bg:'#f6cfc6',bd:'#e6aea2'},
+  'Spezial':{bg:'#f6e6f6',bd:'#e6c8e6'}
 };
 const catStyle = (n)=>{ const c=CAT_COLORS[n]; return c ? `background:${c.bg};border:1px solid ${c.bd};color:${c.fg||'#0f2436'}` : ''; };
 const ORT_COLORS = { Lead: '#78b83f', Bouldern: '#0090c9', Speed: '#c9a227' };
@@ -715,8 +716,10 @@ function renderKurz(days, di, groupId){
           }
         });
       });
-      body = catInfo.length
-        ? `<div class="kurzCats" style="flex-direction:column;gap:6px">${catInfo.map(c=>`<div class="kurzCatBlock"><span class="kurzCat" style="${catStyle(c.name)}">${esc(c.name)}</span><div class="kurzItems">${c.items.map(x=>x.red?`<span class="redFlag">${esc(x.t)}</span>`:esc(x.t)).join(' · ')}</div></div>`).join('')}</div>`
+      const itemsFlat = [];
+      catInfo.forEach(c=>c.items.forEach(x=>itemsFlat.push({t:x.t, red:x.red, cat:c.name})));
+      body = itemsFlat.length
+        ? `<div class="kurzCats" style="flex-direction:column;gap:3px">${itemsFlat.map(x=>`<div class="kurzItem" style="${catStyle(x.cat)}">${x.red?`<span class="redFlag">${esc(x.t)}</span>`:esc(x.t)}</div>`).join('')}</div>`
         : `<span class="kurzNone">-</span>`;
     }
     const oc = ORT_COLORS[dd.ortType];
