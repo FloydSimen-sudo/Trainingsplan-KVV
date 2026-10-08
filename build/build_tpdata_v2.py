@@ -1056,13 +1056,13 @@ BENCH_STRUCTURE = [
         'Kilterboard Max', 'Kilterboard Flash',
     ]),
     ('Physisches Klettertraining', 'mitlaufend', ['Anzahl Aufbauboulder Sessions']),
-    ('Maximalkraft', 'Testung', ['Bestwert 23mm Leiste frei', 'Bestwert 23mm Leiste halbaufgestellt', 'Bestwert Einarmer']),
+    ('Maximalkraft', 'Testung', ['Bestwert Max Hang 23mm Leiste frei', 'Bestwert Max Hang 23mm Leiste halbaufgestellt', 'Bestwert Einarmer']),
 ]
 # Maximalkraft-Items kommen NICHT aus dem Forms, sondern aus den Testtag-Excel-Dateien
 # Trainingsplanung Live/Testungen/SPOGY <TT.MM.JJJJ>.xlsx (siehe load_testungen()).
 TEST_ITEM_MAP = {  # Testname im Zeitplan-Blatt -> Benchmark-Item
-    'Max Hang frei': 'Bestwert 23mm Leiste frei',
-    'Max Hang HA': 'Bestwert 23mm Leiste halbaufgestellt',
+    'Max Hang frei': 'Bestwert Max Hang 23mm Leiste frei',
+    'Max Hang HA': 'Bestwert Max Hang 23mm Leiste halbaufgestellt',
     'Einarmer Tindeq': 'Bestwert Einarmer',
 }
 # Weitere Rubriken/Items (Kilterboard Base, Steinblock DB Max, Motorik, Athletik)
