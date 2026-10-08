@@ -61,7 +61,7 @@
   .cardHead .time{font:500 10px/1 'Roboto Mono',monospace;color:var(--mu)}
   .slotRow{display:grid;grid-template-columns:100px 1fr;gap:10px;width:100%;padding:11px 14px;border-bottom:1px solid rgba(10,50,80,.08);text-align:left}
   .slotRow:last-child{border-bottom:none}
-  .slotK{font:500 9px/1.35 'Roboto Mono',monospace;letter-spacing:.06em;color:var(--di);text-transform:uppercase;padding-top:3px}
+  .slotK{font:500 9px/1.35 'Roboto Mono',monospace;letter-spacing:.06em;color:var(--di);text-transform:uppercase;padding:3px 5px;align-self:start;border-radius:6px}
   .slotName{font:500 13px/1.35 Archivo,sans-serif;color:var(--tx);text-wrap:pretty}
   .slotName.redFlag{color:var(--red);font-weight:700}
   .metaPill.redFlag{border-color:var(--red)}
@@ -179,6 +179,10 @@
   .kurzOrt{font:500 10px/1.2 'Roboto Mono',monospace;color:var(--mu)}
   .kurzCats{display:flex;flex-wrap:wrap;gap:5px}
   .kurzCat{padding:3px 7px;border-radius:6px;font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.02em;background:var(--panel3);color:var(--tx3)}
+  .kurzCatBlock{display:flex;flex-direction:column;gap:2px}
+  .kurzCat{display:inline-block;align-self:flex-start}
+  .kurzItems{font:400 10px/1.35 Archivo,sans-serif;color:var(--tx);padding-left:2px}
+  .kurzItems .redFlag{color:var(--red)}
   .kurzNone{font:400 12px/1.4 Archivo,sans-serif;color:var(--di)}
   .gesamtSection{display:flex;flex-direction:column;gap:10px}
   .gesamtBlock{border-radius:14px;background:var(--panel);border:1px solid var(--border);overflow:hidden}
@@ -213,6 +217,18 @@ const DOKU_FORMS_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id
 const BENCHMARK_FORMS_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=NGKrNpwXUEOM-qEM82Zuq0rnuv3di_ZEn2AfUPm3tJdURUEzSDJJMFA5WUdYTlJNVEYxQ0JLV1RBNy4u';
 // Trainingsort-Farbe, 1:1 wie von Floyd vorgegeben und identisch zur Farbe im
 // Jahr-Ribbon der Gruppen: Grün=Lead, Blau=Bouldern, Gelb=Speed.
+// Kategorie-Farben 1:1 wie die Zeilenfarben in der Einheitenplanung (Excel).
+const CAT_COLORS = {
+  'Theorie':{bg:'#dae3f3',bd:'#8faadc'},
+  'Aufwärmen':{bg:'#d9d9d9',bd:'#a6a6a6'},
+  'Motorik':{bg:'#ffccff',bd:'#e08fe0'},
+  'Technikfokus':{bg:'#fde951',bd:'#d9c21c'},
+  'Technik/Taktik':{bg:'#eef95d',bd:'#c4cf1f'},
+  'Physis Klettern':{bg:'#f4b183',bd:'#d9824a'},
+  'Athletik + Mentales':{bg:'#ff3300',bd:'#cc2900',fg:'#fff'},
+  'Spezial':{bg:'#ffccff',bd:'#e08fe0'}
+};
+const catStyle = (n)=>{ const c=CAT_COLORS[n]; return c ? `background:${c.bg};border:1px solid ${c.bd};color:${c.fg||'#0f2436'}` : ''; };
 const ORT_COLORS = { Lead: '#78b83f', Bouldern: '#0090c9', Speed: '#c9a227' };
 const TAB_ICONS = {
   Woche: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/><rect x="7" y="13.5" width="4" height="4" fill="currentColor" stroke="none"/></svg>',
@@ -575,7 +591,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       <div>
         ${ (s.cats || []).map(cat=>`
           <div class="slotRow">
-            <div class="slotK">${esc(cat.name)}</div>
+            <div class="slotK" style="${catStyle(cat.name)}">${esc(cat.name)}</div>
             <div>
               ${ cat.items && cat.items.length
                   ? cat.items.map(renderItem).join('<div style="height:8px"></div>')
@@ -693,15 +709,14 @@ function renderKurz(days, di, groupId){
       dd.sessions.forEach(s=>{
         (s.cats||[]).forEach(cat=>{
           if(cat.items && cat.items.length){
-            const isRed = cat.items.some(it=>it.red);
-            const found = catInfo.find(c=>c.name===cat.name);
-            if(!found) catInfo.push({name: cat.name, red: isRed});
-            else if(isRed) found.red = true;
+            let found = catInfo.find(c=>c.name===cat.name);
+            if(!found){ found={name:cat.name, red:false, items:[]}; catInfo.push(found); }
+            cat.items.forEach(it=>{ if(it.red) found.red=true; if(it.ex) found.items.push({t:it.ex, red:!!it.red}); });
           }
         });
       });
       body = catInfo.length
-        ? `<div class="kurzCats">${catInfo.map(c=>`<span class="kurzCat${c.red?' redFlag':''}">${esc(c.name)}</span>`).join('')}</div>`
+        ? `<div class="kurzCats" style="flex-direction:column;gap:6px">${catInfo.map(c=>`<div class="kurzCatBlock"><span class="kurzCat" style="${catStyle(c.name)}">${esc(c.name)}</span><div class="kurzItems">${c.items.map(x=>x.red?`<span class="redFlag">${esc(x.t)}</span>`:esc(x.t)).join(' · ')}</div></div>`).join('')}</div>`
         : `<span class="kurzNone">-</span>`;
     }
     const oc = ORT_COLORS[dd.ortType];
