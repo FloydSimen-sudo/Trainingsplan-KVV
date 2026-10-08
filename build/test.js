@@ -81,6 +81,17 @@ check('SPOGY Gruppe (missing group data) shows empty state', () => {
   if (!out.includes('Keine Daten hinterlegt')) throw new Error('expected empty-state message');
 });
 
+check('Benchmarks: Maximalkraft-Testung (Bestwerte 23mm Leiste frei/halbaufgestellt, Einarmer) mit abs+rel, Testdatum, Vorzeichen -/+ und OHNE Koerpergewicht', () => {
+  state.view = {t:'a', id:'Sophie Bickel'}; state.tab='Benchmarks';
+  const o = renderApp();
+  ['Bestwert 23mm Leiste frei','Bestwert 23mm Leiste halbaufgestellt','Bestwert Einarmer','Test 08.10.2026','65,0 kg','107 %','-16,4 kg','73 %'].forEach(t=>{ if(!o.includes(t)) throw new Error('fehlt: '+t); });
+  if (/60,8/.test(o) || /Gewicht/.test(o.split('Maximalkraft')[1])) throw new Error('Koerpergewicht darf nicht erscheinen');
+  state.view = {t:'a', id:'Adrian Kathan'}; const o2 = renderApp();
+  if(!o2.includes('+2,5 kg')) throw new Error('Zusatzgewicht muss mit + markiert sein');
+  state.view = {t:'a', id:'Mariella Vierhauser'}; const o3 = renderApp();
+  if(!o3.includes('Bestwert Einarmer')) throw new Error('Einarmer-Zeile fehlt');
+});
+
 check('Benchmarks tab: Adrian has data, alle 8 SPOGY-Athlet:innen haben inzwischen mind. einen echten Wert (Jakob seit Fix ebenfalls), unbekannte Person zeigt weiterhin Platzhalter', () => {
   state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Benchmarks';
   const out1 = renderApp();

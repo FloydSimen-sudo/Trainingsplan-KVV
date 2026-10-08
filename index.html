@@ -135,6 +135,7 @@
   .benchItem{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(10,50,80,.08)}
   .benchItem:last-child{border-bottom:none}
   .benchK{flex:1;font:400 12.5px/1.3 Archivo,sans-serif;color:var(--tx2)}
+  .benchSub{font:400 10.5px/1.4 'Roboto Mono',monospace;color:var(--di)}
   .benchV{font:600 14px/1 'Roboto Mono',monospace;color:var(--tx);min-width:56px;text-align:right}
   .roster{padding:14px;border-radius:16px;background:var(--panel);border:1px solid var(--border);display:flex;flex-direction:column;gap:9px}
   .rosterRow{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(10,50,80,.08)}
@@ -948,11 +949,13 @@ function renderBenchmarks(view){
         <div class="benchCatHead"><span class="n">${esc(c.name)}</span><span class="r">${esc(c.rhythm)}</span></div>
         <div>${c.items.map(it=>`
           <div class="benchItem">
-            <span class="benchK">${esc(it.k)}${it.auto?' (automatisch)':''}</span>
-            <span class="benchV">${val(it.v)}</span>
+            <span class="benchK">${esc(it.k)}${it.auto?' (automatisch)':''}${it.date?`<br><span class="benchSub">Test ${esc(it.date)}${it.arm?' · '+esc(it.arm):''}</span>`:''}</span>
+            ${it.rel!==undefined
+              ? `<span class="benchV" style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span>${val(it.abs)}</span><span style="font-weight:500;font-size:12px;color:var(--di)">${it.rel?esc(it.rel)+' rel.':'-'}</span></span>`
+              : `<span class="benchV">${val(it.v)}</span>`}
           </div>`).join('')}</div>
       </div>`).join('')}
-    <div class="footNote">Werte kommen aus der Benchmark-Excel. Fehlt ein Wert, steht hier "-" statt einer Erfindung.</div>
+    <div class="footNote">Werte kommen aus der Benchmark-Excel bzw. den Testtag-Dateien (Maximalkraft: Bestwert, absolut und relativ; Tindeq-Einarmer: − = Entlastung, + = Zusatzgewicht). Fehlt ein Wert, steht hier "-" statt einer Erfindung.</div>
   `;
 }
 
