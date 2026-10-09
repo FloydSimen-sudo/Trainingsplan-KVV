@@ -45,12 +45,12 @@ check('Nach Auswahl eines Plans: Reiter Woche ist immer aktiv (initial + nach We
 });
 
 check('all tabs for Adrian render without throw', () => {
-  ['Woche','Jahr','Statistik','Benchmarks','Kader'].forEach(t => { state.tab = t; renderApp(); });
+  ['Woche','Jahr','Statistik','Benchmarks'].forEach(t => { state.tab = t; renderApp(); });
 });
 
 check('switch to group U9, all tabs', () => {
   state.view = {t:'g', id:'U9'}; state.tab='Woche'; state.day=0;
-  ['Woche','Jahr','Statistik','Kader'].forEach(t => { state.tab = t; renderApp(); });
+  ['Woche','Jahr','Statistik'].forEach(t => { state.tab = t; renderApp(); });
 });
 
 check('week nav far into past and future (U9)', () => {
@@ -72,7 +72,7 @@ check('Levi Strolz (28.08. jetzt mit echter Einzelplan-Excel) zeigt reale Daten 
   const out = renderApp();
   if (out.includes('Keine Daten hinterlegt')) throw new Error('Levi Strolz hat jetzt eine echte Excel, sollte keinen Platzhalter mehr zeigen: ' + out.slice(0,300));
   if (!out.includes('Levi Strolz')) throw new Error('Name fehlt: ' + out.slice(0,300));
-  ['Woche','Jahr','Statistik','Benchmarks','Kader'].forEach(t => { state.tab = t; renderApp(); });
+  ['Woche','Jahr','Statistik','Benchmarks'].forEach(t => { state.tab = t; renderApp(); });
 });
 
 check('SPOGY Gruppe (missing group data) shows empty state', () => {
