@@ -25,8 +25,8 @@ LABEL = {'U11I':'U11 I','U11II':'U11 II','U13 I':'U13 I','U13II':'U13 II','U15I'
 
 def password():
     C, V = 'bdfgklmnprstvz', 'aeiou'
-    syl = lambda: ''.join(secrets.choice(C) + secrets.choice(V) for _ in range(2)).capitalize()
-    return '-'.join(syl() for _ in range(3)) + '-' + str(secrets.randbelow(90) + 10)
+    # kurz & simpel (Wunsch Floyd 09.10.): 2 Silben + 2 Ziffern, z. B. Kobu47
+    return (''.join(secrets.choice(C) + secrets.choice(V) for _ in range(2))).capitalize() + str(secrets.randbelow(90) + 10)
 
 def split_names(s): return [n.strip() for n in str(s or '').split('+') if n.strip()]
 

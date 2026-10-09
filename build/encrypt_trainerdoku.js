@@ -7,7 +7,7 @@
 const fs = require('fs');
 const crypto = require('crypto');
 const plain = JSON.parse(fs.readFileSync(__dirname + '/trainer-plain.json', 'utf8'));
-const ITER = 250000;
+const ITER = 600000; // hoeher, weil die Passwoerter kurz sind
 const salt = crypto.randomBytes(16);
 const users = plain.access.map((u) => {
   const K = crypto.pbkdf2Sync(u.password, salt, ITER, 32, 'sha256');
