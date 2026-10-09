@@ -34,12 +34,8 @@ def split_names(s): return [n.strip() for n in str(s or '').split('+') if n.stri
 if os.path.exists(ACCESS):
     access = json.load(open(ACCESS, encoding='utf-8'))
 else:
-    by_trainer = {}
-    for g in GROUPS:
-        for n in split_names(g.get('coaches')):
-            by_trainer.setdefault(n, []).append(g['id'])
-    by_trainer['Floyd Simen'] = [g['id'] for g in GROUPS]
-    access = {'users': [{'name': n, 'password': password(), 'groups': gs} for n, gs in by_trainer.items()]}
+    # ein gemeinsames Passwort fuer alle Trainer:innen und alle Gruppen (Floyd, 09.10.)
+    access = {'users': [{'name': 'Trainer:innen', 'password': password(), 'groups': [g['id'] for g in GROUPS]}]}
     json.dump(access, open(ACCESS, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
     print('Zugaenge neu erzeugt:', ACCESS)
 pws = [u['password'] for u in access['users']]
