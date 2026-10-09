@@ -1,2 +1,4 @@
 .DS_Store
 tp-data.js
+build/trainer_access.local.json
+build/trainer-plain.json

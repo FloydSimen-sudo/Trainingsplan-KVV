@@ -455,6 +455,23 @@ check('Auswahl "Training gesamt" von der Startseite/Picker springt auf den heuti
 });
 
 console.log('DONE');
+check('Reiter Trainer (ganz rechts): ohne Login Passwortfeld, mit Login Doku-Karten im Doku-Stil, nur freigeschaltete Gruppen', () => {
+  state.view = {t:'g', id:'U13II'}; state.tab='Woche';
+  let out = renderApp();
+  const tabs = out.match(/data-tab="([^"]+)"/g).map(x=>x.slice(10,-1));
+  if (tabs[tabs.length-1] !== 'Trainer') throw new Error('Trainer sollte der letzte Reiter sein: ' + tabs.join(','));
+  state.tab='Trainer'; out = renderApp();
+  if (!out.includes('trainerPw')) throw new Error('Passwortfeld fehlt ohne Login');
+  if (out.includes('Laut, hören')) throw new Error('Eintraege duerfen ohne Login nicht sichtbar sein');
+  trainerAdd({name:'Test', groups:[{id:'U13II', label:'U13 II', entries:[{date:'2026-09-30', fokus:'Chaotisch', umsetzung:true, notiz:'Laut, hören nicht zu'}]}]});
+  out = renderApp();
+  if (!out.includes('Laut, hören nicht zu') || !out.includes('Chaotisch') || !out.includes('dokuBlock')) throw new Error('Doku-Karte fehlt: ' + out.slice(0,400));
+  if (out.includes('data-trg')) throw new Error('bei nur einer Gruppe keine Gruppenauswahl');
+  trainerLogout();
+  if (renderApp().includes('Laut, hören')) throw new Error('nach Abmelden duerfen keine Eintraege sichtbar sein');
+  state.tab='Woche';
+});
+
 `;
 
 vm.runInContext(tpdata + '\n' + appScript + '\n' + tests, sandbox, { filename: 'combined.js' });

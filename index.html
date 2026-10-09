@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="./tp-data.enc.js"></script>
+<script src="./trainer-data.enc.js"></script>
 <style>
   :root{
     --bg:#eef3f7; --bg2:#ffffff; --panel:#f5f8fb; --panel2:#e9eff5; --panel3:#e0e8f0; --panel4:#f7fafc;
@@ -232,6 +233,7 @@ const CAT_COLORS = {
 const catStyle = (n)=>{ const c=CAT_COLORS[n]; return c ? `background:${c.bg};border:1px solid ${c.bd};color:${c.fg||'#0f2436'}` : ''; };
 const ORT_COLORS = { Lead: '#78b83f', Bouldern: '#0090c9', Speed: '#c9a227' };
 const TAB_ICONS = {
+  Trainer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 10h7M8.5 14h7M8.5 17.5h4"/></svg>',
   Woche: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/><rect x="7" y="13.5" width="4" height="4" fill="currentColor" stroke="none"/></svg>',
   Jahr: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="3" y="4.5" width="18" height="3.2" rx="1.4"/><rect x="3" y="10.4" width="11" height="3.2" rx="1.4"/><rect x="3" y="16.3" width="15" height="3.2" rx="1.4"/></svg>',
   Statistik: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11M12 20V4M20 20v-6"/></svg>',
@@ -363,6 +365,7 @@ const state = {
   year: NOW.year, kw: NOW.kw, day: 0,
   weekView: 'tage',
   picker: false, openSlot: null,
+  trainerGroup: null, trainerMsg: '', trainerBusy: false,
   statSeason: (D.SEASONS && D.SEASONS[0]) || D.SEASON_LABEL || '25/26',
 };
 
@@ -373,6 +376,7 @@ function render(){
   const el = document.getElementById('app');
   el.innerHTML = renderApp();
   wireEvents();
+  wireTrainerForm();
   window.scrollTo(0,0);
   const ribbon = document.getElementById('jahrRibbon');
   if(ribbon && typeof ribbon.querySelector === 'function'){
@@ -452,6 +456,7 @@ function renderApp(){
 
   const tabNames = ['Woche','Jahr','Statistik'];
   if(isSolo){ tabNames.push('Benchmarks'); }
+  tabNames.push('Trainer');
   if(tabNames.indexOf(state.tab) < 0) state.tab = 'Woche';
 
   return `
@@ -479,6 +484,7 @@ function renderApp(){
       ${state.tab==='Jahr' ? renderJahr(view, isSolo, athlete, group) : ''}
       ${state.tab==='Statistik' ? renderStatistik(view) : ''}
       ${state.tab==='Benchmarks' ? renderBenchmarks(view) : ''}
+      ${state.tab==='Trainer' ? renderTrainerspace(view) : ''}
     </div>
     <div class="tabs">
       ${tabNames.map(n=>`
@@ -1192,6 +1198,127 @@ function wireEvents(){
   });
 }
 
+// ---- Trainerspace: Notizen der Trainer:innen (Forms "Trainer Doku"), je Zugang nur die
+// eigenen Gruppen. Daten liegen pro Passwort getrennt verschluesselt in trainer-data.enc.js
+// (siehe build/encrypt_trainerdoku.js). Mehrere Passwoerter koennen kombiniert werden.
+const TRAINER_FORMS_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=NGKrNpwXUEOM-qEM82Zuq0rnuv3di_ZEn2AfUPm3tJdUMUM2STBIVjEyMFBHVkkwUEg0OUE2OUxMTC4u';
+const trainerSession = { names: [], groups: {}, order: [] };
+async function trainerDecrypt(password){
+  const enc = window.TRAINER_ENC;
+  if(!enc) return null;
+  try{
+    const keyMat = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), {name:'PBKDF2'}, false, ['deriveBits']);
+    const bits = await crypto.subtle.deriveBits({name:'PBKDF2', salt:b64ToBytes(enc.salt), iterations:enc.iterations, hash:'SHA-256'}, keyMat, 256);
+    const K = new Uint8Array(bits);
+    const tag = new TextEncoder().encode('kid');
+    const cat = new Uint8Array(K.length + tag.length); cat.set(K); cat.set(tag, K.length);
+    const h = new Uint8Array(await crypto.subtle.digest('SHA-256', cat));
+    const kid = Array.from(h.slice(0,8)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const u = enc.users.find(x=>x.kid===kid);
+    if(!u) return null;
+    const key = await crypto.subtle.importKey('raw', K, {name:'AES-GCM'}, false, ['decrypt']);
+    const buf = await crypto.subtle.decrypt({name:'AES-GCM', iv:b64ToBytes(u.iv)}, key, b64ToBytes(u.ct));
+    return JSON.parse(new TextDecoder().decode(buf));
+  }catch(e){ return null; }
+}
+function trainerAdd(blob){
+  if(trainerSession.names.indexOf(blob.name)<0) trainerSession.names.push(blob.name);
+  blob.groups.forEach(g=>{ if(!trainerSession.groups[g.id]){ trainerSession.order.push(g.id); } trainerSession.groups[g.id] = g; });
+}
+async function trainerLogin(pw){
+  setState({trainerBusy:true, trainerMsg:''});
+  const blob = await trainerDecrypt(pw.trim());
+  if(!blob){ setState({trainerBusy:false, trainerMsg:'Passwort nicht erkannt.'}); return; }
+  trainerAdd(blob);
+  try{ const l = JSON.parse(sessionStorage.getItem('tpTrainerPws')||'[]'); if(l.indexOf(pw.trim())<0) l.push(pw.trim()); sessionStorage.setItem('tpTrainerPws', JSON.stringify(l)); }catch(e){}
+  setState({trainerBusy:false, trainerMsg:''});
+}
+async function trainerRestore(){
+  let l = []; try{ l = JSON.parse(sessionStorage.getItem('tpTrainerPws')||'[]'); }catch(e){}
+  for(const pw of l){ const b = await trainerDecrypt(pw); if(b) trainerAdd(b); }
+  if(l.length && trainerSession.names.length && D.GROUPS && D.GROUPS.length) render();
+}
+function trainerLogout(){
+  trainerSession.names = []; trainerSession.groups = {}; trainerSession.order = [];
+  try{ sessionStorage.removeItem('tpTrainerPws'); }catch(e){}
+  setState({trainerGroup:null, trainerMsg:''});
+}
+function wireTrainerForm(){
+  const f = document.getElementById('trainerForm');
+  if(f && typeof f.addEventListener === 'function'){
+    f.addEventListener('submit', e=>{ e.preventDefault(); const v = document.getElementById('trainerPw').value; if(v) trainerLogin(v); });
+  }
+  const lo = document.getElementById('trainerLogout');
+  if(lo && typeof lo.addEventListener === 'function') lo.addEventListener('click', trainerLogout);
+  document.querySelectorAll('[data-trg]').forEach(elm=>{
+    elm.addEventListener('click', ()=> setState({trainerGroup: elm.getAttribute('data-trg')}));
+  });
+}
+function trFmtDate(iso){
+  if(!iso) return '-';
+  const d = new Date(iso+'T12:00:00');
+  const dow = ['So','Mo','Di','Mi','Do','Fr','Sa'][d.getDay()];
+  return dow+', '+iso.slice(8,10)+'.'+iso.slice(5,7)+'.'+iso.slice(0,4);
+}
+function renderTrainerspace(view){
+  const ids = trainerSession.order;
+  const head = `<div style="display:flex;flex-direction:column;gap:4px">
+      <span class="sectionTitle">Trainer</span>
+      <span class="subMeta">NOTIZEN DER TRAINER:INNEN · NUR FÜR GRUPPENTRAINER:INNEN</span>
+    </div>`;
+  const formLink = `<a href="${TRAINER_FORMS_URL}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;padding:9px 14px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Trainer-Doku ausfüllen</a>`;
+  const pwForm = (label)=>`<form id="trainerForm" style="display:flex;gap:8px;align-items:stretch">
+      <input id="trainerPw" type="password" autocomplete="off" placeholder="${label}" ${state.trainerBusy?'disabled':''}
+        style="flex:1;min-width:0;font:500 14px/1 Archivo,sans-serif;padding:11px 12px;border-radius:10px;border:1px solid ${DI};outline:none">
+      <button type="submit" ${state.trainerBusy?'disabled':''} style="font:600 13px/1 Archivo,sans-serif;padding:0 14px;border-radius:10px;border:none;background:${AM};color:#fff;cursor:pointer">${state.trainerBusy?'…':'Öffnen'}</button>
+    </form>${state.trainerMsg ? `<span style="font:500 12px/1.3 Archivo,sans-serif;color:#d20028">${esc(state.trainerMsg)}</span>` : ''}`;
+  if(!ids.length){
+    return `${head}
+      <div class="dokuBlock">
+        <span style="font:400 12.5px/1.45 Archivo,sans-serif;color:${MU}">Hier stehen die Notizen der Trainer:innen zu ihren Einheiten. Mit deinem persönlichen Passwort siehst du die Einträge deiner Gruppe(n).</span>
+        ${pwForm('Trainer-Passwort')}
+      </div>
+      <div>${formLink}</div>`;
+  }
+  let gid = state.trainerGroup;
+  if(ids.indexOf(gid)<0) gid = (view && view.t==='g' && ids.indexOf(view.id)>=0) ? view.id : ids[0];
+  const g = trainerSession.groups[gid];
+  const es = g.entries || [];
+  const um = es.filter(e=>e.umsetzung!=null);
+  const umYes = um.filter(e=>e.umsetzung===true).length;
+  const chips = ids.length>1 ? `<div class="weekview">${ids.map(i=>`<button class="weekviewBtn ${i===gid?'sel':''}" data-trg="${esc(i)}">${esc(trainerSession.groups[i].label)}</button>`).join('')}</div>` : '';
+  const cards = es.length ? es.map(e=>`
+      <div class="dokuBlock">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <span style="font:600 12px/1 Archivo,sans-serif">${esc(trFmtDate(e.date))}</span>
+          <span style="font:400 9px/1 'Roboto Mono',monospace;color:${DI}">${esc(g.label)} · TRAINERDOKU</span>
+        </div>
+        <div class="durRow">
+          <div class="durBox"><span class="k">Fokus der Gruppe</span><span class="v">${e.fokus?esc(e.fokus):'-'}</span></div>
+          <div class="durBox"><span class="k">Wie im Plan</span><span class="v">${e.umsetzung===true?'Ja':(e.umsetzung===false?'Nein':'-')}</span></div>
+        </div>
+        ${e.notiz ? `<div class="noteBlock" style="margin-top:2px"><span class="l">Notizen zum Training</span><span class="t">${esc(e.notiz)}</span></div>` : ''}
+      </div>`).join('')
+    : `<div class="dashed">Noch keine Einträge für ${esc(g.label)}</div>`;
+  return `${head}
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span style="font:500 11px/1.3 'Roboto Mono',monospace;color:${MU}">Angemeldet: ${esc(trainerSession.names.join(', '))}</span>
+      <button id="trainerLogout" style="font:600 11px/1 Archivo,sans-serif;padding:7px 10px;border-radius:8px;border:1px solid ${DI};background:transparent;color:${MU};cursor:pointer">Abmelden</button>
+    </div>
+    ${chips}
+    <div class="roster" style="margin-top:0">
+      <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">${esc(g.label)} · Übersicht</span>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(10,50,80,.08)"><span style="font:400 12px/1 Archivo,sans-serif;color:${MU}">Einträge</span><span style="font:600 13px/1 'Roboto Mono',monospace">${es.length}</span></div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:5px 0"><span style="font:400 12px/1 Archivo,sans-serif;color:${MU}">Wie im Plan umgesetzt</span><span style="font:600 13px/1 'Roboto Mono',monospace">${um.length ? umYes+' von '+um.length : '-'}</span></div>
+    </div>
+    <div>${formLink}</div>
+    ${cards}
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
+      <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">Weiteres Passwort hinzufügen</span>
+      ${pwForm('Weiteres Passwort')}
+    </div>`;
+}
+
 // ---- Passwort-Gate (Trainingsdaten liegen AES-256-GCM-verschluesselt in
 // tp-data.enc.js -- siehe build/encrypt_tpdata.js. Ohne korrektes Passwort
 // bleiben Trainingsdoku/Benchmarks/Trainingsinhalte im Quelltext Zeichensalat.
@@ -1269,6 +1396,7 @@ async function bootstrap(){
   showGate('', false);
 }
 bootstrap();
+trainerRestore();
 </script>
 </body>
 </html>
