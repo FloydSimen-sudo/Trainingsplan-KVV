@@ -570,7 +570,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       </div>
       ${scale('Motivation', sr.mot, 5)}
       ${scale('Erschöpfung Beginn', sr.eb)}
-      ${scale('Erschöpfung Ende', sr.ee)}
+      ${scale('Intensität', sr.ee)}
       ${scale('Fitness nach Gefühl', sr.fitness)}
       <div class="durRow">
         <div class="durBox"><span class="k">Dauer</span><span class="v">${val(sr.dur)}${sr.dur!=null?' h':''}</span></div>
@@ -643,7 +643,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
           </div>
           ${scale('Motivation', dk.mot, 5)}
           ${scale('Erschöpfung Beginn', dk.eb)}
-          ${scale('Erschöpfung Ende', dk.ee)}
+          ${scale('Intensität', dk.ee)}
           ${scale('Fitness nach Gefühl', dk.fitness)}
           <div class="durRow">
             <div class="durBox"><span class="k">Dauer S1</span><span class="v">${val(dk.d1)}${dk.d1!=null?' h':''}</span></div>
