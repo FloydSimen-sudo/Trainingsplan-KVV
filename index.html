@@ -504,6 +504,15 @@ function renderApp(){
   `;
 }
 
+// Tages-Hinweise (nicht aus Excel; Floyd, 14.10.2026) -- gelten fuer Gruppen U9-U15.
+const DAY_HINTS = {
+  '2026-10-16': 'Morgen, Samstag 17.10.: Monkey Circus im Blockmonkey (Wettkampf).'
+};
+function dayHint(key, day){
+  if(!day || !day.date || !DAY_HINTS[day.date]) return '';
+  if(!key || key.indexOf('g:')!==0 || key==='g:SPOGY Gruppe') return '';
+  return `<div class="noteBlock"><span class="l">Hinweis</span><span class="t trainerNote">${esc(DAY_HINTS[day.date])}</span></div>`;
+}
 function renderWoche(view, isSolo, key, hasSource, srcInfo){
   if(!hasSource){
     return `<div class="empty">
@@ -643,6 +652,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       <div class="dayChips">${dayChips}</div>
       <div class="dayHead"><div class="dayTitle">${esc(day ? (day.dow+', '+day.dom) : '')}</div></div>
       ${dayMeta.length ? `<div class="metaRow">${dayMeta.map(m=>`<div class="metaPill${m.r?' redFlag':''}"${(m.c && !m.r)?` style="border-color:${m.c}"`:''}>${(m.c && !m.r)?`<span class="dotSm" style="background:${m.c}"></span>`:''}<span class="k">${esc(m.k)}</span><span class="v">${esc(m.v)}</span></div>`).join('')}</div>` : ''}
+      ${dayHint(key, day)}
       ${ (day && day.sessions && day.sessions.length) ? sessionsHtml : `<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>` }
       ${dk && !perSessionMode ? `
         <div class="dokuBlock">
