@@ -338,12 +338,18 @@ def parse_dauer(v):
     Stunden ("zweieinhalb", "zwei einhalb", "2 einhalb" -> 2.5; "anderthalb"/
     "eineinhalb" -> 1.5). Wird NUR fuer Trainingsdauer-Felder verwendet, nicht
     fuer Skalenwerte (Motivation/Erschoepfung), wo Zahlen erwartet werden."""
+    th = _time_to_h(v) if '_time_to_h' in globals() else None
+    if th is not None:
+        return round(th, 2)
     n = parse_num(v)
     if n is not None:
         return n
     if v is None:
         return None
     s = str(v).strip().lower()
+    mm = re.match(r'^(\d{1,2}):(\d{2})(?::\d{2})?$', s)
+    if mm:
+        return round(int(mm.group(1)) + int(mm.group(2)) / 60.0, 2)
     if not s:
         return None
     if s in ('anderthalb', 'eineinhalb'):
@@ -554,6 +560,73 @@ def aggregate_group_doku_weeks(athlete_names, forms_by_athlete):
         }
     return out
 
+# ---- Geplante / effektive Trainingszeit (Floyd, 15.10.2026) -------------------
+# Prioritaet: dokumentierte Dauer > eingetragene Zeit (Zeit-Zelle/Kalender) >
+# Summe der Inhaltsdauern (explizite Zeit in der Zelle, sonst Katalog-Durchschnitt).
+import datetime as _dt
+
+def _time_to_h(v):
+    if isinstance(v, _dt.datetime):
+        return v.hour + v.minute / 60.0
+    if isinstance(v, _dt.time):
+        return v.hour + v.minute / 60.0
+    if isinstance(v, _dt.timedelta):
+        return v.total_seconds() / 3600.0
+    return None
+
+_ZEIT_RANGE_RE = re.compile(r'(\d{1,2})[:.](\d{2})(?::\d{2})?\s*[-–]\s*(\d{1,2})[:.](\d{2})(?::\d{2})?')
+_ZEIT_H_RE = re.compile(r'^\s*(\d+(?:[.,]\d+)?)(?:\s*[-–]\s*(\d+(?:[.,]\d+)?))?\s*(?:h|std\.?|stunden?)\s*$', re.I)
+
+def parse_zeit_hours(z):
+    """'16:30-19:00' -> 2.5, '2-3h' -> 2.5, '3h' -> 3.0; sonst None."""
+    if not z:
+        return None
+    z = str(z)
+    m = _ZEIT_RANGE_RE.search(z)
+    if m:
+        a = int(m.group(1)) + int(m.group(2)) / 60.0
+        b = int(m.group(3)) + int(m.group(4)) / 60.0
+        if b <= a:
+            return None
+        return round(b - a, 2)
+    m = _ZEIT_H_RE.match(z)
+    if m:
+        lo = float(m.group(1).replace(',', '.'))
+        hi = float(m.group(2).replace(',', '.')) if m.group(2) else lo
+        return round((lo + hi) / 2, 2)
+    return None
+
+def _item_minutes(it):
+    et = it.get('explicitTime')
+    if et:
+        m = EXPLICIT_TIME_RE.search(str(et))
+        if m:
+            n = float(m.group(1).replace(',', '.'))
+            unit = m.group(2).lower()
+            return n * 60 if unit.startswith(('h', 'std', 'stunde')) else n
+    mt = it.get('match')
+    if mt and mt.get('min') is not None:
+        n = parse_num(mt.get('min'))
+        if n:
+            return n
+    return 0.0
+
+def planned_hours(day):
+    """Geplante Stunden eines Tages. Rueckgabe (stunden, quelle) oder (0, None).
+    quelle: 'zeit' (eingetragene Zeit) | 'inhalt' (Summe Inhaltsdauern)."""
+    cand = [day.get('zeit')] + [s.get('time') for s in day.get('sessions', [])]
+    zs = [parse_zeit_hours(c) for c in cand if c]
+    zs = [x for x in zs if x]
+    if zs:
+        # day.zeit und session.time beschreiben dieselbe Einheit -> nicht doppelt zaehlen
+        sess_t = [parse_zeit_hours(s.get('time')) for s in day.get('sessions', []) if s.get('time')]
+        sess_t = [x for x in sess_t if x]
+        return (round(sum(sess_t), 2) if sess_t else zs[0]), 'zeit'
+    mins = sum(_item_minutes(it) for s in day.get('sessions', []) for c in s.get('cats', []) for it in c.get('items', []))
+    if mins > 0:
+        return round(mins / 60.0, 2), 'inhalt'
+    return 0.0, None
+
 def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_records=None):
     wb = openpyxl.load_workbook(path, data_only=True)
     sheetname = None
@@ -717,6 +790,23 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_record
                                                    'eb_sum': 0, 'eb_n': 0, 'fit_sum': 0, 'fit_n': 0, 'um_yes': 0, 'um_n': 0,
                                                    'days': 0, 'planDays': 0})
                 stat['planDays'] += 1
+            # effektive Stunden: dokumentiert > geplant, nur Tage bis heute
+            if sessions and date_str and date_str <= date.today().isoformat():
+                stat = week_stats.setdefault(yk, {'load': 0, 'hrs': 0, 'rpe_sum': 0, 'rpe_n': 0, 'mot_sum': 0, 'mot_n': 0,
+                                                   'eb_sum': 0, 'eb_n': 0, 'fit_sum': 0, 'fit_n': 0, 'um_yes': 0, 'um_n': 0,
+                                                   'days': 0, 'planDays': 0})
+                doc_h = sum(r['dur'] for r in day_records if r.get('dur') is not None)
+                if doc_h > 0:
+                    eff, src = doc_h, 'doku'
+                else:
+                    eff, src = planned_hours({'zeit': None, 'sessions': sessions})
+                stat['planDaysPast'] = stat.get('planDaysPast', 0) + 1
+                if eff > 0:
+                    stat['hrsEff'] = stat.get('hrsEff', 0) + eff
+                    if src == 'doku':
+                        stat['hrsDok'] = stat.get('hrsDok', 0) + eff
+                    else:
+                        stat['hrsPlan'] = stat.get('hrsPlan', 0) + eff
             days.append({
                 'dow': dow, 'dom': dt.strftime('%d.%m.') if dt else '?', 'date': date_str,
                 'ort': next((s['ort'] for s in sessions if s.get('ort')), None),
@@ -739,11 +829,23 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_record
             'umPct': round(100 * st['um_yes'] / st['um_n'], 1) if st['um_n'] else None,
             'days': st['days'],
             'planDays': st['planDays'],
+            'planDaysPast': st.get('planDaysPast', 0),
+            'hrsEff': round(st.get('hrsEff', 0), 2),
+            'hrsDok': round(st.get('hrsDok', 0), 2),
+            'hrsPlan': round(st.get('hrsPlan', 0), 2),
             'wallDays': count_wall_days_from_weeks([weeks[wk_key]]) if wk_key in weeks else 0,
         })
     doku_stats = aggregate_doku_records(all_doku_records)
+    hrs_eff = sum(w['hrsEff'] for w in weeks_out)
+    if doku_stats is None and hrs_eff > 0:
+        doku_stats = {'hrsSaison': None, 'dokuDays': 0, 'loadSaison': None, 'avgLoad': None, 'avgMotivation': None,
+                      'avgErschoepfungBeginn': None, 'avgFitness': None, 'pctUmsetzung': None}
     if doku_stats is not None:
-        doku_stats['planDaysSaison'] = sum(w['planDays'] for w in weeks_out)
+        doku_stats['hrsDokuOnly'] = doku_stats.get('hrsSaison')
+        doku_stats['hrsSaison'] = round(hrs_eff, 2) if hrs_eff > 0 else doku_stats.get('hrsSaison')
+        doku_stats['hrsDok'] = round(sum(w['hrsDok'] for w in weeks_out), 2)
+        doku_stats['hrsPlan'] = round(sum(w['hrsPlan'] for w in weeks_out), 2)
+        doku_stats['planDaysSaison'] = sum(w['planDaysPast'] for w in weeks_out)
     return weeks, weeks_out, doku_stats
 
 # Trainingsort-Zellfarbe -> Sessionsart, 1:1 wie von Floyd vorgegeben (dieselben
@@ -968,12 +1070,15 @@ def parse_season_individual(path, season_weeks=None):
         'wallDays': sum(st.get('wallDays', 0) for st in week_stats.values()),
     }
 
-def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label):
+def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label, doc_by_date=None):
     """Saison 26/27 für Gruppen: direkt aus den bereits per parse_group()
-    geparsten Einheitenplanung-26_27-Daten (neues Zeilenraster inkl. Motorik)
-    aggregiert, statt nochmal mit dem alten Sheet/Raster zu parsen."""
+    geparsten Einheitenplanung-26_27-Daten aggregiert. Stunden: dokumentiert
+    (Mittel der Athlet:innen je Tag, doc_by_date) > eingetragene Zeit > Summe
+    Inhaltsdauern > Fallback 2.75 h. Nur Tage bis heute."""
     cat_counts = {c: 0 for c in CAT_ORDER}
     training_days = 0
+    hrs_dok = hrs_zeit = hrs_inh = hrs_fb = 0.0
+    today_iso = date.today().isoformat()
     for wk in weeks.values():
         if (wk.get('year'), wk.get('kw')) not in season_weeks:
             continue
@@ -985,8 +1090,20 @@ def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label):
                     if n:
                         cat_counts[cat['name']] = cat_counts.get(cat['name'], 0) + n
                         day_has_entry = True
-            if day_has_entry:
+            if day_has_entry and day.get('date') and day['date'] <= today_iso:
                 training_days += 1
+                dd = (doc_by_date or {}).get(day['date'])
+                if dd:
+                    hrs_dok += dd
+                else:
+                    ph, src = planned_hours(day)
+                    if src == 'zeit':
+                        hrs_zeit += ph
+                    elif src == 'inhalt':
+                        hrs_inh += ph
+                    else:
+                        hrs_fb += GROUP_EST_HOURS_PER_DAY
+    hrs_total = hrs_dok + hrs_zeit + hrs_inh + hrs_fb
     if training_days == 0 and all(v == 0 for v in cat_counts.values()):
         return None
     return {
@@ -995,7 +1112,9 @@ def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label):
         'sheet': sheet_label,
         'trainingDays': training_days,
         'estHoursPerDay': GROUP_EST_HOURS_PER_DAY,
-        'estHours': round(training_days * GROUP_EST_HOURS_PER_DAY, 1),
+        'estHours': round(hrs_total, 1),
+        'hrsSaison': round(hrs_total, 1),
+        'hrsDok': round(hrs_dok, 1), 'hrsZeit': round(hrs_zeit, 1), 'hrsInhalt': round(hrs_inh, 1), 'hrsFallback': round(hrs_fb, 1),
         'wallDays': count_wall_days_from_weeks(weeks, season_weeks),
     }
 
@@ -1256,17 +1375,21 @@ def build_bench_for(athlete_name, forms_vals, legacy_vals, aufbau_count=None, te
     return {'stand': date.today().strftime('%d.%m.%Y'), 'cats': cats_out}
 
 def count_aufbau_sessions(weeks):
-    """Zählt reale Vorkommen von 'Aufbau Boulder'-Übungen (gematcht über die
-    Übungssammlung) über alle Wochen einer Athletin/eines Athleten."""
+    """Zaehlt Sessions (nicht Eintraege) mit mindestens einer 'Aufbau Boulder'-
+    Uebung (gematcht ueber die Uebungssammlung). Nur Tage bis heute -- geplante
+    zukuenftige Sessions zaehlen noch nicht."""
     n = 0
+    today_iso = date.today().isoformat()
     for wk in weeks.values():
         for day in wk['days']:
+            if not day.get('date') or day['date'] > today_iso:
+                continue
             for sess in day['sessions']:
-                for cat in sess.get('cats', []):
-                    for it in cat['items']:
-                        m = it.get('match')
-                        if m and str(m.get('name', '')).startswith('Aufbau Boulder'):
-                            n += 1
+                hit = any(
+                    (it.get('match') and str(it['match'].get('name', '')).startswith('Aufbau Boulder'))
+                    for cat in sess.get('cats', []) for it in cat['items'])
+                if hit:
+                    n += 1
     return n
 
 # ---------------------------------------------------------------- Kalender --
@@ -1877,7 +2000,6 @@ def main():
         ss = parse_season_group(BASE + relpath, SEASON_WEEKS)
         if ss:
             SEASON_STATS['25/26']['g:' + gid] = ss
-        ss27 = build_group_season_stats_from_weeks(weeks, SEASON_WEEKS_2627, sheetname or 'Einheitenplanung 26_27')
         # Gruppen-Doku (26/27 = aktuelle/laufende Saison): Motivation/Trainingsdauer/Load
         # über alle Athlet:innen der Gruppe, aus allen Forms-Antworten - bewusst NICHT
         # auf SEASON_WEEKS_2627 (KW38+) gefiltert, da Live-Doku (wie bei den Einzelplänen)
@@ -1886,6 +2008,14 @@ def main():
         group_names = [a['n'] for a in next((g['athletes'] for g in groups_kader if g['id'] == gid), [])]
         forms_2627 = {n: FORMS_BY_ATHLETE[n] for n in group_names if FORMS_BY_ATHLETE.get(n)}
         group_doku_season = aggregate_group_doku_season(group_names, forms_2627)
+        _per = {}
+        for _n, _recs in forms_2627.items():
+            for _r in _recs:
+                if _r.get('date') and _r.get('dur') is not None:
+                    _per.setdefault(_r['date'], {}).setdefault(_n, 0.0)
+                    _per[_r['date']][_n] += _r['dur']
+        doc_by_date = {d: sum(v.values()) / len(v) for d, v in _per.items()}
+        ss27 = build_group_season_stats_from_weeks(weeks, SEASON_WEEKS_2627, sheetname or 'Einheitenplanung 26_27', doc_by_date)
         group_doku_weeks = aggregate_group_doku_weeks(group_names, forms_2627)
         # Pro-Athlet:in Doku-Abgabequote (Balken im Statistik-Tab): Doku-Tage
         # im Verhaeltnis zu den Tagen mit Training an der Wand der Gruppe.

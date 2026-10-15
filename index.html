@@ -695,7 +695,7 @@ function renderWeekStats(view, isSolo){
     if(!w) return '';
     const avgLoadWk = w.days ? Math.round((w.load/w.days)*10)/10 : null;
     rows = [
-      {k:'Trainingsstunden (Woche)', v: w.hrs!=null ? w.hrs.toFixed(1)+' h' : '-'},
+      {k:'Trainingsstunden (Woche)', v: (w.hrsEff||w.hrs)!=null && (w.hrsEff||w.hrs)>0 ? (w.hrsEff||w.hrs).toFixed(1)+' h'+(w.hrsPlan>0 ? ' (davon '+w.hrsPlan.toFixed(1)+' h geplant)' : '') : '-'},
       {k:'Trainingstage gesamt (Woche)', v: val(w.planDays)},
       {k:'Tage mit Training an der Wand (Woche)', v: w.wallDays!=null ? w.wallDays : '-'},
       {k:'Trainingstage mit Doku (Woche)', v: val(w.days)},
@@ -892,13 +892,13 @@ function renderStatistik(view){
   }
 
   const grpEstNote = (!isSolo && ss.trainingDays!=null)
-    ? `Trainingsstunden bei Gruppen sind geschätzt: ${esc(ss.estHoursPerDay)} h × Trainingstage (Gruppen erfassen keine echte Dauer). Ein Trainingstag zählt, wenn an dem Tag mindestens eine Kategorie unterhalb "Trainingsort" befüllt ist — Notizen zählen nicht.`
+    ? `Trainingsstunden bei Gruppen sind geschätzt (nur Tage bis heute): dokumentierte Dauer (Ø der Athlet:innen) ${esc(ss.hrsDok)} h · eingetragene Zeit ${esc(ss.hrsZeit)} h · Summe Inhaltsdauern ${esc(ss.hrsInhalt)} h · Pauschale ${esc(ss.estHoursPerDay)} h/Tag ohne Angaben ${esc(ss.hrsFallback)} h. Ein Trainingstag zählt, wenn an dem Tag mindestens eine Kategorie unterhalb "Trainingsort" befüllt ist — Notizen zählen nicht.`
     : null;
 
   const dk = ss.doku || {};
   const totals = isSolo
     ? [
-        {k:'Trainingsstunden Saison', v: dk.hrsSaison!=null ? dk.hrsSaison.toFixed(1)+' h' : '-'},
+        {k:'Trainingsstunden Saison', v: dk.hrsSaison!=null ? dk.hrsSaison.toFixed(1)+' h'+(dk.hrsPlan>0 ? ' (davon '+dk.hrsPlan.toFixed(1)+' h geplant)' : '') : '-'},
         {k:'Trainingstage gesamt', v: dk.planDaysSaison!=null ? dk.planDaysSaison : '-'},
         {k:'Tage mit Training an der Wand', v: ss.wallDays!=null ? ss.wallDays : '-'},
         {k:'Trainingstage mit Doku', v: dk.dokuDays!=null ? dk.dokuDays : '-'},
@@ -910,6 +910,7 @@ function renderStatistik(view){
         {k:'Prozentsatz genaue Umsetzung', v: dk.pctUmsetzung!=null ? dk.pctUmsetzung.toFixed(0)+'%' : '-'},
       ]
     : [
+        {k:'Trainingsstunden Saison (Gruppe)', v: ss.hrsSaison!=null ? ss.hrsSaison.toFixed(1)+' h' : '-'},
         {k:'Tage mit Training an der Wand', v: ss.wallDays!=null ? ss.wallDays : '-'},
         {k:'Durchschnittliche Motivation (Saison)', v: dk.avgMotivation!=null ? dk.avgMotivation.toFixed(1) : '-'},
         {k:'Durchschnittliche Trainingsdauer (Saison)', v: dk.avgTrainingsdauer!=null ? dk.avgTrainingsdauer.toFixed(2)+' h' : '-'},
