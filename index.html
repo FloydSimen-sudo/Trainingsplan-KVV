@@ -892,7 +892,7 @@ function renderStatistik(view){
   }
 
   const grpEstNote = (!isSolo && ss.trainingDays!=null)
-    ? `Trainingsstunden bei Gruppen sind geschätzt (nur Tage bis heute): dokumentierte Dauer (Ø der Athlet:innen) ${esc(ss.hrsDok)} h · eingetragene Zeit ${esc(ss.hrsZeit)} h · Summe Inhaltsdauern ${esc(ss.hrsInhalt)} h · Pauschale ${esc(ss.estHoursPerDay)} h/Tag ohne Angaben ${esc(ss.hrsFallback)} h. Ein Trainingstag zählt, wenn an dem Tag mindestens eine Kategorie unterhalb "Trainingsort" befüllt ist — Notizen zählen nicht.`
+    ? `Trainingsstunden bei Gruppen sind geschätzt (nur Tage bis heute): dokumentierte Dauer (Ø der Athlet:innen) ${esc(ss.hrsDok)} h · Kalenderzeit ${esc(ss.hrsKalender||0)} h · eingetragene Zeit (Excel) ${esc(ss.hrsZeit)} h · Summe Inhaltsdauern ${esc(ss.hrsInhalt)} h · Pauschale ${esc(ss.estHoursPerDay)} h/Tag ohne Angaben ${esc(ss.hrsFallback)} h. Ein Trainingstag zählt, wenn an dem Tag mindestens eine Kategorie unterhalb "Trainingsort" befüllt ist — Notizen zählen nicht.`
     : null;
 
   const dk = ss.doku || {};

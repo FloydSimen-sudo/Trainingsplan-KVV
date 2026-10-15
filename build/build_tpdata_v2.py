@@ -791,7 +791,7 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_record
                                                    'days': 0, 'planDays': 0})
                 stat['planDays'] += 1
             # effektive Stunden: dokumentiert > geplant, nur Tage bis heute
-            if sessions and date_str and date_str <= date.today().isoformat():
+            if sessions and date_str and date_str <= date.today().isoformat() and yk in SEASON_WEEKS_2627:
                 stat = week_stats.setdefault(yk, {'load': 0, 'hrs': 0, 'rpe_sum': 0, 'rpe_n': 0, 'mot_sum': 0, 'mot_n': 0,
                                                    'eb_sum': 0, 'eb_n': 0, 'fit_sum': 0, 'fit_n': 0, 'um_yes': 0, 'um_n': 0,
                                                    'days': 0, 'planDays': 0})
@@ -1070,14 +1070,22 @@ def parse_season_individual(path, season_weeks=None):
         'wallDays': sum(st.get('wallDays', 0) for st in week_stats.values()),
     }
 
-def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label, doc_by_date=None):
+def load_kalender_zeiten():
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kalender_zeiten.json'), encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label, doc_by_date=None, gid=None):
     """Saison 26/27 für Gruppen: direkt aus den bereits per parse_group()
     geparsten Einheitenplanung-26_27-Daten aggregiert. Stunden: dokumentiert
     (Mittel der Athlet:innen je Tag, doc_by_date) > eingetragene Zeit > Summe
     Inhaltsdauern > Fallback 2.75 h. Nur Tage bis heute."""
     cat_counts = {c: 0 for c in CAT_ORDER}
     training_days = 0
-    hrs_dok = hrs_zeit = hrs_inh = hrs_fb = 0.0
+    hrs_dok = hrs_zeit = hrs_inh = hrs_fb = hrs_cal = 0.0
+    kz = load_kalender_zeiten() or {}
     today_iso = date.today().isoformat()
     for wk in weeks.values():
         if (wk.get('year'), wk.get('kw')) not in season_weeks:
@@ -1091,10 +1099,16 @@ def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label, doc_by
                         cat_counts[cat['name']] = cat_counts.get(cat['name'], 0) + n
                         day_has_entry = True
             if day_has_entry and day.get('date') and day['date'] <= today_iso:
-                training_days += 1
                 dd = (doc_by_date or {}).get(day['date'])
+                cal_h = (kz.get('stunden', {}).get(day['date'], {}) or {}).get(gid)
+                cancelled = gid in (kz.get('entfaellt', {}).get(day['date'], []) or [])
+                if cancelled and not dd:
+                    continue
+                training_days += 1
                 if dd:
                     hrs_dok += dd
+                elif cal_h:
+                    hrs_cal += cal_h
                 else:
                     ph, src = planned_hours(day)
                     if src == 'zeit':
@@ -1103,7 +1117,7 @@ def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label, doc_by
                         hrs_inh += ph
                     else:
                         hrs_fb += GROUP_EST_HOURS_PER_DAY
-    hrs_total = hrs_dok + hrs_zeit + hrs_inh + hrs_fb
+    hrs_total = hrs_dok + hrs_cal + hrs_zeit + hrs_inh + hrs_fb
     if training_days == 0 and all(v == 0 for v in cat_counts.values()):
         return None
     return {
@@ -1114,7 +1128,7 @@ def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label, doc_by
         'estHoursPerDay': GROUP_EST_HOURS_PER_DAY,
         'estHours': round(hrs_total, 1),
         'hrsSaison': round(hrs_total, 1),
-        'hrsDok': round(hrs_dok, 1), 'hrsZeit': round(hrs_zeit, 1), 'hrsInhalt': round(hrs_inh, 1), 'hrsFallback': round(hrs_fb, 1),
+        'hrsDok': round(hrs_dok, 1), 'hrsKalender': round(hrs_cal, 1), 'hrsZeit': round(hrs_zeit, 1), 'hrsInhalt': round(hrs_inh, 1), 'hrsFallback': round(hrs_fb, 1),
         'wallDays': count_wall_days_from_weeks(weeks, season_weeks),
     }
 
@@ -1381,12 +1395,15 @@ def count_aufbau_sessions(weeks):
     n = 0
     today_iso = date.today().isoformat()
     for wk in weeks.values():
+        if (wk.get('year'), wk.get('kw')) not in SEASON_WEEKS_2627:
+            continue
         for day in wk['days']:
             if not day.get('date') or day['date'] > today_iso:
                 continue
             for sess in day['sessions']:
                 hit = any(
-                    (it.get('match') and str(it['match'].get('name', '')).startswith('Aufbau Boulder'))
+                    (it.get('match') and str(it['match'].get('name', '')).startswith('Aufbau Boulder')
+                     and 'campus' not in str(it.get('ex', '')).lower())
                     for cat in sess.get('cats', []) for it in cat['items'])
                 if hit:
                     n += 1
@@ -2015,7 +2032,7 @@ def main():
                     _per.setdefault(_r['date'], {}).setdefault(_n, 0.0)
                     _per[_r['date']][_n] += _r['dur']
         doc_by_date = {d: sum(v.values()) / len(v) for d, v in _per.items()}
-        ss27 = build_group_season_stats_from_weeks(weeks, SEASON_WEEKS_2627, sheetname or 'Einheitenplanung 26_27', doc_by_date)
+        ss27 = build_group_season_stats_from_weeks(weeks, SEASON_WEEKS_2627, sheetname or 'Einheitenplanung 26_27', doc_by_date, gid)
         group_doku_weeks = aggregate_group_doku_weeks(group_names, forms_2627)
         # Pro-Athlet:in Doku-Abgabequote (Balken im Statistik-Tab): Doku-Tage
         # im Verhaeltnis zu den Tagen mit Training an der Wand der Gruppe.
