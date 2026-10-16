@@ -50,18 +50,20 @@ if os.path.exists(SRC):
     def col(*needles):
         for i, h in enumerate(hdr):
             if all(n in h.lower() for n in needles): return i
-    c_ts, c_g, c_fok, c_day, c_um, c_not = col('startzeit'), col('gruppe'), col('fokus'), col('anderen tag'), col('umgesetzt'), col('notizen')
+    c_ts, c_g, c_fok, c_day, c_um, c_not = col('startzeit'), col('gruppe'), col('fokus'), (col('datum des trainings') if col('datum des trainings') is not None else col('anderen tag')), col('umgesetzt'), col('notizen')
+    c_name = col('dein name')
     for r in ws.iter_rows(min_row=2, values_only=True):
         if not r or r[c_g] is None: continue
         gid = GID_BY_NORM.get(norm(r[c_g]))
         if not gid: unmatched.append(str(r[c_g])); continue
-        ts = r[c_ts]; day = r[c_day] or ts
+        ts = r[c_ts]; day = (r[c_day] if c_day is not None else None) or ts
         um = str(r[c_um] or '').strip().lower()
         entries[gid].append({
             'date': day.date().isoformat() if hasattr(day, 'date') else None,
             'fokus': (str(r[c_fok]).strip() if r[c_fok] else None),
             'umsetzung': True if um == 'ja' else (False if um == 'nein' else None),
             'notiz': (str(r[c_not]).strip() if r[c_not] else None),
+            'trainer': (str(r[c_name]).strip() if c_name is not None and r[c_name] else None),
             'ts': ts.isoformat() if hasattr(ts, 'isoformat') else None,
         })
 for g in entries.values(): g.sort(key=lambda e: (e['date'] or '', e['ts'] or ''), reverse=True)

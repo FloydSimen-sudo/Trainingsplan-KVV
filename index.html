@@ -1316,7 +1316,7 @@ function renderTrainerspace(view){
   const cards = es.length ? es.map(e=>`
       <div class="dokuBlock">
         <div style="display:flex;align-items:baseline;justify-content:space-between">
-          <span style="font:600 12px/1 Archivo,sans-serif">${esc(trFmtDate(e.date))}</span>
+          <span style="font:600 12px/1 Archivo,sans-serif">${esc(trFmtDate(e.date))}${e.trainer?" · "+esc(e.trainer):""}</span>
           <span style="font:400 9px/1 'Roboto Mono',monospace;color:${DI}">${esc(g.label)} · TRAINERDOKU</span>
         </div>
         <div class="durRow">
