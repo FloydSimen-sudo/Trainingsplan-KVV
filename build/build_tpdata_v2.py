@@ -668,7 +668,12 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_record
             dow = ws.cell(row=2, column=col).value
             dt = block_dates[i]
             sessions = []
+            sonst_parts = []
             for sess_num, base in [(1, 4), (2, 19)]:
+                _sv = ws.cell(row=base + 1, column=col).value
+                if _sv not in (None, ''):
+                    _st = str(_sv).strip()
+                    if _st and _st not in sonst_parts: sonst_parts.append(_st)
                 ort_cell = ws.cell(row=base + 2, column=col)
                 ort = ort_cell.value
                 ort_red = is_red_font(ort_cell)
@@ -810,6 +815,7 @@ def parse_individual(path, athlete_name, catalog, ex, cats_counter, forms_record
             days.append({
                 'dow': dow, 'dom': dt.strftime('%d.%m.') if dt else '?', 'date': date_str,
                 'ort': next((s['ort'] for s in sessions if s.get('ort')), None),
+                'sonstiges': ' / '.join(sonst_parts) if sonst_parts else None,
                 'sessions': sessions, 'doku': doku, 'notiz': None,
             })
         span = f"{block_dates[0].strftime('%d.%m.')} – {block_dates[-1].strftime('%d.%m.%Y')}" if block_dates[0] and block_dates[-1] else ''
@@ -894,6 +900,8 @@ def parse_group(path, sheet_candidates, catalog, ex, cats_counter):
         zeit_cell = ws.cell(row=hdr['zeit'], column=col)
         zeit = zeit_cell.value
         zeit_red = is_red_font(zeit_cell)
+        _sv = ws.cell(row=5, column=col).value if is_new else None
+        sonstiges = str(_sv).strip() if _sv not in (None, '') else None
         ort_cell = ws.cell(row=hdr['ort'], column=col)
         ort = ort_cell.value
         ort_red = is_red_font(ort_cell)
@@ -923,7 +931,7 @@ def parse_group(path, sheet_candidates, catalog, ex, cats_counter):
                               'cats': cats, 'notiz': notiz, 'notizRed': notiz_red})
         wk_entry['days'].append({
             'dow': dow, 'dom': dt.strftime('%d.%m.'), 'date': dt.isoformat(),
-            'ort': ort, 'ortType': ort_type, 'ortRed': ort_red,
+            'ort': ort, 'ortType': ort_type, 'ortRed': ort_red, 'sonstiges': sonstiges,
             'trainer': trainer, 'trainerRed': trainer_red,
             'zeit': str(zeit) if zeit else None, 'zeitRed': zeit_red,
             'sessions': sessions, 'doku': None, 'notiz': None,

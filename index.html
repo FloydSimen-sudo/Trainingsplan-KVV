@@ -542,6 +542,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
     </button>`;}).join('');
 
   const dayMeta = [];
+  if(day && day.sonstiges) dayMeta.push({k:'Sonstiges', v:day.sonstiges, c:'#E8A33D'});
   if(day && day.ort) dayMeta.push({k:'Ort', v:day.ort, c: ORT_COLORS[day.ortType], r: !!day.ortRed});
   if(day && day.zeit) dayMeta.push({k:'Zeit', v:day.zeit, r: !!day.zeitRed});
   const dayTrainerVal = day ? trainerDisplay(isSolo ? null : view.id, day) : null;
