@@ -326,12 +326,12 @@ function applyTPData(data){
 // betroffenen Gruppe; die Excel-Quelle bleibt unveraendert (Floyd wollte
 // bewusst seinen Namen statt des urspruenglichen Trainers sehen).
 const ROTATION_OVERRIDE = {
-  'U13 I': { '2026-09-16': 'Floyd', '2026-09-30': 'Floyd' },
-  'U9':    { '2026-09-23': 'Floyd', '2026-10-21': 'Floyd' },
-  'U13II': { '2026-10-02': 'Floyd' },
-  'U11II': { '2026-10-06': 'Floyd', '2026-10-09': 'Kathi' },  // KW41: Floyd uebernimmt Di (statt Jo), Kathi Fr wie gewohnt (Floyd, 01.10.)
+  'U13 I': { '2026-09-16': 'Floyd', '2026-09-30': 'Floyd', '2026-11-04': 'Floyd', '2026-11-25': 'Floyd' },
+  'U9':    { '2026-09-23': 'Floyd', '2026-10-21': 'Floyd', '2026-11-18': 'Floyd' },
+  'U13II': { '2026-10-02': 'Floyd', '2026-11-06': 'Floyd', '2026-12-04': 'Floyd' },
+  'U11II': { '2026-10-06': 'Floyd', '2026-10-09': 'Kathi', '2026-11-13': 'Floyd + Kathi', '2026-12-11': 'Floyd' },  // KW41: Floyd uebernimmt Di (statt Jo), Kathi Fr wie gewohnt (Floyd, 01.10.)
   'U15 II': { '2026-10-05': 'Jo' },  // KW41: Jo uebernimmt U15 II am Mo im Tausch (Floyd, 01.10.)
-  'U11I':  { '2026-10-16': 'Nemo', '2026-10-23': 'Floyd' },  // Floyd 12.10.: Nemo trainiert am Fr 16.10. (Excel sagt noch 'Floyd (voraussichtlich)')
+  'U11I':  { '2026-10-16': 'Nemo', '2026-10-23': 'Floyd', '2026-11-27': 'Floyd' },  // Floyd 12.10.: Nemo trainiert am Fr 16.10. (Excel sagt noch 'Floyd (voraussichtlich)')
 };
 // Regulaere/r Trainer:in je Gruppe (fuer die Anzeige "Floyd statt X" in der
 // Rotation-Ansicht) -- Quelle: v9-Herleitung (build_rotation_pdf_v9.py).
@@ -348,7 +348,7 @@ function trainerDisplay(groupId, dd){
   if(hasContent && ov && dd.date && ov[dd.date]) return ov[dd.date];
   return dd.trainer || null;
 }
-// Vollstaendige Wochenuebersicht fuer die Rotation-Ansicht (Tab/Button).
+// Vollstaendige Wochenuebersicht fuer die Rotation-Ansicht (Tab/Button). KW45-50 von Floyd am 16.10.2026 bestaetigt.
 // Quelle: Trainingsplanung Live/Rotation U9-U13/Regeln fuer Rotationsprinzip.docx,
 // angewendet gemaess Floyds Vorgaben (siehe Chat-Verlauf 16./17.09.2026),
 // genehmigt als "v9". Faellt eine neue Woche an, muss sie hier manuell
@@ -362,6 +362,12 @@ const ROTATION_PLAN = {
     { kw: 42, range: '12.10.\u201318.10.', event: 'Arge Alp',    entries: [] },
     { kw: 43, range: '19.10.\u201325.10.', event: 'normal',      entries: [ {group:'U9', gid:'U9', day:'Mi', trainer:'Floyd'}, {group:'U11 I', gid:'U11I', day:'Fr', trainer:'Floyd'} ] },
     { kw: 44, range: '26.10.\u201301.11.', event: 'Herbstferien', entries: [] },
+    { kw: 45, range: '02.11.\u201308.11.', event: 'Mini Move Master', entries: [ {group:'U13 I', gid:'U13 I', day:'Mi', trainer:'Floyd'}, {group:'U13 II', gid:'U13II', day:'Fr', trainer:'Floyd'} ] },
+    { kw: 46, range: '09.11.\u201315.11.', event: 'Bouldery', entries: [ {group:'U11 II', gid:'U11II', day:'Fr', trainer:'Floyd', chip:'Floyd + Kathi (Floyd danach beim Yoga-Nachmittag)'} ] },
+    { kw: 47, range: '16.11.\u201322.11.', event: 'A-Cup Innsbruck', note:'Keine \u00dcbernahme (Fr 20.11.: Hide-Workshop Z\u00fcrich)', entries: [ {group:'U9', gid:'U9', day:'Mi', trainer:'Floyd'} ] },
+    { kw: 48, range: '23.11.\u201329.11.', event: 'Niccolo Cup', entries: [ {group:'U13 I', gid:'U13 I', day:'Mi', trainer:'Floyd'}, {group:'U11 I', gid:'U11I', day:'Fr', trainer:'Floyd'} ] },
+    { kw: 49, range: '30.11.\u201306.12.', event: 'normal', entries: [ {group:'U13 II', gid:'U13II', day:'Fr', trainer:'Floyd'} ] },
+    { kw: 50, range: '07.12.\u201313.12.', event: 'Kombitraining', entries: [ {group:'U11 II', gid:'U11II', day:'Fr', trainer:'Floyd'} ] },
   ]
 };
 
@@ -1009,7 +1015,7 @@ function renderRotation(){
           <span style="flex:1;font:400 12.5px/1.2 Archivo,sans-serif;color:${TX}">
             ${esc(e.group)}
           </span>
-          <span class="roleChip head">${esc(e.trainer)} statt ${esc(e.replaces||REGULAR_TRAINER[e.group]||'?')}</span>
+          <span class="roleChip head">${e.chip ? esc(e.chip) : esc(e.trainer)+' statt '+esc(e.replaces||REGULAR_TRAINER[e.group]||'?')}</span>
         </div>`).join('') : `<div class="footNote">${w.event==='Herbstferien'?'Herbstferien \u2013 es gilt der Herbstferienplan':'Keine \u00dcbernahme diese Woche'}</div>`;
     return `
       <div class="roster" style="margin-top:0">
@@ -1018,12 +1024,13 @@ function renderRotation(){
           <span style="font:600 9px/1 'Roboto Mono',monospace;letter-spacing:.06em;color:${w.event==='normal'?DI:AM};text-transform:uppercase">${esc(w.event)}</span>
         </div>
         ${rows}
+        ${w.note ? `<div class="footNote">${esc(w.note)}</div>` : ''}
       </div>`;
   }).join('');
   return `
     <div style="display:flex;flex-direction:column;gap:4px">
       <span class="sectionTitle">Landestrainer-Rotation</span>
-      <span class="subMeta">FLOYD \u00dcBERNIMMT TURNUSM\u00c4SSIG · KW 38\u201344 / 2026</span>
+      <span class="subMeta">FLOYD \u00dcBERNIMMT TURNUSM\u00c4SSIG · KW 38\u201350 / 2026</span>
     </div>
     ${weekCards}
   `;
