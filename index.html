@@ -326,7 +326,7 @@ function applyTPData(data){
 // betroffenen Gruppe; die Excel-Quelle bleibt unveraendert (Floyd wollte
 // bewusst seinen Namen statt des urspruenglichen Trainers sehen).
 const ROTATION_OVERRIDE = {
-  'U13 I': { '2026-09-16': 'Floyd', '2026-09-30': 'Floyd', '2026-11-25': 'Floyd' },
+  'U13 I': { '2026-09-16': 'Floyd', '2026-09-30': 'Floyd', '2026-11-25': 'Floyd', '2026-12-02': 'Floyd' },
   'U9':    { '2026-09-23': 'Floyd', '2026-10-21': 'Floyd', '2026-11-18': 'Floyd' },
   'U13II': { '2026-10-02': 'Floyd', '2026-11-06': 'Floyd', '2026-12-04': 'Floyd' },
   'U11II': { '2026-10-06': 'Floyd', '2026-10-09': 'Kathi', '2026-11-13': 'Floyd + Kathi', '2026-12-11': 'Floyd' },  // KW41: Floyd uebernimmt Di (statt Jo), Kathi Fr wie gewohnt (Floyd, 01.10.)
@@ -366,7 +366,7 @@ const ROTATION_PLAN = {
     { kw: 46, range: '09.11.\u201315.11.', event: 'Bouldery', entries: [ {group:'U11 II', gid:'U11II', day:'Fr', trainer:'Floyd', chip:'Floyd + Kathi (Floyd danach beim Yoga-Nachmittag)'} ] },
     { kw: 47, range: '16.11.\u201322.11.', event: 'A-Cup Innsbruck', note:'Keine \u00dcbernahme (Fr 20.11.: Hide-Workshop Z\u00fcrich)', entries: [ {group:'U9', gid:'U9', day:'Mi', trainer:'Floyd'} ] },
     { kw: 48, range: '23.11.\u201329.11.', event: 'Niccolo Cup', entries: [ {group:'U13 I', gid:'U13 I', day:'Mi', trainer:'Floyd'}, {group:'U11 I', gid:'U11I', day:'Fr', trainer:'Floyd'} ] },
-    { kw: 49, range: '30.11.\u201306.12.', event: 'normal', entries: [ {group:'U13 II', gid:'U13II', day:'Fr', trainer:'Floyd'} ] },
+    { kw: 49, range: '30.11.\u201306.12.', event: 'normal', entries: [ {group:'U13 I', gid:'U13 I', day:'Mi', trainer:'Floyd', chip:'Floyd statt Andi (Nachholtermin f\u00fcr 04.11.)'}, {group:'U13 II', gid:'U13II', day:'Fr', trainer:'Floyd'} ] },
     { kw: 50, range: '07.12.\u201313.12.', event: 'Kombitraining', entries: [ {group:'U11 II', gid:'U11II', day:'Fr', trainer:'Floyd'} ] },
   ]
 };
