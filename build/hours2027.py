@@ -250,3 +250,21 @@ def find_entry(name, excat):
             if not best or len(k) > len(best):
                 best = k
     return excat[best] if best else None
+
+
+def find_latest_exercise_list(base):
+    """Neueste 'Uebungssammlung Gesamt*.xlsx' im ganzen Ordner (nach Aenderungsdatum), ohne 'alte Versionen'/Temp-Dateien."""
+    import unicodedata
+    best = None
+    for root, dirs, files in os.walk(base):
+        dirs[:] = [d for d in dirs if 'alte version' not in d.lower() and not d.startswith('.')]
+        for fn in files:
+            n = unicodedata.normalize('NFC', fn).lower()
+            if fn.startswith('~') or not n.endswith('.xlsx'):
+                continue
+            if n.startswith('übungssammlung gesamt') and 'kopie' not in n:
+                fp = os.path.join(root, fn)
+                m = os.path.getmtime(fp)
+                if best is None or m > best[0]:
+                    best = (m, fp)
+    return best[1] if best else None

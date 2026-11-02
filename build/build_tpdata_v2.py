@@ -1934,7 +1934,9 @@ def build_coaches(groups):
 
 def main():
     global DURCAT
-    DURCAT = hours2027.load_duration_catalog(BASE + 'Projekt Jahresplanung/Übungssammlung Gesamt.xlsx')
+    EXLIST_PATH = hours2027.find_latest_exercise_list(BASE) or (BASE + 'Projekt Jahresplanung/Übungssammlung Gesamt.xlsx')
+    print('Uebungsliste:', os.path.relpath(EXLIST_PATH, BASE), datetime.fromtimestamp(os.path.getmtime(EXLIST_PATH)).strftime('%d.%m.%Y %H:%M'))
+    DURCAT = hours2027.load_duration_catalog(EXLIST_PATH)
     print('Uebungsliste Gesamt: Dauern fuer', len(DURCAT), 'Uebungen')
     DOC_BY_DATE, GROUP_NAMES = {}, {}
     ex = load_ex()
@@ -2154,7 +2156,7 @@ def main():
         SOURCE_INFO['g:SPOGY Gruppe'] = 'Keine Gruppen-Excel für SPOGY im Trainingsplanung Live-Ordner hinterlegt (Athlet:innen haben Einzelpläne)'
 
     # ---- Standardangaben + Kurzbeschreibung je Uebung aus "Uebungssammlung Gesamt" (Floyd, 02.11.2026) ----
-    EXCAT = hours2027.load_exercise_catalog(BASE + 'Projekt Jahresplanung/Übungssammlung Gesamt.xlsx')
+    EXCAT = hours2027.load_exercise_catalog(EXLIST_PATH)
     EXHOW = {}
     _std_hit = _std_all = 0
     for _k, _wks in PLANS.items():
