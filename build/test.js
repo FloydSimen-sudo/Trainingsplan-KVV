@@ -295,9 +295,9 @@ check('Zeiten bei Trainingsinhalten: nur explizite Floyd-Zeit direkt uebernommen
   if (out.includes('120 min')) throw new Error('Katalog-Zeit (120 min) wird trotz expliziter Floyd-Zeit gezeigt: ' + out.slice(0,900));
 });
 
-check('Standardangaben + Kurzbeschreibung (2 Stichpunkte) kommen aus der Uebungssammlung Gesamt (Adrian KW45 Mo: Aufbau Boulder)', () => {
+check('Standardangaben + Kurzbeschreibung (2 Stichpunkte) kommen aus der Uebungssammlung Gesamt (Adrian KW45 Do: Aufbau Boulder)', () => {
   state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.weekView='tage';
-  state.year = 2026; state.kw = 45; state.day = 0;
+  state.year = 2026; state.kw = 45; state.day = 3;
   const out = renderApp();
   if (!out.includes('Aufbau Boulder')) throw new Error('Aufbau Boulder fehlt');
   if (!out.includes('exFields') || !out.includes('>Dauer<') || !out.includes('90 min')) throw new Error('Rubrik Dauer 90 min fehlt');
