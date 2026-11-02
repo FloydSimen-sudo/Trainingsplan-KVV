@@ -1938,6 +1938,14 @@ def main():
     print('Uebungsliste:', os.path.relpath(EXLIST_PATH, BASE), datetime.fromtimestamp(os.path.getmtime(EXLIST_PATH)).strftime('%d.%m.%Y %H:%M'))
     DURCAT = hours2027.load_duration_catalog(EXLIST_PATH)
     print('Uebungsliste Gesamt: Dauern fuer', len(DURCAT), 'Uebungen')
+    # LIVE-Modus (TP_LIVE=1): bisheriger Live-Umfang; neue Excel (2027) nur fuer die in TP_LIVE_KEYS genannten Plaene
+    # (nur Einheitenplanung), ohne neuen Statistik-/Standardangaben-Nachlauf. Ohne TP_LIVE: voller Umfang (Beta).
+    LIVE_MODE = os.environ.get('TP_LIVE') == '1'
+    LIVE_KEYS = set(x.strip() for x in os.environ.get('TP_LIVE_KEYS', '').split(',') if x.strip())
+    if LIVE_MODE:
+        DURCAT = {}
+        print('LIVE-MODUS: neue Excel nur fuer', sorted(LIVE_KEYS) or 'keine Plaene')
+    EXHOW = {}
     DOC_BY_DATE, GROUP_NAMES = {}, {}
     ex = load_ex()
     catalog = build_catalog(ex)
@@ -2121,13 +2129,15 @@ def main():
         ('g:SPOGY Gruppe', 'SPOGY-Gruppe', 'SPOGY Gruppe'),
     ]
     for key27, fname27, gid27 in P27_TARGETS:
+        if LIVE_MODE and key27 not in LIVE_KEYS:
+            continue
         f27 = plans2027.resolve_plan_file(BASE, fname27, P27)
         if not f27:
             PLANS2027_INFO[key27] = {'file': None}
             continue
         jp27 = plans2027.parse_jahresplanung(f27, P27)
         info27 = {'file': os.path.relpath(f27, BASE), 'policy': P27['einheiten_policy']}
-        if jp27:
+        if jp27 and not LIVE_MODE:
             JAHRESPLAN2027[key27] = jp27
             legacy27 = plans2027.legacy_phase_weeks(jp27)
             src27 = 'Jahresplanung 2027 · ' + os.path.basename(f27)
@@ -2155,122 +2165,123 @@ def main():
         PLANS['g:SPOGY Gruppe'] = {}
         SOURCE_INFO['g:SPOGY Gruppe'] = 'Keine Gruppen-Excel für SPOGY im Trainingsplanung Live-Ordner hinterlegt (Athlet:innen haben Einzelpläne)'
 
-    # ---- Standardangaben + Kurzbeschreibung je Uebung aus "Uebungssammlung Gesamt" (Floyd, 02.11.2026) ----
-    EXCAT = hours2027.load_exercise_catalog(EXLIST_PATH)
-    EXHOW = {}
-    _std_hit = _std_all = 0
-    for _k, _wks in PLANS.items():
-        for _wk in (_wks.values() if isinstance(_wks, dict) else []):
-            for _day in _wk.get('days', []):
-                for _se in _day.get('sessions', []):
-                    for _c in _se.get('cats', []):
-                        for _it in _c.get('items', []):
-                            _std_all += 1
-                            _e = hours2027.find_entry(_it.get('ex'), EXCAT)
-                            if _e:
-                                _std_hit += 1
-                                _key = hours2027.norm(_e['name'])
-                                _it['match'] = {'name': _e['name'], 'min': _e['min'], 'sets': _e['sets'], 'vol': _e['vol'], 'pause': _e['pause']}
-                                _it['sx'] = _key
-                                if _e['how']:
-                                    EXHOW[_key] = _e['how']
-                            else:
-                                _it['match'] = None
-                                _it.pop('sx', None)
-    print('Standardangaben aus Uebungssammlung Gesamt:', _std_hit, 'von', _std_all, 'Inhalten gefunden;', len(EXHOW), 'Kurzbeschreibungen')
+    if not LIVE_MODE:
+        # ---- Standardangaben + Kurzbeschreibung je Uebung aus "Uebungssammlung Gesamt" (Floyd, 02.11.2026) ----
+        EXCAT = hours2027.load_exercise_catalog(EXLIST_PATH)
+        EXHOW = {}
+        _std_hit = _std_all = 0
+        for _k, _wks in PLANS.items():
+            for _wk in (_wks.values() if isinstance(_wks, dict) else []):
+                for _day in _wk.get('days', []):
+                    for _se in _day.get('sessions', []):
+                        for _c in _se.get('cats', []):
+                            for _it in _c.get('items', []):
+                                _std_all += 1
+                                _e = hours2027.find_entry(_it.get('ex'), EXCAT)
+                                if _e:
+                                    _std_hit += 1
+                                    _key = hours2027.norm(_e['name'])
+                                    _it['match'] = {'name': _e['name'], 'min': _e['min'], 'sets': _e['sets'], 'vol': _e['vol'], 'pause': _e['pause']}
+                                    _it['sx'] = _key
+                                    if _e['how']:
+                                        EXHOW[_key] = _e['how']
+                                else:
+                                    _it['match'] = None
+                                    _it.pop('sx', None)
+        print('Standardangaben aus Uebungssammlung Gesamt:', _std_hit, 'von', _std_all, 'Inhalten gefunden;', len(EXHOW), 'Kurzbeschreibungen')
 
-    # ---- Exakte Stunden (Floyd, 02.11.2026): nach dem Merge ueber ALLE Plaene neu berechnen ----
-    # Doku der Einheit > Floyds eigene Zeit > Summe der Inhalte mit Durchschnittszeiten aus der Uebungsliste Gesamt.
-    today_iso = date.today().isoformat()
-    kz = load_kalender_zeiten() or {}
-    HOURS_MISSING.clear()
-    for _k, _wks in PLANS.items():
-        for _wk in (_wks.values() if isinstance(_wks, dict) else []):
-            for _day in _wk.get('days', []):
-                if _day.get('sessions'):
-                    if _k.startswith('g:'):
-                        _h = hours2027.group_day(_day, DURCAT, None, ((kz.get('stunden', {}).get(_day.get('date'), {}) or {}).get(_k[2:])), None)['h']
-                    else:
-                        _h = round(sum(hours2027.session_planned(_s, DURCAT)[0] for _s in _day['sessions']), 2)
-                    _day['planH'] = _h if _h else None
-    S27 = SEASON_STATS['26/27']
-    for name in INDIVIDUAL_FILES:
-        key = 'a:' + name
-        wks = PLANS.get(key) or {}
-        if not wks:
-            continue
-        ss = S27.get(key)
-        if ss is None:
-            ss = {'catCounts': [], 'weeks': [], 'sheet': 'Einheitenplanung 26_27', 'doku': None, 'wallDays': 0}
-            S27[key] = ss
-        idx = {(w['year'], w['kw']): w for w in ss['weeks']}
-        cat_cnt = {c: 0 for c in CAT_ORDER}
-        sum_eff = sum_dok = sum_plan = 0.0; past_days = 0
-        for wk in wks.values():
-            yk = (wk.get('year'), wk.get('kw'))
-            if yk not in SEASON_WEEKS_2627:
+        # ---- Exakte Stunden (Floyd, 02.11.2026): nach dem Merge ueber ALLE Plaene neu berechnen ----
+        # Doku der Einheit > Floyds eigene Zeit > Summe der Inhalte mit Durchschnittszeiten aus der Uebungsliste Gesamt.
+        today_iso = date.today().isoformat()
+        kz = load_kalender_zeiten() or {}
+        HOURS_MISSING.clear()
+        for _k, _wks in PLANS.items():
+            for _wk in (_wks.values() if isinstance(_wks, dict) else []):
+                for _day in _wk.get('days', []):
+                    if _day.get('sessions'):
+                        if _k.startswith('g:'):
+                            _h = hours2027.group_day(_day, DURCAT, None, ((kz.get('stunden', {}).get(_day.get('date'), {}) or {}).get(_k[2:])), None)['h']
+                        else:
+                            _h = round(sum(hours2027.session_planned(_s, DURCAT)[0] for _s in _day['sessions']), 2)
+                        _day['planH'] = _h if _h else None
+        S27 = SEASON_STATS['26/27']
+        for name in INDIVIDUAL_FILES:
+            key = 'a:' + name
+            wks = PLANS.get(key) or {}
+            if not wks:
                 continue
-            tot = dok = plan = wk_total = 0.0; pdays = 0; plan_days = 0
-            for day in wk.get('days', []):
-                d = day.get('date')
-                past = bool(d and d <= today_iso)
-                r = hours2027.individual_day(day, DURCAT, HOURS_MISSING if past else None)
-                wk_total += r['h']
-                if day.get('sessions'):
-                    plan_days += 1
-                    for se in day['sessions']:
-                        for c in se.get('cats', []):
-                            cat_cnt[c['name']] = cat_cnt.get(c['name'], 0) + len(c.get('items') or [])
-                if past and (day.get('sessions') or r['dok'] > 0):
-                    tot += r['h']; dok += r['dok']; plan += r['plan']
-                    if day.get('sessions'): pdays += 1
-            e = idx.get(yk)
-            if e is None:
-                e = {'year': yk[0], 'kw': yk[1], 'load': 0, 'hrs': 0, 'rpe': None, 'mot': None, 'eb': None, 'fit': None,
-                     'umPct': None, 'days': 0}
-                ss['weeks'].append(e); idx[yk] = e
-            e.update({'planDays': plan_days, 'planDaysPast': pdays, 'hrsEff': round(tot, 2), 'hrsDok': round(dok, 2),
-                      'hrsPlan': round(plan, 2), 'hrsWeekTotal': round(wk_total, 2), 'wallDays': count_wall_days_from_weeks([wk])})
-            sum_eff += tot; sum_dok += dok; sum_plan += plan; past_days += pdays
-        ss['weeks'].sort(key=lambda w: (w['year'], w['kw']))
-        ss['catCounts'] = [{'name': c, 'count': cat_cnt.get(c, 0)} for c in CAT_ORDER]
-        dk = ss.get('doku')
-        if dk is None and sum_eff > 0:
-            dk = {'hrsSaison': None, 'dokuDays': 0, 'loadSaison': None, 'avgLoad': None, 'avgMotivation': None,
-                  'avgErschoepfungBeginn': None, 'avgFitness': None, 'pctUmsetzung': None}
-        if dk is not None:
-            dk['hrsSaison'] = round(sum_eff, 2)
-            dk['hrsDok'] = round(sum_dok, 2); dk['hrsPlan'] = round(sum_plan, 2); dk['planDaysSaison'] = past_days
-            ss['doku'] = dk
-        ss['wallDays'] = count_wall_days_from_weeks(wks, SEASON_WEEKS_2627)
-        q_wall = count_planned_days_in_range(wks, DOKU_QUOTE_START, today_iso)
-        ss['athleteDoku'] = aggregate_group_athlete_doku([name], FORMS_BY_ATHLETE, q_wall, DOKU_QUOTE_START, today_iso)
-        ss['dokuQuote'] = {'from': DOKU_QUOTE_START, 'to': today_iso, 'wallDays': q_wall, 'basis': 'planned'}
-    for gid in GROUP_FILES:
-        key = 'g:' + gid
-        old = S27.get(key)
-        if not old or 'dash' not in old or gid not in DOC_BY_DATE:
-            continue
-        new = build_group_season_stats_from_weeks(PLANS[key], SEASON_WEEKS_2627, old.get('sheet'), DOC_BY_DATE[gid], gid)
-        if not new:
-            continue
-        loads = {(d['year'], d['kw']): d.get('load') for d in old.get('dash', [])}
-        for d in new['dash']:
-            d['load'] = loads.get((d['year'], d['kw']))
-        for k in ('catCounts', 'dash', 'trainingDays', 'estHours', 'hrsSaison', 'hrsDok', 'hrsKalender', 'hrsZeit', 'hrsInhalt', 'hrsFallback', 'wallDays'):
-            old[k] = new[k]
-        if old.get('dokuQuote'):
-            qw = count_wall_days_in_range(PLANS[key], DOKU_QUOTE_START, today_iso)
-            old['athleteDoku'] = aggregate_group_athlete_doku(GROUP_NAMES[gid], FORMS_BY_ATHLETE, qw, DOKU_QUOTE_START, today_iso)
-            old['dokuQuote'] = {'from': DOKU_QUOTE_START, 'to': today_iso, 'wallDays': qw, 'basis': 'wall'}
-    _miss = sorted(HOURS_MISSING.items(), key=lambda x: -x[1])
-    print('Inhalte OHNE Dauer in der Uebungsliste (zaehlen 0 h):', len(_miss), 'verschiedene,', sum(v for _, v in _miss), 'Vorkommen')
-    print('  Top:', _miss[:30])
-    try:
-        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hours_missing.json'), 'w', encoding='utf-8') as f:
-            json.dump(_miss, f, ensure_ascii=False)
-    except Exception:
-        pass
+            ss = S27.get(key)
+            if ss is None:
+                ss = {'catCounts': [], 'weeks': [], 'sheet': 'Einheitenplanung 26_27', 'doku': None, 'wallDays': 0}
+                S27[key] = ss
+            idx = {(w['year'], w['kw']): w for w in ss['weeks']}
+            cat_cnt = {c: 0 for c in CAT_ORDER}
+            sum_eff = sum_dok = sum_plan = 0.0; past_days = 0
+            for wk in wks.values():
+                yk = (wk.get('year'), wk.get('kw'))
+                if yk not in SEASON_WEEKS_2627:
+                    continue
+                tot = dok = plan = wk_total = 0.0; pdays = 0; plan_days = 0
+                for day in wk.get('days', []):
+                    d = day.get('date')
+                    past = bool(d and d <= today_iso)
+                    r = hours2027.individual_day(day, DURCAT, HOURS_MISSING if past else None)
+                    wk_total += r['h']
+                    if day.get('sessions'):
+                        plan_days += 1
+                        for se in day['sessions']:
+                            for c in se.get('cats', []):
+                                cat_cnt[c['name']] = cat_cnt.get(c['name'], 0) + len(c.get('items') or [])
+                    if past and (day.get('sessions') or r['dok'] > 0):
+                        tot += r['h']; dok += r['dok']; plan += r['plan']
+                        if day.get('sessions'): pdays += 1
+                e = idx.get(yk)
+                if e is None:
+                    e = {'year': yk[0], 'kw': yk[1], 'load': 0, 'hrs': 0, 'rpe': None, 'mot': None, 'eb': None, 'fit': None,
+                         'umPct': None, 'days': 0}
+                    ss['weeks'].append(e); idx[yk] = e
+                e.update({'planDays': plan_days, 'planDaysPast': pdays, 'hrsEff': round(tot, 2), 'hrsDok': round(dok, 2),
+                          'hrsPlan': round(plan, 2), 'hrsWeekTotal': round(wk_total, 2), 'wallDays': count_wall_days_from_weeks([wk])})
+                sum_eff += tot; sum_dok += dok; sum_plan += plan; past_days += pdays
+            ss['weeks'].sort(key=lambda w: (w['year'], w['kw']))
+            ss['catCounts'] = [{'name': c, 'count': cat_cnt.get(c, 0)} for c in CAT_ORDER]
+            dk = ss.get('doku')
+            if dk is None and sum_eff > 0:
+                dk = {'hrsSaison': None, 'dokuDays': 0, 'loadSaison': None, 'avgLoad': None, 'avgMotivation': None,
+                      'avgErschoepfungBeginn': None, 'avgFitness': None, 'pctUmsetzung': None}
+            if dk is not None:
+                dk['hrsSaison'] = round(sum_eff, 2)
+                dk['hrsDok'] = round(sum_dok, 2); dk['hrsPlan'] = round(sum_plan, 2); dk['planDaysSaison'] = past_days
+                ss['doku'] = dk
+            ss['wallDays'] = count_wall_days_from_weeks(wks, SEASON_WEEKS_2627)
+            q_wall = count_planned_days_in_range(wks, DOKU_QUOTE_START, today_iso)
+            ss['athleteDoku'] = aggregate_group_athlete_doku([name], FORMS_BY_ATHLETE, q_wall, DOKU_QUOTE_START, today_iso)
+            ss['dokuQuote'] = {'from': DOKU_QUOTE_START, 'to': today_iso, 'wallDays': q_wall, 'basis': 'planned'}
+        for gid in GROUP_FILES:
+            key = 'g:' + gid
+            old = S27.get(key)
+            if not old or 'dash' not in old or gid not in DOC_BY_DATE:
+                continue
+            new = build_group_season_stats_from_weeks(PLANS[key], SEASON_WEEKS_2627, old.get('sheet'), DOC_BY_DATE[gid], gid)
+            if not new:
+                continue
+            loads = {(d['year'], d['kw']): d.get('load') for d in old.get('dash', [])}
+            for d in new['dash']:
+                d['load'] = loads.get((d['year'], d['kw']))
+            for k in ('catCounts', 'dash', 'trainingDays', 'estHours', 'hrsSaison', 'hrsDok', 'hrsKalender', 'hrsZeit', 'hrsInhalt', 'hrsFallback', 'wallDays'):
+                old[k] = new[k]
+            if old.get('dokuQuote'):
+                qw = count_wall_days_in_range(PLANS[key], DOKU_QUOTE_START, today_iso)
+                old['athleteDoku'] = aggregate_group_athlete_doku(GROUP_NAMES[gid], FORMS_BY_ATHLETE, qw, DOKU_QUOTE_START, today_iso)
+                old['dokuQuote'] = {'from': DOKU_QUOTE_START, 'to': today_iso, 'wallDays': qw, 'basis': 'wall'}
+        _miss = sorted(HOURS_MISSING.items(), key=lambda x: -x[1])
+        print('Inhalte OHNE Dauer in der Uebungsliste (zaehlen 0 h):', len(_miss), 'verschiedene,', sum(v for _, v in _miss), 'Vorkommen')
+        print('  Top:', _miss[:30])
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hours_missing.json'), 'w', encoding='utf-8') as f:
+                json.dump(_miss, f, ensure_ascii=False)
+        except Exception:
+            pass
 
     # Gesamtkalender: nur Pruefgrundlage, nicht mehr in der App angezeigt (Floyd, 02.10.2026)
     check_wk_conflicts(PLANS)

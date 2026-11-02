@@ -562,12 +562,14 @@ def parse_einheitenplanung(path, make_item):
 
         y, kw, wd = d.isocalendar()
         wk = weeks.setdefault(f'{y}-{kw}', {'days': {}, 'year': y, 'kw': kw})
-        wk['days'][wd - 1] = {
+        _day = {
             'dow': DOW[wd - 1], 'dom': d.strftime('%d.%m.'), 'date': d.isoformat(),
             'ort': next((s['ort'] for s in sessions if s.get('ort')), None),
             'sonstiges': ' · '.join(sonst_parts) or None,
             'sessions': sessions, 'doku': doku, 'notiz': None,
         }
+        _split_sonst(_day)
+        wk['days'][wd - 1] = _day
 
     out = {}
     for key, wk in weeks.items():
@@ -587,6 +589,32 @@ def parse_einheitenplanung(path, make_item):
         out[key] = {'days': days, 'span': f'{mon.strftime("%d.%m.")} – {sun.strftime("%d.%m.%Y")}',
                     'year': wk['year'], 'kw': wk['kw']}
     return out
+
+
+_TIME_LIKE = re.compile(r'^(\d{1,2}[:.]\d{2}(?::\d{2})?\s*[-–]\s*\d{1,2}[:.]\d{2}(?::\d{2})?|\d+(?:[.,]\d+)?(?:\s*[-–]\s*\d+(?:[.,]\d+)?)?\s*(?:h|std\.?|stunden?))$', re.I)
+
+def _split_sonst(day):
+    """Zelle 'Sonstiges' im Gruppenformat 'Zeit | Trainer' (z. B. '14:00-16:30 | Nemo', '| Hannah', '2-3h | Selbststaendig')
+    -> day['zeit'] und day['trainer']; die Zelle selbst wird dann nicht mehr als Freitext angezeigt."""
+    t = day.get('sonstiges')
+    if not day.get('zeit'):
+        for se in day.get('sessions', []):
+            if se.get('time') and _TIME_LIKE.match(str(se['time']).strip()):
+                day['zeit'] = str(se['time']).strip()
+                break
+    if not t or t.count('|') != 1:
+        return
+    left, right = [x.strip() for x in t.split('|', 1)]
+    if left and not _TIME_LIKE.match(left):
+        return
+    if left:
+        day['zeit'] = left
+        for se in day.get('sessions', []):
+            if not se.get('time'):
+                se['time'] = left
+    if right:
+        day['trainer'] = right
+    day['sonstiges'] = None
 
 
 def merge_weeks(old, new, policy):
@@ -616,7 +644,7 @@ def merge_weeks(old, new, policy):
                 continue
             if od.get('sessions'):
                 if policy == 'new_wins':
-                    keep = {k: od.get(k) for k in ('zeit', 'trainer', 'zeitRed', 'trainerRed') if k in od}
+                    keep = {k: od.get(k) for k in ('zeit', 'trainer', 'zeitRed', 'trainerRed') if k in od and not nd.get(k)}
                     nd = dict(nd)
                     nd.update(keep)
                     nd['doku'] = od.get('doku') or nd.get('doku')
@@ -624,6 +652,9 @@ def merge_weeks(old, new, policy):
                     stat['replaced'] += 1
                 continue
             od['sessions'] = nd['sessions']
+            for _k in ('zeit', 'trainer'):
+                if nd.get(_k):
+                    od[_k] = nd[_k]
             if not od.get('ort'):
                 od['ort'] = nd.get('ort')
             if nd.get('sonstiges') and not od.get('sonstiges'):
