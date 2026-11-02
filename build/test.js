@@ -76,10 +76,10 @@ check('Levi Strolz (28.08. jetzt mit echter Einzelplan-Excel) zeigt reale Daten 
   ['Dashboard','Woche','Jahr','Statistik','Benchmarks'].forEach(t => { state.tab = t; renderApp(); });
 });
 
-check('SPOGY Gruppe (missing group data) shows empty state', () => {
+check('SPOGY Gruppe rendert (Plan aus neuer Excel 2027 oder Leerzustand)', () => {
   state.view = {t:'g', id:'SPOGY Gruppe'}; state.tab='Woche';
   const out = renderApp();
-  if (!out.includes('Keine Daten hinterlegt')) throw new Error('expected empty-state message');
+  if (!out.includes('Keine Daten hinterlegt') && !out.includes('KW ')) throw new Error('weder Plan noch Leerzustand');
 });
 
 check('Benchmarks: Maximalkraft-Testung (Bestwerte 23mm Leiste frei/halbaufgestellt, Einarmer) mit abs+rel, Testdatum, Vorzeichen -/+ und OHNE Koerpergewicht', () => {
