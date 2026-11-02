@@ -849,7 +849,7 @@ function lcDate(t){ const d=new Date(t); return String(d.getUTCDate()).padStart(
 // pts: [{year,kw,load}] aufsteigend. Zeitachse = Wochenmontage; unten Start/Ende mit Jahr, Jahreswechsel
 // und Meilensteine (Wettkaempfe, Fels/Trainingslager, Testungen) aus dem Jahresplan 2027 in kleiner Schrift.
 function dashLoadSvg(pts, jp2){
-  const W=340,H=140,pl=30,pr=10,pt=12,axY=92;
+  const W=340,H=150,pl=30,pr=10,pt=12,axY=92;
   const mon=p=>isoWeekMonday(p.year,p.kw).getTime();
   const t0=mon(pts[0]), t1=Math.max(mon(pts[pts.length-1]), isoWeekMonday(NOW.year,NOW.kw).getTime());
   const span=Math.max(1,t1-t0);
@@ -864,6 +864,15 @@ function dashLoadSvg(pts, jp2){
     const tj=Date.UTC(y,0,1); if(tj<=t0||tj>=t1) continue;
     yr+=`<line x1="${X(tj).toFixed(1)}" y1="${pt}" x2="${X(tj).toFixed(1)}" y2="${axY}" stroke="var(--border2)" stroke-dasharray="3 3"/><text x="${(X(tj)+3).toFixed(1)}" y="${pt+8}" font-size="8" fill="var(--mu)">${y}</text>`;
   }
+  // Kalenderwochen auf der X-Achse: jede Woche, bei laengerem Verlauf nur jede 2./4./8. Woche
+  const nW=Math.round(span/(7*864e5))+1;
+  const step=nW<=18?1:(nW<=36?2:(nW<=72?4:8));
+  let kwT='';
+  for(let i=0;i<nW;i++){
+    if(i%step) continue;
+    const tt=t0+i*7*864e5, x=X(tt);
+    kwT+=`<line x1="${x.toFixed(1)}" y1="${axY}" x2="${x.toFixed(1)}" y2="${axY+3}" stroke="var(--mu)" stroke-width=".7"/><text x="${x.toFixed(1)}" y="${axY+11}" font-size="7" text-anchor="middle" fill="var(--mu)">${getISOWeek(new Date(tt)).kw}</text>`;
+  }
   // Meilensteine
   const ms=[];
   if(jp2){
@@ -872,7 +881,7 @@ function dashLoadSvg(pts, jp2){
     ((jp2.tracks||{}).test||[]).forEach(b=>{ const w=jp2.weeks[b.s]; if(w) ms.push({t:Date.parse(w.mon+'T00:00:00Z'), n:lcShort(b.t)||'Test'}); });
   }
   ms.sort((a,b)=>a.t-b.t);
-  const rows=[axY+25, axY+34, axY+43], lastEnd=[-1e9,-1e9,-1e9];
+  const rows=[axY+34, axY+43, axY+52], lastEnd=[-1e9,-1e9,-1e9];
   let msHtml='';
   ms.filter(m=>m.t>=t0 && m.t<=t1+6*864e5).forEach(m=>{
     const x=Math.min(W-pr, X(Math.min(m.t,t1)));
@@ -881,11 +890,11 @@ function dashLoadSvg(pts, jp2){
     if(r<0) return;
     const end = x+w>W;
     lastEnd[r] = end ? x+4 : x+w;
-    msHtml+=`<line x1="${x.toFixed(1)}" y1="${axY}" x2="${x.toFixed(1)}" y2="${rows[r]-6}" stroke="var(--mu)" stroke-width=".6" opacity=".6"/><text x="${(x+(end?-2:2)).toFixed(1)}" y="${rows[r]}" font-size="7" text-anchor="${end?'end':'start'}" fill="var(--mu)">${esc(m.n)}</text>`;
+    msHtml+=`<line x1="${x.toFixed(1)}" y1="${axY+26}" x2="${x.toFixed(1)}" y2="${rows[r]-6}" stroke="var(--mu)" stroke-width=".6" opacity=".6"/><text x="${(x+(end?-2:2)).toFixed(1)}" y="${rows[r]}" font-size="7" text-anchor="${end?'end':'start'}" fill="var(--mu)">${esc(m.n)}</text>`;
   });
-  const lab=(p,a)=>`<text x="${a==='end'?W-pr:pl}" y="${axY+12}" font-size="8.5" text-anchor="${a}" fill="var(--tx)">KW ${p.kw} · ${lcDate(p.t)}</text>`;
+  const lab=(p,a)=>`<text x="${a==='end'?W-pr:pl}" y="${axY+22}" font-size="8.5" text-anchor="${a}" fill="var(--tx)">KW ${p.kw} · ${lcDate(p.t)}</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Load-Verlauf">
-    <line x1="${pl}" y1="${axY}" x2="${W-pr}" y2="${axY}" stroke="var(--border2)"/>${yr}
+    <line x1="${pl}" y1="${axY}" x2="${W-pr}" y2="${axY}" stroke="var(--border2)"/>${yr}${kwT}
     <text x="${pl-4}" y="${pt+3}" font-size="9" text-anchor="end" fill="var(--mu)">${Math.round(mx)}</text>
     <text x="${pl-4}" y="${axY}" font-size="9" text-anchor="end" fill="var(--mu)">0</text>
     <path d="${path}" fill="none" stroke="var(--am)" stroke-width="2.2" stroke-linejoin="round"/>${dots}
