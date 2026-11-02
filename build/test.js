@@ -221,7 +221,7 @@ check('Jahr tab Adrian: kompakt mit Phase, Kraftausdauer, rote Linie, naechster 
 check('Dashboard: Kacheln fuer Adrian und alle Gruppen rendern ohne Absturz, ohne Gruppenfarben', () => {
   state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Dashboard';
   let out = renderApp();
-  ['Trainingsphase','Kraftausdauer','Geplant heute','Stunden diese Woche','Stunden Saison','Bis nächster Wettkampf','Bis nächster Deload','Load-Verlauf'].forEach(t => { if (!out.includes(t)) throw new Error('Dashboard-Kachel fehlt: ' + t); });
+  ['Trainingsphase','Kraftausdauer','Dauer der geplanten Inhalte','Stunden diese Woche','Stunden Saison','Bis nächster Wettkampf','Bis nächster Deload','Load-Verlauf'].forEach(t => { if (!out.includes(t)) throw new Error('Dashboard-Kachel fehlt: ' + t); });
   if (out.includes('Aktualisierung durch Floyd')) throw new Error('syncbar-Text sollte entfernt sein');
   if (out.includes('Woche kompakt')) throw new Error('Woche kompakt sollte entfernt sein');
   ['U9','U11I','U11II','U13 I','U13II','U15I','U15 II','SPOGY Gruppe'].forEach(g => { state.view={t:'g', id:g}; state.tab='Dashboard'; if (!renderApp().includes('dashGrid')) throw new Error('Dashboard leer: '+g); });
@@ -300,7 +300,7 @@ check('Standardangaben + Kurzbeschreibung (2 Stichpunkte) kommen aus der Uebungs
   state.year = 2026; state.kw = 45; state.day = 0;
   const out = renderApp();
   if (!out.includes('Aufbau Boulder')) throw new Error('Aufbau Boulder fehlt');
-  if (!out.includes('metaTag std">Standard') || !out.includes('90 min')) throw new Error('Standard-Dauer 90 min fehlt');
+  if (!out.includes('exFields') || !out.includes('>Dauer<') || !out.includes('90 min')) throw new Error('Rubrik Dauer 90 min fehlt');
   if (!out.includes('slotDesc') || !out.includes('8 Zug Boulder mit bestimmtem Thema')) throw new Error('Kurzbeschreibung fehlt');
 });
 
