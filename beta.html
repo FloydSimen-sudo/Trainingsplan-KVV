@@ -838,20 +838,54 @@ function dashCurIdx(jp2){
   (jp2.weeks||[]).forEach((w,i)=>{ if(w.mon<=t) idx=i; });
   return idx;
 }
-function dashLoadSvg(pts){
-  const W=320,H=120,pl=26,pr=8,pt=10,pb=18;
-  const xs=pts.map(p=>p.i), mx=Math.max(...pts.map(p=>p.load)), mn=0;
-  const x0=Math.min(...xs), x1=Math.max(...xs);
-  const X=i=> pl + (x1===x0 ? (W-pl-pr)/2 : (i-x0)/(x1-x0)*(W-pl-pr));
-  const Y=v=> pt + (1-(v-mn)/Math.max(1,(mx-mn)))*(H-pt-pb);
-  const path=pts.map((p,k)=>(k?'L':'M')+X(p.i).toFixed(1)+' '+Y(p.load).toFixed(1)).join(' ');
-  const dots=pts.map(p=>`<circle cx="${X(p.i).toFixed(1)}" cy="${Y(p.load).toFixed(1)}" r="2.6" fill="var(--am)"/>`).join('');
-  const labs=[[pts[0],'start'],[pts[pts.length-1],'end']].map(([p,a])=>`<text x="${(X(p.i)+(a==='end'?4:-4)).toFixed(1)}" y="${H-4}" font-size="9" text-anchor="${a}" fill="var(--mu)">KW ${p.kw}</text>`).join('');
+function lcShort(n){
+  return String(n||'').replace(/\s+\d{1,2}[./]\d{1,2}.*$/,'').replace(/\s+\d{1,2}\.\s*-.*$/,'').replace(/\s+\d{1,2}\.$/,'').trim().slice(0,18);
+}
+function lcDate(t){ const d=new Date(t); return String(d.getUTCDate()).padStart(2,'0')+'.'+String(d.getUTCMonth()+1).padStart(2,'0')+'.'+d.getUTCFullYear(); }
+// pts: [{year,kw,load}] aufsteigend. Zeitachse = Wochenmontage; unten Start/Ende mit Jahr, Jahreswechsel
+// und Meilensteine (Wettkaempfe, Fels/Trainingslager, Testungen) aus dem Jahresplan 2027 in kleiner Schrift.
+function dashLoadSvg(pts, jp2){
+  const W=340,H=140,pl=30,pr=10,pt=12,axY=92;
+  const mon=p=>isoWeekMonday(p.year,p.kw).getTime();
+  const t0=mon(pts[0]), t1=Math.max(mon(pts[pts.length-1]), isoWeekMonday(NOW.year,NOW.kw).getTime());
+  const span=Math.max(1,t1-t0);
+  const X=t=>pl+(t-t0)/span*(W-pl-pr);
+  const mx=Math.max(...pts.map(p=>p.load));
+  const Y=v=>pt+(1-v/Math.max(1,mx))*(axY-pt);
+  const path=pts.map((p,k)=>(k?'L':'M')+X(mon(p)).toFixed(1)+' '+Y(p.load).toFixed(1)).join(' ');
+  const dots=pts.map(p=>`<circle cx="${X(mon(p)).toFixed(1)}" cy="${Y(p.load).toFixed(1)}" r="2.4" fill="var(--am)"/>`).join('');
+  // Jahreswechsel
+  let yr='';
+  for(let y=new Date(t0).getUTCFullYear()+1; y<=new Date(t1).getUTCFullYear(); y++){
+    const tj=Date.UTC(y,0,1); if(tj<=t0||tj>=t1) continue;
+    yr+=`<line x1="${X(tj).toFixed(1)}" y1="${pt}" x2="${X(tj).toFixed(1)}" y2="${axY}" stroke="var(--border2)" stroke-dasharray="3 3"/><text x="${(X(tj)+3).toFixed(1)}" y="${pt+8}" font-size="8" fill="var(--mu)">${y}</text>`;
+  }
+  // Meilensteine
+  const ms=[];
+  if(jp2){
+    (jp2.wk||[]).forEach(w=>{ const t=Date.parse(w.date+'T00:00:00Z'); ms.push({t, n:lcShort(w.name)||'WK'}); });
+    ((jp2.tracks||{}).fels||[]).forEach(b=>{ const w=jp2.weeks[b.s]; if(w) ms.push({t:Date.parse(w.mon+'T00:00:00Z'), n:lcShort(b.t)||'Fels'}); });
+    ((jp2.tracks||{}).test||[]).forEach(b=>{ const w=jp2.weeks[b.s]; if(w) ms.push({t:Date.parse(w.mon+'T00:00:00Z'), n:lcShort(b.t)||'Test'}); });
+  }
+  ms.sort((a,b)=>a.t-b.t);
+  const rows=[axY+25, axY+34, axY+43], lastEnd=[-1e9,-1e9,-1e9];
+  let msHtml='';
+  ms.filter(m=>m.t>=t0 && m.t<=t1+6*864e5).forEach(m=>{
+    const x=Math.min(W-pr, X(Math.min(m.t,t1)));
+    const w=m.n.length*3.7+4;
+    let r=-1; for(let i=0;i<rows.length;i++){ if(x>=lastEnd[i]){ r=i; break; } }
+    if(r<0) return;
+    const end = x+w>W;
+    lastEnd[r] = end ? x+4 : x+w;
+    msHtml+=`<line x1="${x.toFixed(1)}" y1="${axY}" x2="${x.toFixed(1)}" y2="${rows[r]-6}" stroke="var(--mu)" stroke-width=".6" opacity=".6"/><text x="${(x+(end?-2:2)).toFixed(1)}" y="${rows[r]}" font-size="7" text-anchor="${end?'end':'start'}" fill="var(--mu)">${esc(m.n)}</text>`;
+  });
+  const lab=(p,a)=>`<text x="${a==='end'?W-pr:pl}" y="${axY+12}" font-size="8.5" text-anchor="${a}" fill="var(--tx)">KW ${p.kw} · ${lcDate(p.t)}</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Load-Verlauf">
-    <line x1="${pl}" y1="${H-pb}" x2="${W-pr}" y2="${H-pb}" stroke="var(--border2)"/>
+    <line x1="${pl}" y1="${axY}" x2="${W-pr}" y2="${axY}" stroke="var(--border2)"/>${yr}
     <text x="${pl-4}" y="${pt+3}" font-size="9" text-anchor="end" fill="var(--mu)">${Math.round(mx)}</text>
-    <text x="${pl-4}" y="${H-pb}" font-size="9" text-anchor="end" fill="var(--mu)">0</text>
-    <path d="${path}" fill="none" stroke="var(--am)" stroke-width="2.2" stroke-linejoin="round"/>${dots}${labs}</svg>`;
+    <text x="${pl-4}" y="${axY}" font-size="9" text-anchor="end" fill="var(--mu)">0</text>
+    <path d="${path}" fill="none" stroke="var(--am)" stroke-width="2.2" stroke-linejoin="round"/>${dots}
+    ${lab({kw:pts[0].kw,t:t0},'start')}${lab({kw:getISOWeek(new Date(t1)).kw,t:t1},'end')}${msHtml}</svg>`;
 }
 function renderDashboard(view, isSolo, key){
   const jp2 = D.JAHRESPLAN2027 ? D.JAHRESPLAN2027[key] : null;
@@ -902,31 +936,31 @@ function renderDashboard(view, isSolo, key){
     if(dls.length){ const d=dls[0]; nextDl={days: d.start<=todayD ? 0 : Math.round((d.start-todayD)/86400000), kw:d.kw}; }
   }
   // Stunden
-  let hWeek=null, hSeason=null, loadPts=[];
+  let hWeek=null, hSeason=null, hWeekTot=null, loadPts=[];
   if(ss){
     if(isSolo){
       const w=(ss.weeks||[]).find(x=>x.year===NOW_TODAY.year && x.kw===NOW_TODAY.kw);
-      if(w){ const h=(w.hrsEff||w.hrs); hWeek = h!=null ? h : null; }
+      if(w){ const h=(w.hrsEff||w.hrs); hWeek = h!=null ? h : null; hWeekTot = w.hrsWeekTotal!=null ? w.hrsWeekTotal : null; }
       hSeason = ss.doku && ss.doku.hrsSaison!=null ? ss.doku.hrsSaison : null;
-      (ss.weeks||[]).forEach((w,i)=>{ if(w.load>0) loadPts.push({i,kw:w.kw,load:w.load}); });
+      (ss.weeks||[]).forEach((w,i)=>{ if(w.load>0) loadPts.push({year:w.year,kw:w.kw,load:w.load}); });
     } else {
       const w=(ss.dash||[]).find(x=>x.year===NOW_TODAY.year && x.kw===NOW_TODAY.kw);
       if(w) hWeek = w.hrs;
       hSeason = ss.hrsSaison!=null ? ss.hrsSaison : null;
-      (ss.dash||[]).forEach((w,i)=>{ if(w.load>0) loadPts.push({i,kw:w.kw,load:w.load}); });
+      (ss.dash||[]).forEach((w,i)=>{ if(w.load>0) loadPts.push({year:w.year,kw:w.kw,load:w.load}); });
     }
   }
   const f1 = v => v==null ? '–' : (Math.round(v*10)/10).toString().replace('.',',');
   const planH = day && day.planH!=null ? day.planH : null;
   const loadTile = `<div class="dashTile wide"><span class="dashLbl">Load-Verlauf Saison ${esc(season||'')}</span>${
-    loadPts.length>=2 ? dashLoadSvg(loadPts) : `<span class="dashSub">Noch zu wenig Load-Daten für eine Kurve (mind. 2 Wochen mit Doku).</span>`}</div>`;
+    loadPts.length>=2 ? dashLoadSvg(loadPts, jp2) : `<span class="dashSub">Noch zu wenig Load-Daten für eine Kurve (mind. 2 Wochen mit Doku).</span>`}</div>`;
   return `
     <div class="dashGrid">
       ${todayTile}
       ${tile('Trainingsphase', phase ? `<span style="font-size:24px">${esc(phase)}</span>` : '–', hasP ? '' : 'Kein Jahresplan 2027 hinterlegt')}
       ${tile('Kraftausdauer', ka ? `<span style="font-size:24px">${esc(ka)}</span>` : '–', '')}
       ${tile('Geplant heute', planH!=null ? f1(planH)+'<small>h</small>' : '–', planH!=null ? '' : 'keine Einheit geplant')}
-      ${tile('Stunden diese Woche', f1(hWeek)+'<small>h</small>', 'inkl. geplanter Einheiten')}
+      ${tile('Stunden diese Woche', f1(hWeek)+'<small>h</small>', hWeekTot!=null ? 'bis heute · Woche geplant '+f1(hWeekTot)+' h' : 'bis heute, inkl. Plan')}
       ${tile('Stunden Saison', f1(hSeason)+'<small>h</small>', 'Saison '+esc(season||''))}
       ${tile('Bis nächster Wettkampf', nextWk ? nextWk.days+'<small>Tage</small>' : '–', nextWk ? esc(nextWk.name)+(nextWk.approx?' (Datum ungefähr)':'') : '')}
       ${tile('Bis nächster Deload', nextDl ? nextDl.days+'<small>Tage</small>' : '–', nextDl ? 'KW '+nextDl.kw : '')}
@@ -1214,12 +1248,20 @@ function renderStatistik(view){
     </div>`;
   }
 
+  const lcPts = (isSolo ? W : (ss.dash||[]).slice().sort((a,b)=>(a.year-b.year)||(a.kw-b.kw))).filter(w=>w.load>0).map(w=>({year:w.year,kw:w.kw,load:w.load}));
+  const lcCard = `<div class="barChart">
+      <div style="display:flex;align-items:baseline;justify-content:space-between"><span class="sectionTitle">Load-Verlauf</span><span class="subMeta">SAISON ${esc(season)}</span></div>
+      ${lcPts.length>=2 ? dashLoadSvg(lcPts, D.JAHRESPLAN2027 ? D.JAHRESPLAN2027[key] : null) : '<div class="footNote">Noch zu wenig Load-Daten für eine Kurve (mind. 2 Wochen mit Doku).</div>'}
+    </div>`;
+  const hoursNote = isSolo ? `<div class="footNote">Trainingsstunden (nur Tage bis heute): Doku der Einheit schlägt eigene Zeitangabe in der Excel, diese schlägt die Summe der geplanten Inhalte (Ø-Zeiten aus der Übungsliste Gesamt). Inhalte ohne Dauer in der Liste zählen 0 h.${dk.hrsDok!=null ? ' Aktuell: '+Number(dk.hrsDok).toFixed(1)+' h dokumentiert + '+Number(dk.hrsPlan||0).toFixed(1)+' h aus dem Plan.' : ''}</div>` : '';
   return `
     <div style="display:flex;align-items:baseline;justify-content:space-between">
       <span class="sectionTitle">Statistik</span>
       <span class="subMeta">SAISON ${esc(season)}</span>
     </div>
     ${seasonToggle}
+    ${lcCard}
+    ${hoursNote}
     ${loadSection}
     <div class="barChart">
       <span class="sectionTitle">Verteilung der Inhalte</span>
