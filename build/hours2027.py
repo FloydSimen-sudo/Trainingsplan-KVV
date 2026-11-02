@@ -6,7 +6,7 @@ Regel je Einheit (Session):
   3. Sonst Summe aller geplanten Inhalte mit den Durchschnittszeiten aus "Uebungssammlung Gesamt.xlsx"
      (Bereiche wie 60-90 -> Mittelwert). Inhalte ohne Dauer in der Liste zaehlen 0 und werden gemeldet.
 """
-import os, re, openpyxl
+import os, re, json, openpyxl
 
 EXPL_RE = re.compile(r'(\d+(?:[.,]\d+)?)\s*(minuten|minute|min\.?|stunden|stunde|std\.?|h)\b', re.I)
 RANGE_RE = re.compile(r'(\d{1,2})[:.](\d{2})(?::\d{2})?\s*[-–]\s*(\d{1,2})[:.](\d{2})(?::\d{2})?')
@@ -14,7 +14,8 @@ H_RE = re.compile(r'^\s*(\d+(?:[.,]\d+)?)(?:\s*[-–]\s*(\d+(?:[.,]\d+)?))?\s*(?
 
 # Kurzformen aus den Plaenen -> Name in der Uebungsliste
 ALIASES = {'bb': 'bewegungsbouldern', 'bb offen': 'bewegungsbouldern', 'andere bb': 'bewegungsbouldern',
-           'routine': 'warm up routine'}
+           'routine': 'warm up routine',
+           'spray max': 'max boulder', 'spray aufbau': 'aufbau boulder'}
 
 def norm(s):
     return re.sub(r'\s+', ' ', re.sub(r'[^0-9a-zäöüß ]', ' ', str(s).lower())).strip()
@@ -222,6 +223,16 @@ def load_exercise_catalog(path):
                     cat[k]['how'] = e['how']
     except Exception as ex:
         print('hours2027: Exercise-Katalog nicht lesbar:', ex)
+    # Eigene Ergaenzungen von Floyd: build/uebung_overrides.json {"Blackroll": {"min": 10, "how": ["Regenerative Uebung."]}}
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uebung_overrides.json'), encoding='utf-8') as f:
+            for nm, v in json.load(f).items():
+                e = cat.setdefault(norm(nm), {'name': nm, 'min': None, 'sets': None, 'vol': None, 'pause': None, 'how': []})
+                for fld in ('min', 'sets', 'vol', 'pause', 'how'):
+                    if fld in v:
+                        e[fld] = v[fld]
+    except FileNotFoundError:
+        pass
     return cat
 
 def find_entry(name, excat):
