@@ -250,7 +250,7 @@
 </style>
 </head>
 <body>
-<div style="position:fixed;top:6px;right:6px;z-index:999;background:#d20028;color:#fff;font:700 10px/1 Archivo,sans-serif;padding:4px 9px;border-radius:8px;pointer-events:none;letter-spacing:.08em">BETA</div>
+<a href="./index.html" style="position:fixed;bottom:76px;right:8px;z-index:999;background:#d20028;color:#fff;font:700 10px/1 Archivo,sans-serif;padding:7px 11px;border-radius:14px;letter-spacing:.06em;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.25)">BETA · zurück zu LIVE</a>
 <div id="app"></div>
 <script>
 const AM='#00588f', LI='#128089', TX='#0f2436', MU='#6b8496', DI='#9db0bd';
@@ -1607,7 +1607,7 @@ function renderTrainerspace(view){
       <span class="subMeta">NOTIZEN DER TRAINER:INNEN · NUR FÜR GRUPPENTRAINER:INNEN</span>
     </div>`;
   const formLink = `<a href="${TRAINER_FORMS_URL}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;padding:9px 14px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Trainer-Doku ausfüllen</a>`;
-  const betaLink = `<a href="./beta.html" style="display:inline-flex;align-items:center;margin-left:8px;padding:9px 14px;border-radius:10px;background:#d20028;color:#fff;font:700 12px/1 Archivo,sans-serif;white-space:nowrap">Beta</a>`;
+  const betaLink = `<a href="./index.html" style="display:inline-flex;align-items:center;margin-left:8px;padding:9px 14px;border-radius:10px;background:#128089;color:#fff;font:700 12px/1 Archivo,sans-serif;white-space:nowrap">Live</a>`;
   const pwForm = (label)=>`<form id="trainerForm" style="display:flex;gap:8px;align-items:stretch">
       <input id="trainerPw" type="password" autocomplete="off" placeholder="${label}" ${state.trainerBusy?'disabled':''}
         style="flex:1;min-width:0;font:500 14px/1 Archivo,sans-serif;padding:11px 12px;border-radius:10px;border:1px solid ${DI};outline:none">

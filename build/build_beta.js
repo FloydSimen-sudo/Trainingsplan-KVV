@@ -6,6 +6,9 @@
 const fs = require('fs'), crypto = require('crypto');
 const BETA_PW = 'KVV';
 const BTN = `const betaLink = \`<a href="./beta.html" style="display:inline-flex;align-items:center;margin-left:8px;padding:9px 14px;border-radius:10px;background:#d20028;color:#fff;font:700 12px/1 Archivo,sans-serif;white-space:nowrap">Beta</a>\`;\n  `;
+const BETA_A = '<a href="./beta.html" style="display:inline-flex;align-items:center;margin-left:8px;padding:9px 14px;border-radius:10px;background:#d20028;color:#fff;font:700 12px/1 Archivo,sans-serif;white-space:nowrap">Beta</a>';
+const LIVE_A = '<a href="./index.html" style="display:inline-flex;align-items:center;margin-left:8px;padding:9px 14px;border-radius:10px;background:#128089;color:#fff;font:700 12px/1 Archivo,sans-serif;white-space:nowrap">Live</a>';
+const BADGE = '\n<a href="./index.html" style="position:fixed;bottom:76px;right:8px;z-index:999;background:#d20028;color:#fff;font:700 10px/1 Archivo,sans-serif;padding:7px 11px;border-radius:14px;letter-spacing:.06em;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.25)">BETA · zurück zu LIVE</a>';
 function addBetaButton(html){
   if (html.includes('const betaLink')) return html;
   if (!html.includes('const pwForm =')) throw new Error('pwForm nicht gefunden');
@@ -46,7 +49,8 @@ function makeBetaHtml(html){
   rep("sessionStorage.getItem('tpPw')", "sessionStorage.getItem('tpPwBeta')");
   rep("sessionStorage.setItem('tpPw', password)", "sessionStorage.setItem('tpPwBeta', password)");
   rep('<title>Trainingspläne KVV</title>', '<title>BETA · Trainingspläne KVV</title>');
-  rep('<body>', '<body>\n<div style="position:fixed;top:6px;right:6px;z-index:999;background:#d20028;color:#fff;font:700 10px/1 Archivo,sans-serif;padding:4px 9px;border-radius:8px;pointer-events:none;letter-spacing:.08em">BETA</div>');
+  rep(BETA_A, LIVE_A);
+  rep('<body>', '<body>' + BADGE);
   rep('Bitte Passwort eingeben, um die Trainingspläne zu öffnen.', 'BETA-Testversion (Adrian Kathan, U15 II). Bitte Passwort eingeben.');
   return html;
 }
@@ -56,7 +60,8 @@ function fromBetaToLive(beta){
   rep('<script src="./beta-data.enc.js"></script>', '<script src="./tp-data.enc.js"></script>\n<script src="./trainer-data.enc.js"></script>');
   rep("tpPwBeta", "tpPw");
   rep('<title>BETA · Trainingspläne KVV</title>', '<title>Trainingspläne KVV</title>');
-  h = h.replace(/\n<div style="position:fixed;top:6px;right:6px;z-index:999;[^\n]*BETA<\/div>/, '');
+  rep(BADGE, '');
+  rep(LIVE_A, BETA_A);
   rep('BETA-Testversion (Adrian Kathan, U15 II). Bitte Passwort eingeben.', 'Bitte Passwort eingeben, um die Trainingspläne zu öffnen.');
   return h;
 }
