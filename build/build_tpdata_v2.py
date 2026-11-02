@@ -10,6 +10,8 @@ und die App zeigt "-" an.
 """
 import openpyxl, json, re, subprocess, sys, glob, os
 from datetime import date, datetime, timedelta
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import plans2027
 
 BASE = os.path.join(os.path.expanduser("~"), "mnt", "Trainingsplanung Live") + "/"
 OUT = "/sessions/rcw-0151s7tv8hxkojd4a1uavrle/mnt/Trainingsplan-KVV/tp-data.js"
@@ -510,6 +512,20 @@ def count_wall_days_in_range(weeks, start_iso, end_iso):
                 continue
             if any(cat.get('name') in WALL_CATS and cat.get('items')
                    for sess in day.get('sessions', []) for cat in sess.get('cats', [])):
+                count += 1
+    return count
+
+def count_planned_days_in_range(weeks, start_iso, end_iso):
+    """Alle geplanten Trainingstage (irgendeine Kategorie mit Inhalt, auch Athletik/Spezial),
+    nicht nur Tage an der Wand. Basis der Doku-Abgabequote ab SPOGY-Niveau (Floyd, 02.11.2026)."""
+    count = 0
+    values = weeks.values() if isinstance(weeks, dict) else weeks
+    for wk in values:
+        for day in wk.get('days', []):
+            d = day.get('date')
+            if not d or d < start_iso or d > end_iso:
+                continue
+            if any(cat.get('items') for sess in day.get('sessions', []) for cat in sess.get('cats', [])):
                 count += 1
     return count
 
@@ -1095,6 +1111,7 @@ def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label, doc_by
     hrs_dok = hrs_zeit = hrs_inh = hrs_fb = hrs_cal = 0.0
     kz = load_kalender_zeiten() or {}
     today_iso = date.today().isoformat()
+    wk_hours = {}
     for wk in weeks.values():
         if (wk.get('year'), wk.get('kw')) not in season_weeks:
             continue
@@ -1115,22 +1132,29 @@ def build_group_season_stats_from_weeks(weeks, season_weeks, sheet_label, doc_by
                 training_days += 1
                 if dd:
                     hrs_dok += dd
+                    h_day = dd
                 elif cal_h:
                     hrs_cal += cal_h
+                    h_day = cal_h
                 else:
                     ph, src = planned_hours(day)
                     if src == 'zeit':
                         hrs_zeit += ph
+                        h_day = ph
                     elif src == 'inhalt':
                         hrs_inh += ph
+                        h_day = ph
                     else:
                         hrs_fb += GROUP_EST_HOURS_PER_DAY
+                        h_day = GROUP_EST_HOURS_PER_DAY
+                wk_hours[(wk.get('year'), wk.get('kw'))] = wk_hours.get((wk.get('year'), wk.get('kw')), 0.0) + h_day
     hrs_total = hrs_dok + hrs_cal + hrs_zeit + hrs_inh + hrs_fb
     if training_days == 0 and all(v == 0 for v in cat_counts.values()):
         return None
     return {
         'catCounts': [{'name': c, 'count': cat_counts.get(c, 0)} for c in CAT_ORDER],
         'weeks': [],
+        'dash': [{'year': y, 'kw': k, 'hrs': round(h, 2)} for (y, k), h in sorted(wk_hours.items())],
         'sheet': sheet_label,
         'trainingDays': training_days,
         'estHoursPerDay': GROUP_EST_HOURS_PER_DAY,
@@ -1935,8 +1959,13 @@ def main():
     # Trainingsplanung Live-Ordner neu strukturiert); resolve_file fällt bei Bedarf auf
     # den alten Wurzelpfad zurück und toleriert OneDrive-Konfliktkopien
     # (z.B. "Name 2.xlsx").
+    # Alte Plaene: kuenftig unter 'Trainingspläne <Vorjahr>/' (Ordner automatisch erkannt),
+    # bis dahin am bisherigen Ort direkt unter Trainingsplanung Live.
+    OLDROOT = plans2027.old_root(BASE)
+    def oldp(rel):
+        return OLDROOT + rel if (OLDROOT and os.path.exists(BASE + OLDROOT + rel)) else rel
     INDIVIDUAL_PATHS = {
-        name: resolve_file(BASE + 'Einzelpläne/' + fname, BASE + fname)
+        name: resolve_file(BASE + OLDROOT + 'Einzelpläne/' + fname, BASE + 'Einzelpläne/' + fname, BASE + fname)
         for name, fname in INDIVIDUAL_FILES.items()
     }
     GROUP_FILES = {
@@ -1957,6 +1986,9 @@ def main():
         'U15I': 'Gruppenpläne/U15 I/Jahresplanung U15.xlsx',
         'U15 II': 'Gruppenpläne/U15 II/Jahresplanung U15.xlsx',
     }
+
+    GROUP_FILES = {g: (oldp(r), sh) for g, (r, sh) in GROUP_FILES.items()}
+    GROUP_JAHRESPLAN_FILES = {g: oldp(r) for g, r in GROUP_JAHRESPLAN_FILES.items()}
 
     PLANS = {}
     WEEKS_BY_ATHLETE = {}
@@ -2012,9 +2044,9 @@ def main():
             }
             # Trainingsdoku-Abgabequote auch fuer Einzelplaene (Floyd, 01.10.2026)
             q_end = date.today().isoformat()
-            q_wall = count_wall_days_in_range(weeks, DOKU_QUOTE_START, q_end)
+            q_wall = count_planned_days_in_range(weeks, DOKU_QUOTE_START, q_end)
             SEASON_STATS['26/27']['a:' + name]['athleteDoku'] = aggregate_group_athlete_doku([name], FORMS_BY_ATHLETE, q_wall, DOKU_QUOTE_START, q_end)
-            SEASON_STATS['26/27']['a:' + name]['dokuQuote'] = {'from': DOKU_QUOTE_START, 'to': q_end, 'wallDays': q_wall}
+            SEASON_STATS['26/27']['a:' + name]['dokuQuote'] = {'from': DOKU_QUOTE_START, 'to': q_end, 'wallDays': q_wall, 'basis': 'planned'}
 
     for gid, (relpath, sheet_cands) in GROUP_FILES.items():
         cats_counter = {}
@@ -2051,9 +2083,11 @@ def main():
         quote_wall_days = count_wall_days_in_range(weeks, DOKU_QUOTE_START, quote_end) if gid in ATHLETE_DOKU_GROUPS else 0
         athlete_doku = aggregate_group_athlete_doku(group_names, FORMS_BY_ATHLETE, quote_wall_days, DOKU_QUOTE_START, quote_end) if gid in ATHLETE_DOKU_GROUPS else None
         if ss27:
+            for _d in ss27.get('dash', []):
+                _d['load'] = (group_doku_weeks.get((_d['year'], _d['kw'])) or {}).get('avgLoad')
             ss27['doku'] = group_doku_season
             ss27['athleteDoku'] = athlete_doku
-            ss27['dokuQuote'] = {'from': DOKU_QUOTE_START, 'to': quote_end, 'wallDays': quote_wall_days} if athlete_doku is not None else None
+            ss27['dokuQuote'] = {'from': DOKU_QUOTE_START, 'to': quote_end, 'wallDays': quote_wall_days, 'basis': 'wall'} if athlete_doku is not None else None
             SEASON_STATS['26/27']['g:' + gid] = ss27
         elif group_doku_season:
             SEASON_STATS['26/27']['g:' + gid] = {
@@ -2074,7 +2108,6 @@ def main():
     # ---- Neue Jahrespläne 2027 (eine Excel je Athlet:in/Gruppe; nur gelesen, nie geschrieben) ----
     # Pfade/Policy: build/plans2027_config.json. Jahresplan (Zeitstrahl) kommt aus der neuen Excel,
     # die Einheitenplanung wird je nach Policy mit den bisherigen Plänen zusammengeführt.
-    import plans2027
     P27 = plans2027.load_config()
     JAHRESPLAN2027 = {}
     PLANS2027_INFO = {}
@@ -2120,6 +2153,14 @@ def main():
     if 'g:SPOGY Gruppe' not in PLANS:
         PLANS['g:SPOGY Gruppe'] = {}
         SOURCE_INFO['g:SPOGY Gruppe'] = 'Keine Gruppen-Excel für SPOGY im Trainingsplanung Live-Ordner hinterlegt (Athlet:innen haben Einzelpläne)'
+
+    # Geplante Dauer je Trainingstag (Dashboard): Zeit > Summe der Inhaltsdauern; sonst None
+    for _k, _wks in PLANS.items():
+        for _wk in (_wks.values() if isinstance(_wks, dict) else []):
+            for _day in _wk.get('days', []):
+                if _day.get('sessions'):
+                    _h, _src = planned_hours(_day)
+                    _day['planH'] = _h if _h else None
 
     # Gesamtkalender: nur Pruefgrundlage, nicht mehr in der App angezeigt (Floyd, 02.10.2026)
     check_wk_conflicts(PLANS)

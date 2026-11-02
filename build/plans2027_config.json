@@ -1,11 +1,17 @@
 {
-  "roots": [
-    "Trainingspläne 2027",
-    "Trainingspläne 2026",
+  "plans_dir": "Trainingspläne {year}",
+  "current_year": null,
+  "old_year": null,
+  "subdirs": [
+    "Einzelpläne",
+    "Gruppenpläne",
+    ""
+  ],
+  "file_pattern": "{name} {year}.xlsx",
+  "fallback_roots": [
     "Projekt Jahresplanung/Jahresplanung 2027/Neue Pläne"
   ],
-  "subdirs": ["Einzelpläne", "Gruppenpläne", ""],
-  "file_pattern": "{name} 2027.xlsx",
+  "fallback_year": 2027,
   "jahresplan_start": "2026-09-07",
-  "einheiten_policy": "fill_gaps"
+  "einheiten_policy": "new_wins"
 }

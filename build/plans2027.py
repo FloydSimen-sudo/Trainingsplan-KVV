@@ -28,22 +28,23 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, 'plans2027_config.json')
 
 DEFAULT_CONFIG = {
-    # relativ zu BASE ("Trainingsplanung Live"); der Reihe nach probiert
-    'roots': [
-        'Trainingspläne 2027',
-        'Trainingspläne 2026',
-        'Projekt Jahresplanung/Jahresplanung 2027/Neue Pläne',
-    ],
+    # Ordner unter "Trainingsplanung Live"; {year} wird ersetzt. Ohne "current_year" nimmt der Build
+    # automatisch das hoechste vorhandene Jahr ("Trainingspläne 2028" wird ohne Codeaenderung erkannt),
+    # die Saison davor ist der Ordner fuer die alten Plaene ("old_year" ueberschreibt das).
+    'plans_dir': 'Trainingspläne {year}',
+    'current_year': None,
+    'old_year': None,
     'subdirs': ['Einzelpläne', 'Gruppenpläne', ''],
-    'file_pattern': '{name} 2027.xlsx',
+    'file_pattern': '{name} {year}.xlsx',
+    # Solange der Ordner "Trainingspläne <Jahr>" noch nicht existiert: Ausweichorte (Jahr fuer den Dateinamen)
+    'fallback_roots': ['Projekt Jahresplanung/Jahresplanung 2027/Neue Pläne'],
+    'fallback_year': 2027,
     # Start der Jahresplanung (Spalte E = Montag dieser Woche = KW37/2026)
     'jahresplan_start': '2026-09-07',
-    # fill_gaps: Tage, die in der bisherigen Einheitenplanung schon Sessions haben, bleiben;
-    #            neue Excel fuellt nur Luecken.
-    # new_wins : neue Excel ueberschreibt alle Tage, an denen sie Inhalt hat.
-    # off      : Einheitenplanung der neuen Excel wird nicht gelesen.
-    'einheiten_policy': 'fill_gaps',
-    # Jahresplan (Zeitstrahl) kommt immer aus der neuen Excel, wenn vorhanden.
+    # new_wins : neue Excel ueberschreibt Tage, an denen sie Inhalt hat (Doku/Zeit/Trainer bleiben)
+    # fill_gaps: nur leere Tage werden gefuellt
+    # off      : Einheitenplanung der neuen Excel wird nicht gelesen
+    'einheiten_policy': 'new_wins',
 }
 
 
@@ -54,21 +55,63 @@ def load_config():
             cfg.update(json.load(f))
     except FileNotFoundError:
         pass
-    env_root = os.environ.get('TP_PLANS2027_ROOT')
+    env_root = os.environ.get('TP_PLANS_YEAR')
     if env_root:
-        cfg['roots'] = [env_root] + list(cfg['roots'])
+        cfg['current_year'] = int(env_root)
     return cfg
 
 
-def resolve_plan_file(base, name, cfg=None):
-    """Sucht '<root>/<sub>/<name>/<name> 2027.xlsx' bzw. '<root>/<sub>/<name> 2027.xlsx'.
-    Gibt den ersten Treffer (abs. Pfad) oder None zurueck."""
+def detect_years(base, cfg):
+    """Alle vorhandenen Jahre der Ordner 'plans_dir' (absteigend)."""
+    pat = re.escape(cfg['plans_dir']).replace(re.escape('{year}'), r'(\d{4})')
+    years = []
+    try:
+        for d in os.listdir(base):
+            m = re.fullmatch(pat, d)
+            if m and os.path.isdir(os.path.join(base, d)):
+                years.append(int(m.group(1)))
+    except OSError:
+        pass
+    return sorted(set(years), reverse=True)
+
+
+def current_year(base, cfg):
+    if cfg.get('current_year'):
+        return int(cfg['current_year'])
+    ys = detect_years(base, cfg)
+    return ys[0] if ys else None
+
+
+def old_root(base, cfg=None):
+    """Relativer Ordner der alten Plaene ('Trainingspläne 2026/') oder '' (alter Ort direkt unter Live)."""
     cfg = cfg or load_config()
-    fname = cfg['file_pattern'].format(name=name)
-    for root in cfg['roots']:
+    old = cfg.get('old_year')
+    if not old:
+        cur = current_year(base, cfg)
+        ys = [y for y in detect_years(base, cfg) if cur is None or y < cur]
+        old = ys[0] if ys else None
+    if old:
+        d = cfg['plans_dir'].format(year=old)
+        if os.path.isdir(os.path.join(base, d)):
+            return d + '/'
+    return ''
+
+
+def resolve_plan_file(base, name, cfg=None):
+    """Sucht '<root>/<sub>/<name>/<name> <Jahr>.xlsx' bzw. '<root>/<sub>/<name> <Jahr>.xlsx'.
+    Erst 'Trainingspläne <aktuelles Jahr>', dann die Ausweichorte. Gibt abs. Pfad oder None."""
+    cfg = cfg or load_config()
+    cands = []
+    cur = current_year(base, cfg)
+    if cur:
+        cands.append((cfg['plans_dir'].format(year=cur), cur))
+    for fr in cfg.get('fallback_roots', []):
+        cands.append((fr, cfg.get('fallback_year') or cur))
+    for root, year in cands:
         rdir = root if os.path.isabs(root) else os.path.join(base, root)
         if not os.path.isdir(rdir):
             continue
+        fname = cfg['file_pattern'].format(name=name, year=year)
         for sub in cfg['subdirs']:
             for cand in (os.path.join(rdir, sub, name, fname), os.path.join(rdir, sub, fname)):
                 if os.path.isfile(cand):
@@ -251,7 +294,44 @@ def parse_jahresplanung(path, cfg=None):
             'days': _txt(ws.cell(r, 4).value), 'blocks': blocks,
         })
 
-    return {'source': os.path.basename(path), 'weeks': weeks, 'tracks': tracks, 'rows': rows}
+    return {'source': os.path.basename(path), 'weeks': weeks, 'tracks': tracks, 'rows': rows,
+            'wk': wk_list(weeks, tracks)}
+
+
+WK_DATE_FULL_RE = re.compile(r'(\d{1,2})\.(\d{1,2})\.\s*[-–]\s*\d{1,2}\.\d{1,2}\.')
+WK_DATE_RE = re.compile(r'(\d{1,2})(?:\s*[.\/,\-–]{1,3}\s*\d{1,2})*\.\s*(\d{1,2})\.')
+
+
+def wk_list(weeks, tracks):
+    """Wettkampfliste [{date, name, kind}] aus den WK-Zeilen. Datum = erstes Datum im Text
+    (z.B. '21/22.11.' -> 21.11.); ohne lesbares Datum der Montag der Blockwoche (approx=True)."""
+    out = []
+    for key, kind in (('wkB', 'Bouldern'), ('wkWC', 'World Cup'), ('wkL', 'Lead')):
+        for b in tracks.get(key, []):
+            mon = date.fromisoformat(weeks[b['s']]['mon'])
+            end = mon + timedelta(days=7 * b['n'] - 1)
+            d, approx = None, True
+            m = WK_DATE_FULL_RE.search(b['t']) or WK_DATE_RE.search(b['t'])
+            if m:
+                day, month = int(m.group(1)), int(m.group(2))
+                for yr in (mon.year, mon.year + 1, mon.year - 1):
+                    try:
+                        cand = date(yr, month, day)
+                    except ValueError:
+                        continue
+                    if mon - timedelta(days=7) <= cand <= end + timedelta(days=7):
+                        d, approx = cand, False
+                        break
+            if d is None:
+                d = mon
+            out.append({'date': d.isoformat(), 'name': b['t'], 'kind': kind, 'approx': approx})
+    out.sort(key=lambda x: (x['date'], x['name']))
+    ded = []
+    for x in out:
+        if ded and ded[-1]['name'] == x['name'] and (ded[-1]['date'] == x['date'] or x['approx']):
+            continue
+        ded.append(x)
+    return ded
 
 
 def legacy_phase_weeks(jp):

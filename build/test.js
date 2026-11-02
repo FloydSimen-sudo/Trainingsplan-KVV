@@ -36,8 +36,9 @@ check('Nach Auswahl eines Plans: Reiter Woche ist immer aktiv (initial + nach We
   state.view = {t:'a', id:'Adrian Kathan'};
   let out = renderApp();
   if (!out.includes('Adrian Kathan')) throw new Error('missing name');
-  if (!out.includes('KW ' + state.kw)) throw new Error('missing week');
-  if (state.tab !== 'Woche') throw new Error('Tab sollte nach Auswahl Woche sein, ist: ' + state.tab);
+  if (state.tab !== 'Dashboard') throw new Error('Tab sollte nach Auswahl Dashboard sein, ist: ' + state.tab);
+  if (!out.includes('dashGrid')) throw new Error('Dashboard fehlt');
+  state.tab='Woche'; if (!renderApp().includes('KW ' + state.kw)) throw new Error('missing week'); state.tab='Dashboard';
   state.tab = 'Statistik'; renderApp();
   state.view = {t:'g', id:'U9'}; state.tab = 'Woche'; state.day = 0;
   out = renderApp();
@@ -45,7 +46,7 @@ check('Nach Auswahl eines Plans: Reiter Woche ist immer aktiv (initial + nach We
 });
 
 check('all tabs for Adrian render without throw', () => {
-  ['Woche','Jahr','Statistik','Benchmarks'].forEach(t => { state.tab = t; renderApp(); });
+  ['Dashboard','Woche','Jahr','Statistik','Benchmarks'].forEach(t => { state.tab = t; renderApp(); });
 });
 
 check('switch to group U9, all tabs', () => {
@@ -72,7 +73,7 @@ check('Levi Strolz (28.08. jetzt mit echter Einzelplan-Excel) zeigt reale Daten 
   const out = renderApp();
   if (out.includes('Keine Daten hinterlegt')) throw new Error('Levi Strolz hat jetzt eine echte Excel, sollte keinen Platzhalter mehr zeigen: ' + out.slice(0,300));
   if (!out.includes('Levi Strolz')) throw new Error('Name fehlt: ' + out.slice(0,300));
-  ['Woche','Jahr','Statistik','Benchmarks'].forEach(t => { state.tab = t; renderApp(); });
+  ['Dashboard','Woche','Jahr','Statistik','Benchmarks'].forEach(t => { state.tab = t; renderApp(); });
 });
 
 check('SPOGY Gruppe (missing group data) shows empty state', () => {
@@ -188,7 +189,7 @@ check('Statistik: Saison-Toggle nur im Statistik-Tab, andere Tabs (Woche/Jahr/Be
 
   state.tab = 'Jahr';
   const jahrOut = renderApp();
-  if (!jahrOut.includes('jahrZs')) throw new Error('Jahr-Tab: Zeitstrahl fehlt');
+  if (!jahrOut.includes('jcBand')) throw new Error('Jahr-Tab: Zeitstrahl fehlt');
 
   state.tab = 'Benchmarks';
   const benchOut = renderApp();
@@ -205,66 +206,42 @@ check('Woche KW36 Adrian shows updated Dienstag exercise + fuzzy duration + Noti
   if (!out.includes('Gute Vorbereitung vor jedem Versuch')) throw new Error('missing updated Notiz: ' + out.slice(0,800));
 });
 
-check('Woche kompakt (Kurzform) view renders week-at-a-glance without throw, all 7 days', () => {
-  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.year=2026; state.kw=36; state.day=1; state.weekView='kurz';
-  const out = renderApp();
-  if (!out.includes('kurzTable')) throw new Error('kurz view did not render: ' + out.slice(0,500));
-  if (!out.includes('2-3 Onsight Gos')) throw new Error('expected Inhalt fuer Dienstag in kurz view');
-  if (!out.includes('class="kurzItem"')) throw new Error('expected farbig hinterlegte Inhalte in kurz view');
-  if (out.includes('class="kurzCat"')) throw new Error('Kategorienamen sollen in kurz view nicht mehr erscheinen');
-  state.weekView='tage';
-});
-
-check('Woche kompakt renders for a group plan too (U9)', () => {
-  state.view = {t:'g', id:'U9'}; state.tab='Woche'; state.weekView='kurz';
-  renderApp();
-  state.weekView='tage';
-});
-
 check('Jahr tab renders for group U13 I without crash', () => {
   state.view = {t:'g', id:'U13 I'}; state.tab='Jahr';
   renderApp();
 });
 
-check('Jahr tab Adrian: Zeitstrahl 2027 mit Phasen, KA, WK-Terminen und echten Excel-Farben', () => {
-  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Jahr'; state.zsSel=null; state.zsOpen={};
+check('Jahr tab Adrian: kompakt mit Phase, Kraftausdauer, rote Linie, naechster Wettkampf, Excel-Farben', () => {
+  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Jahr';
   const out = renderApp();
-  if (!out.includes('jahrZs')) throw new Error('Zeitstrahl fehlt: ' + out.slice(0,300));
-  ['Basis','Aufbau','Max','Kraftausdauer','WK Bouldern','Testung','Fels','Schulferien'].forEach(t => {
-    if (!out.includes(t)) throw new Error('Zeitstrahl-Zeile/Block fehlt: ' + t);
-  });
+  if (!out.includes('jcBand')) throw new Error('Phasenband fehlt: ' + out.slice(0,300));
+  ['Trainingsphase','Kraftausdauer','Nächster Wettkampf','jcNow'].forEach(t => { if (!out.includes(t)) throw new Error('fehlt: ' + t); });
   if (!/#[0-9a-fA-F]{6}/.test(out)) throw new Error('echte Excel-Hex-Farbe fehlt');
-  if (!out.includes('zsNow')) throw new Error('Markierung der aktuellen Woche fehlt');
 });
 
-check('Jahr tab: Kategorie aufklappen zeigt Inhaltszeilen, Block antippen zeigt Details', () => {
-  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Jahr'; state.zsSel=null; state.zsOpen={};
+check('Dashboard: Kacheln fuer Adrian und alle Gruppen rendern ohne Absturz, ohne Gruppenfarben', () => {
+  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Dashboard';
   let out = renderApp();
-  if (out.includes('Bewegungsbouldern')) throw new Error('Inhalte sollten zugeklappt starten');
-  state.zsOpen = {'Hauptteil 1 Technik': true};
-  out = renderApp();
-  if (!out.includes('Bewegungsbouldern')) throw new Error('aufgeklappte Kategorie zeigt keine Inhalte');
-  const m = out.match(/data-act="zsSel" data-id="([^"]+)"/);
-  state.zsSel = m[1];
-  out = renderApp();
-  if (!out.includes('zsDetail')) throw new Error('Detailkarte fehlt');
-  state.zsSel = null; state.zsOpen = {};
+  ['Trainingsphase','Kraftausdauer','Geplant heute','Stunden diese Woche','Stunden Saison','Bis nächster Wettkampf','Bis nächster Deload','Load-Verlauf'].forEach(t => { if (!out.includes(t)) throw new Error('Dashboard-Kachel fehlt: ' + t); });
+  if (out.includes('Aktualisierung durch Floyd')) throw new Error('syncbar-Text sollte entfernt sein');
+  if (out.includes('Woche kompakt')) throw new Error('Woche kompakt sollte entfernt sein');
+  ['U9','U11I','U11II','U13 I','U13II','U15I','U15 II','SPOGY Gruppe'].forEach(g => { state.view={t:'g', id:g}; state.tab='Dashboard'; if (!renderApp().includes('dashGrid')) throw new Error('Dashboard leer: '+g); });
 });
 
 check('Jahr tab Gruppen (alle 7 + SPOGY) rendern den Zeitstrahl ohne Absturz', () => {
   ['U9','U11I','U11II','U13 I','U13II','U15I','U15 II','SPOGY Gruppe'].forEach(g => {
     state.view = {t:'g', id:g}; state.tab='Jahr';
     const out = renderApp();
-    if (!out.includes('jahrZs') && !out.includes('jahrRibbon') && !out.includes('Noch kein Jahresplan')) throw new Error('Jahr-Tab leer für ' + g);
+    if (!out.includes('jcBand') && !out.includes('jahrRibbon') && !out.includes('Noch kein Jahresplan')) throw new Error('Jahr-Tab leer für ' + g);
   });
   state.view = {t:'g', id:'U9'}; state.tab='Jahr';
-  if (!renderApp().includes('jahrZs')) throw new Error('U9: Zeitstrahl aus neuer Excel fehlt');
+  if (!renderApp().includes('jcBand')) throw new Error('U9: Zeitstrahl aus neuer Excel fehlt');
 });
 
 check('Einheitenplanung 2027 (Adrian): Luecken gefuellt, bestehende Tage unveraendert (fill_gaps)', () => {
   const w = window.TPDATA.PLANS['a:Adrian Kathan']['2026-45'];
   const mo = w.days[0];
-  if (!mo.sessions.length || mo.ort !== 'SB Dornbirn') throw new Error('bestehender Montag wurde veraendert: ' + JSON.stringify(mo).slice(0,200));
+  if (!mo.sessions.length) throw new Error('Montag KW45 leer: ' + JSON.stringify(mo).slice(0,200));
   const fr = w.days[4];
   if (!fr.sessions.length) throw new Error('Freitag KW45 sollte aus der neuen Excel gefuellt sein');
 });
@@ -282,15 +259,6 @@ check('Woche Tage-Ansicht (U9, Do 17.09.): Zeit + Trainer + farbiger Ort-Pill si
   if (!out.includes('Florian')) throw new Error('Trainer fehlt: ' + out.slice(0,500));
   if (!out.includes('Steinblock Dornbirn')) throw new Error('Ort fehlt: ' + out.slice(0,500));
   if (!out.includes(ORT_COLORS.Bouldern)) throw new Error('Ort-Farbe (Blau=Bouldern) fehlt im Markup: ' + out.slice(0,500));
-});
-
-check('Woche kompakt (U9, KW38): Ort/Zeit/Trainer je Tag + farbiger Rahmen', () => {
-  state.view = {t:'g', id:'U9'}; state.tab='Woche'; state.weekView='kurz';
-  state.year = 2026; state.kw = 38; state.day = 0;
-  const out = renderApp();
-  if (!out.includes('16:30-19:00') || !out.includes('Florian')) throw new Error('Kompakt-Ansicht zeigt Zeit/Trainer nicht: ' + out.slice(0,600));
-  if (!out.includes('border-left:4px solid ' + ORT_COLORS.Bouldern)) throw new Error('Kompakt-Ansicht faerbt Bouldern-Tag nicht: ' + out.slice(0,600));
-  if (!out.includes('border-left:4px solid ' + ORT_COLORS.Lead)) throw new Error('Kompakt-Ansicht faerbt Lead-Tag nicht: ' + out.slice(0,600));
 });
 
 check('Individuen ohne Zeit/Trainer/Ort-Typ crashen nicht (Adrian)', () => {
