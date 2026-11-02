@@ -2071,6 +2071,47 @@ def main():
                 JAHRESPLAN_GROUP[gid] = jpg
                 JAHRESPLAN_GROUP_SOURCE[gid] = 'Jahresplan · ' + jp_path.split('/')[-1]
 
+    # ---- Neue Jahrespläne 2027 (eine Excel je Athlet:in/Gruppe; nur gelesen, nie geschrieben) ----
+    # Pfade/Policy: build/plans2027_config.json. Jahresplan (Zeitstrahl) kommt aus der neuen Excel,
+    # die Einheitenplanung wird je nach Policy mit den bisherigen Plänen zusammengeführt.
+    import plans2027
+    P27 = plans2027.load_config()
+    JAHRESPLAN2027 = {}
+    PLANS2027_INFO = {}
+    def _mk27(text, red):
+        return {'ex': text, 'match': fuzzy_match(text, catalog, ex), 'explicitTime': extract_explicit_time(text), 'red': red}
+    P27_TARGETS = [('a:' + n, n, n) for n in INDIVIDUAL_FILES] + [
+        ('g:U9', 'U9', 'U9'), ('g:U11I', 'U11 I', 'U11I'), ('g:U11II', 'U11 II', 'U11II'),
+        ('g:U13 I', 'U13 I', 'U13 I'), ('g:U13II', 'U13 II', 'U13II'),
+        ('g:U15I', 'U15 I', 'U15I'), ('g:U15 II', 'U15 II', 'U15 II'),
+        ('g:SPOGY Gruppe', 'SPOGY-Gruppe', 'SPOGY Gruppe'),
+    ]
+    for key27, fname27, gid27 in P27_TARGETS:
+        f27 = plans2027.resolve_plan_file(BASE, fname27, P27)
+        if not f27:
+            PLANS2027_INFO[key27] = {'file': None}
+            continue
+        jp27 = plans2027.parse_jahresplanung(f27, P27)
+        info27 = {'file': os.path.relpath(f27, BASE), 'policy': P27['einheiten_policy']}
+        if jp27:
+            JAHRESPLAN2027[key27] = jp27
+            legacy27 = plans2027.legacy_phase_weeks(jp27)
+            src27 = 'Jahresplanung 2027 · ' + os.path.basename(f27)
+            if key27.startswith('a:'):
+                JAHRESPLAN[gid27] = legacy27
+                JAHRESPLAN_SOURCE[gid27] = src27
+            else:
+                JAHRESPLAN_GROUP[gid27] = legacy27
+                JAHRESPLAN_GROUP_SOURCE[gid27] = src27
+        if P27['einheiten_policy'] != 'off':
+            new_weeks27 = plans2027.parse_einheitenplanung(f27, _mk27)
+            if new_weeks27:
+                target27 = PLANS.setdefault(key27, {})
+                info27['merge'] = plans2027.merge_weeks(target27, new_weeks27, P27['einheiten_policy'])
+                info27['weeksWithContent'] = len(new_weeks27)
+        PLANS2027_INFO[key27] = info27
+    print('plans2027:', {k: (v.get('file') and (v.get('merge') or 'nur Jahresplan')) for k, v in PLANS2027_INFO.items()})
+
     # Missing sources -> explicit empty markers (kein Erfinden)
     for missing in ['Levi Strolz']:
         if ('a:' + missing) not in PLANS:
@@ -2099,6 +2140,8 @@ def main():
         'JAHRESPLAN_SOURCE': JAHRESPLAN_SOURCE,
         'JAHRESPLAN_GROUP': JAHRESPLAN_GROUP,
         'JAHRESPLAN_GROUP_SOURCE': JAHRESPLAN_GROUP_SOURCE,
+        'JAHRESPLAN2027': JAHRESPLAN2027,
+        'PLANS2027_INFO': PLANS2027_INFO,
         'SEASON_STATS': SEASON_STATS,
         'SEASON_LABEL': SEASON_LABEL,
         'SEASONS': SEASONS,

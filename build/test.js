@@ -188,7 +188,7 @@ check('Statistik: Saison-Toggle nur im Statistik-Tab, andere Tabs (Woche/Jahr/Be
 
   state.tab = 'Jahr';
   const jahrOut = renderApp();
-  if (!jahrOut.includes('ribbonWrap')) throw new Error('Jahr-Tab sollte weiterhin fortlaufend/unverändert sein');
+  if (!jahrOut.includes('jahrZs')) throw new Error('Jahr-Tab: Zeitstrahl fehlt');
 
   state.tab = 'Benchmarks';
   const benchOut = renderApp();
@@ -226,28 +226,47 @@ check('Jahr tab renders for group U13 I without crash', () => {
   renderApp();
 });
 
-check('Jahr tab Adrian: reine Grafik-Ribbon mit echten Excel-Farben (kein Termine-Block mehr)', () => {
-  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Jahr';
+check('Jahr tab Adrian: Zeitstrahl 2027 mit Phasen, KA, WK-Terminen und echten Excel-Farben', () => {
+  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Jahr'; state.zsSel=null; state.zsOpen={};
   const out = renderApp();
-  if (!out.includes('jahrRibbon')) throw new Error('Phasen-Ribbon fehlt: ' + out.slice(0,400));
-  if (!out.includes('ribbonCol')) throw new Error('Wochen-Spalten fehlen');
-  if (!/Max|Aufbau|SK|KA/.test(out)) throw new Error('erwartete Phasen-Legende fehlt');
-  if (!/#[0-9a-fA-F]{6}/.test(out)) throw new Error('echte Excel-Hex-Farbe fehlt im Output: ' + out.slice(0,400));
-  if (out.includes('evRow') || out.includes('WK Termine')) throw new Error('Termine-Block sollte laut Vorgabe (erstmal) weg sein');
+  if (!out.includes('jahrZs')) throw new Error('Zeitstrahl fehlt: ' + out.slice(0,300));
+  ['Basis','Aufbau','Max','Kraftausdauer','WK Bouldern','Testung','Fels','Schulferien'].forEach(t => {
+    if (!out.includes(t)) throw new Error('Zeitstrahl-Zeile/Block fehlt: ' + t);
+  });
+  if (!/#[0-9a-fA-F]{6}/.test(out)) throw new Error('echte Excel-Hex-Farbe fehlt');
+  if (!out.includes('zsNow')) throw new Error('Markierung der aktuellen Woche fehlt');
 });
 
-check('Jahr tab Gruppen (U9): eigener Phasen-Ribbon aus Jahresplan-Excel (Lead/Bouldern, echte Farben), kein Gesamtkalender mehr', () => {
+check('Jahr tab: Kategorie aufklappen zeigt Inhaltszeilen, Block antippen zeigt Details', () => {
+  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Jahr'; state.zsSel=null; state.zsOpen={};
+  let out = renderApp();
+  if (out.includes('Bewegungsbouldern')) throw new Error('Inhalte sollten zugeklappt starten');
+  state.zsOpen = {'Hauptteil 1 Technik': true};
+  out = renderApp();
+  if (!out.includes('Bewegungsbouldern')) throw new Error('aufgeklappte Kategorie zeigt keine Inhalte');
+  const m = out.match(/data-act="zsSel" data-id="([^"]+)"/);
+  state.zsSel = m[1];
+  out = renderApp();
+  if (!out.includes('zsDetail')) throw new Error('Detailkarte fehlt');
+  state.zsSel = null; state.zsOpen = {};
+});
+
+check('Jahr tab Gruppen (alle 7 + SPOGY) rendern den Zeitstrahl ohne Absturz', () => {
+  ['U9','U11I','U11II','U13 I','U13II','U15I','U15 II','SPOGY Gruppe'].forEach(g => {
+    state.view = {t:'g', id:g}; state.tab='Jahr';
+    const out = renderApp();
+    if (!out.includes('jahrZs') && !out.includes('jahrRibbon') && !out.includes('Noch kein Jahresplan')) throw new Error('Jahr-Tab leer für ' + g);
+  });
   state.view = {t:'g', id:'U9'}; state.tab='Jahr';
-  const out = renderApp();
-  if (!out.includes('jahrRibbon')) throw new Error('Gruppen-Ribbon fehlt: ' + out.slice(0,400));
-  if (!out.includes('Lead') && !out.includes('Bouldern')) throw new Error('Lead/Bouldern-Legende fehlt');
-  if (!out.includes('#92D050') && !out.toLowerCase().includes('#92d050')) throw new Error('echte Grün-Farbe (Lead) aus Excel fehlt');
+  if (!renderApp().includes('jahrZs')) throw new Error('U9: Zeitstrahl aus neuer Excel fehlt');
 });
 
-check('Jahr tab Sophie: Freitext-Phase wird als Text gezeigt, nicht als erfundener Phasen-Chip', () => {
-  state.view = {t:'a', id:'Sophie Bickel'}; state.tab='Jahr';
-  const out = renderApp();
-  if (!out.includes('Vorbereitung LT, KA verbessern')) throw new Error('Freitext-Phase fehlt: ' + out.slice(0,400));
+check('Einheitenplanung 2027 (Adrian): Luecken gefuellt, bestehende Tage unveraendert (fill_gaps)', () => {
+  const w = window.TPDATA.PLANS['a:Adrian Kathan']['2026-45'];
+  const mo = w.days[0];
+  if (!mo.sessions.length || mo.ort !== 'SB Dornbirn') throw new Error('bestehender Montag wurde veraendert: ' + JSON.stringify(mo).slice(0,200));
+  const fr = w.days[4];
+  if (!fr.sessions.length) throw new Error('Freitag KW45 sollte aus der neuen Excel gefuellt sein');
 });
 
 check('missing values render as "-" not blank/undefined', () => {

@@ -207,6 +207,22 @@
   .ribbonBar{width:18px;border-radius:2px;height:34px;background:#eef3f7}
   .ribbonBar.empty{background:#eef3f7}
   .ribbonBar.cur{outline:2px solid var(--am);outline-offset:1px}
+  .zsWrap{position:relative;overflow-x:auto;padding:4px 0 10px;-webkit-overflow-scrolling:touch}
+  .zsInner{position:relative;display:flex;flex-direction:column;gap:3px}
+  .zsRow{display:flex;align-items:stretch}
+  .zsLbl{flex:none;position:sticky;left:0;z-index:3;width:118px;padding:0 6px 0 2px;background:var(--bg);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:600 9px/1.15 'Roboto Mono',monospace;color:var(--mu);display:flex;align-items:center;letter-spacing:.01em}
+  .zsLbl.cat{color:var(--am);text-transform:uppercase;cursor:pointer;border:none;text-align:left;padding:5px 8px 5px 2px;width:auto;max-width:260px;background:var(--panel)}
+  .zsCatFill{flex:1;background:var(--panel)}
+  .zsTrack{position:relative;flex:none;height:22px}
+  .zsTrack.hdr{height:24px}
+  .zsBlk{position:absolute;top:1px;bottom:1px;border-radius:4px;border:none;padding:0 4px;font:600 8.5px/1 'Roboto Mono',monospace;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:left;cursor:pointer;background:#dfe7ee;color:var(--tx2)}
+  .zsBlk.sel{outline:2px solid var(--am);outline-offset:0;z-index:2}
+  .zsBlk.thin{padding:0}
+  .zsHdrCell{position:absolute;top:0;font:500 8px/1 'Roboto Mono',monospace;color:var(--di);text-align:center}
+  .zsHdrCell.month{color:var(--tx);font-weight:700}
+  .zsNow{position:absolute;top:0;bottom:0;background:rgba(0,88,143,.10);border-left:1px solid rgba(0,88,143,.45);border-right:1px solid rgba(0,88,143,.45);pointer-events:none;z-index:1}
+  .zsDetail{padding:9px 12px;border-radius:10px;background:var(--panel);border:1px solid var(--border);font:400 12px/1.45 Archivo,sans-serif;color:var(--tx)}
+  .zsDetail .k{font:600 9.5px/1.2 'Roboto Mono',monospace;color:var(--mu);text-transform:uppercase;letter-spacing:.03em}
   .legendRow{display:flex;flex-wrap:wrap;gap:10px 14px}
   .legendItem{display:flex;align-items:center;gap:5px;font:500 9.5px/1 'Roboto Mono',monospace;color:var(--mu)}
   .legendSwatch{width:9px;height:9px;border-radius:2px;flex:none}
@@ -374,6 +390,7 @@ const ROTATION_PLAN = {
 
 
 const state = {
+  zsOpen: {}, zsSel: null,
   view: null,
   tab: 'Woche',
   year: NOW.year, kw: NOW.kw, day: 0,
@@ -388,10 +405,22 @@ function setState(patch){ Object.assign(state, patch); render(); }
 // ---- Render ----
 function render(){
   const el = document.getElementById('app');
+  const oldZs = document.getElementById('jahrZs');
+  const keepLeft = (window.__zsKeep && oldZs && typeof oldZs.scrollLeft === 'number') ? oldZs.scrollLeft : null;
+  const keepTop = window.__zsKeep ? (window.pageYOffset || 0) : 0;
   el.innerHTML = renderApp();
   wireEvents();
   wireTrainerForm();
-  window.scrollTo(0,0);
+  window.scrollTo(0, window.__zsKeep ? keepTop : 0);
+  const zs = document.getElementById('jahrZs');
+  if(zs && typeof zs.scrollLeft === 'number'){
+    if(keepLeft !== null) zs.scrollLeft = keepLeft;
+    else {
+      const nowEl = zs.querySelector ? zs.querySelector('.zsNow') : null;
+      if(nowEl) zs.scrollLeft = Math.max(0, (nowEl.offsetLeft || 0) - 140);
+    }
+  }
+  window.__zsKeep = false;
   const ribbon = document.getElementById('jahrRibbon');
   if(ribbon && typeof ribbon.querySelector === 'function'){
     const cur = ribbon.querySelector('.ribbonBar.cur');
@@ -769,11 +798,95 @@ function renderKurz(days, di, groupId){
 function renderJahr(view, isSolo, athlete, group){
   const jp = isSolo ? D.JAHRESPLAN[view.id] : D.JAHRESPLAN_GROUP[view.id];
   const src = isSolo ? D.JAHRESPLAN_SOURCE[view.id] : D.JAHRESPLAN_GROUP_SOURCE[view.id];
+  const jp2 = D.JAHRESPLAN2027 ? D.JAHRESPLAN2027[(isSolo ? 'a:' : 'g:') + view.id] : null;
+  if(jp2 && jp2.weeks && jp2.weeks.length) return renderJahrZeitstrahl(view, jp2, src || jp2.source || '-');
   if(jp && jp.length) return renderJahrPhasen(view, jp, src || '-');
   return `<div class="empty">
       <div class="t1">Noch kein Jahresplan hinterlegt</div>
       <div class="t2">Sobald die Jahresplanung in der Excel gepflegt ist, erscheint sie hier.</div>
     </div>`;
+}
+
+// Zeitstrahl der Jahresplanung 2027: Spalte = Kalenderwoche, Blöcke = zusammengeführte
+// Excel-Zellen (Farben 1:1 aus der Excel). Nur lesen/anzeigen — nichts wird erfunden.
+const ZS_CW = 24, ZS_LW = 118;
+const ZS_TRACKS = [
+  ['phase','Phase'], ['ka','Kraftausdauer'], ['deload','Deload'],
+  ['wkB','WK Bouldern'], ['wkWC','World Cups'], ['wkL','WK Lead'],
+  ['test','Testung'], ['fels','Fels'], ['ferien','Schulferien']
+];
+function zsTextOn(hex){
+  if(!hex || !/^#[0-9a-fA-F]{6}$/.test(hex)) return 'var(--tx2)';
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return (0.299*r+0.587*g+0.114*b) < 140 ? '#ffffff' : '#0f2436';
+}
+function zsDM(iso){ const p=String(iso).split('-'); return p[2]+'.'+p[1]+'.'; }
+function renderJahrZeitstrahl(view, jp2, src){
+  const weeks = jp2.weeks, n = weeks.length, W = ZS_CW;
+  const total = n * W;
+  const idx = {};
+  const trackRow = (rowKey, label, blocks, extraCls, days) => {
+    const html = (blocks||[]).map((b, i) => {
+      const id = rowKey + ':' + i;
+      idx[id] = {label: label + (days ? ' (' + days + ')' : ''), text:b.t, s:b.s, n:b.n};
+      const bg = b.c ? `background:${esc(b.c)};color:${zsTextOn(b.c)};` : '';
+      const w = Math.max(b.n * W - 2, 4);
+      return `<button class="zsBlk ${b.n<2?'thin':''} ${state.zsSel===id?'sel':''}" data-act="zsSel" data-id="${esc(id)}" style="left:${b.s*W+1}px;width:${w}px;${bg}" title="${esc(b.t)}">${b.n>=2 ? esc(b.t) : ''}</button>`;
+    }).join('');
+    return `<div class="zsRow"><div class="zsLbl">${esc(label)}</div><div class="zsTrack ${extraCls||''}" style="width:${total}px">${html}</div></div>`;
+  };
+  // Kopfzeile: Monatsname am Monatsanfang, sonst KW
+  let lastM = null;
+  let curIdx = -1;
+  const hdrCells = weeks.map((w, i) => {
+    const mon = new Date(w.mon + 'T00:00:00Z');
+    const m = mon.getUTCMonth();
+    const isM = m !== lastM; lastM = m;
+    if(w.y===NOW.year && w.kw===NOW.kw) curIdx = i;
+    return `<span class="zsHdrCell ${isM?'month':''}" style="left:${i*W}px;width:${W}px;top:${isM?0:7}px">${isM ? MNAMES[m] : w.kw}</span>`;
+  }).join('');
+  const header = `<div class="zsRow"><div class="zsLbl">KW</div><div class="zsTrack hdr" style="width:${total}px">${hdrCells}</div></div>`;
+
+  let rowsHtml = header;
+  ZS_TRACKS.forEach(([k, label]) => {
+    const bl = jp2.tracks[k];
+    if(bl && bl.length) rowsHtml += trackRow(k, label, bl);
+  });
+  // Inhaltszeilen nach Kategorie (auf-/zuklappbar)
+  const cats = [];
+  (jp2.rows || []).forEach(r => {
+    let c = cats.find(x => x.name === r.cat);
+    if(!c){ c = {name:r.cat, rows:[]}; cats.push(c); }
+    c.rows.push(r);
+  });
+  cats.forEach(c => {
+    const open = !!state.zsOpen[c.name];
+    rowsHtml += `<div class="zsRow" style="width:${ZS_LW+total}px"><button class="zsLbl cat" data-act="zsCat" data-cat="${esc(c.name)}">${open?'▾':'▸'} ${esc(c.name)} · ${c.rows.length}</button><div class="zsCatFill"></div></div>`;
+    if(open) c.rows.forEach((r, j) => {
+      rowsHtml += trackRow('r' + c.name + ':' + j, r.label, r.blocks, '', r.days);
+    });
+  });
+  const now = curIdx >= 0 ? `<div class="zsNow" style="left:${ZS_LW + curIdx*W}px;width:${W}px"></div>` : '';
+
+  let detail = '';
+  const sel = state.zsSel && idx[state.zsSel];
+  if(sel){
+    const a = weeks[sel.s], z = weeks[Math.min(n-1, sel.s + sel.n - 1)];
+    const endMon = new Date(z.mon + 'T00:00:00Z'); endMon.setUTCDate(endMon.getUTCDate()+6);
+    const endIso = endMon.toISOString().slice(0,10);
+    detail = `<div class="zsDetail"><div class="k">${esc(sel.label)} · KW ${a.kw}${sel.n>1?'–'+z.kw:''} · ${zsDM(a.mon)}–${zsDM(endIso)}</div>${esc(sel.text)}</div>`;
+  }
+  return `
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <span class="sectionTitle">Jahresplan</span>
+        <span class="subMeta">${n} WOCHEN</span>
+      </div>
+      <div class="footNote">${esc(src)}. Farben und Blöcke 1:1 aus der Excel. Block antippen für Details, Kategorien aufklappen für die Inhalte.</div>
+    </div>
+    <div class="zsWrap" id="jahrZs"><div class="zsInner" style="width:${ZS_LW+total}px">${now}${rowsHtml}</div></div>
+    ${detail}
+  `;
 }
 
 // Reine Grafik-Ansicht: Kalenderwochen fortlaufend (scrollbar), Phasenfarbe
@@ -1209,6 +1322,8 @@ function wireEvents(){
       else if(act==='tab') setState({tab: elm.getAttribute('data-tab')});
       else if(act==='day') setState({day: parseInt(elm.getAttribute('data-i'),10), weekView:'tage'});
       else if(act==='weekview') setState({weekView: elm.getAttribute('data-wv')});
+      else if(act==='zsSel'){ window.__zsKeep = true; const id = elm.getAttribute('data-id'); setState({zsSel: state.zsSel===id ? null : id}); }
+      else if(act==='zsCat'){ window.__zsKeep = true; const c = elm.getAttribute('data-cat'); const o = Object.assign({}, state.zsOpen); o[c] = !o[c]; setState({zsOpen:o}); }
       else if(act==='statseason') setState({statSeason: elm.getAttribute('data-season')});
       else if(act==='prevWeek'){ const nw = addWeeks(state.year, state.kw, -1); setState({year:nw.year, kw:nw.kw, day:0}); }
       else if(act==='nextWeek'){ const nw = addWeeks(state.year, state.kw, 1); setState({year:nw.year, kw:nw.kw, day:0}); }

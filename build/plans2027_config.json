@@ -1,0 +1,11 @@
+{
+  "roots": [
+    "Trainingspläne 2027",
+    "Trainingspläne 2026",
+    "Projekt Jahresplanung/Jahresplanung 2027/Neue Pläne"
+  ],
+  "subdirs": ["Einzelpläne", "Gruppenpläne", ""],
+  "file_pattern": "{name} 2027.xlsx",
+  "jahresplan_start": "2026-09-07",
+  "einheiten_policy": "fill_gaps"
+}
