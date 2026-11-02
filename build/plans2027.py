@@ -17,6 +17,7 @@ DOKU-Block. Zeilen werden ueber die Beschriftung in Spalte A gefunden (nicht ueb
 feste Zeilennummern).
 """
 import glob
+import unicodedata
 import json
 import os
 import re
@@ -48,6 +49,17 @@ DEFAULT_CONFIG = {
 }
 
 
+def real_dir(base, name):
+    """Tatsaechlicher Ordnername (tolerant gegen NFD/NFC-Umlaute, z.B. aus iCloud/OneDrive)."""
+    try:
+        for d in os.listdir(base):
+            if unicodedata.normalize('NFC', d) == unicodedata.normalize('NFC', name):
+                return d
+    except OSError:
+        pass
+    return name
+
+
 def load_config():
     cfg = dict(DEFAULT_CONFIG)
     try:
@@ -67,7 +79,7 @@ def detect_years(base, cfg):
     years = []
     try:
         for d in os.listdir(base):
-            m = re.fullmatch(pat, d)
+            m = re.fullmatch(pat, unicodedata.normalize('NFC', d))
             if m and os.path.isdir(os.path.join(base, d)):
                 years.append(int(m.group(1)))
     except OSError:
@@ -91,7 +103,7 @@ def old_root(base, cfg=None):
         ys = [y for y in detect_years(base, cfg) if cur is None or y < cur]
         old = ys[0] if ys else None
     if old:
-        d = cfg['plans_dir'].format(year=old)
+        d = real_dir(base, cfg['plans_dir'].format(year=old))
         if os.path.isdir(os.path.join(base, d)):
             return d + '/'
     return ''
@@ -104,7 +116,7 @@ def resolve_plan_file(base, name, cfg=None):
     cands = []
     cur = current_year(base, cfg)
     if cur:
-        cands.append((cfg['plans_dir'].format(year=cur), cur))
+        cands.append((real_dir(base, cfg['plans_dir'].format(year=cur)), cur))
     for fr in cfg.get('fallback_roots', []):
         cands.append((fr, cfg.get('fallback_year') or cur))
     for root, year in cands:
