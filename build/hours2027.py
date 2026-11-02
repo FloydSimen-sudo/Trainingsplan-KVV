@@ -175,3 +175,67 @@ def group_day(day, cat, doc_h=None, cal_h=None, fallback=None, missing=None):
     if tot > 0:
         return {'h': round(tot, 2), 'src': src or 'inhalt'}
     return {'h': fallback or 0.0, 'src': 'fallback' if fallback else None}
+
+
+# ---- Standardangaben + Kurzbeschreibung aus "Uebungssammlung Gesamt" (Floyd, 02.11.2026) ----
+def _clean(v):
+    return None if v is None or str(v).strip().lower() in ('', 'x') else v
+
+def how_bullets(text, maxlen=170):
+    """Bis zu zwei Stichpunkte, WOERTLICH aus der Spalte 'Ausfuehrung' (ganze Saetze, nur bei Bedarf am Wortende gekuerzt)."""
+    if not text:
+        return []
+    t = re.sub(r'\s+', ' ', str(text)).strip()
+    raw = [p.strip() for p in re.split(r'(?<=[.!?])\s+(?=[A-ZÄÖÜ„"(])', t) if p.strip()]
+    parts = []
+    for p in raw:                      # Abkuerzungen (ca., z.B., max. ...) nicht als Satzende werten
+        if parts and re.search(r'(?:\b(?:ca|bzw|ggf|max|min|Min|Sek|z\.B|d\.h|evtl|inkl|usw|u\.a|vgl)\.)$', parts[-1]):
+            parts[-1] += ' ' + p
+        else:
+            parts.append(p)
+    out = []
+    for p in parts[:2]:
+        if len(p) > maxlen:
+            cut = p[:maxlen].rsplit(' ', 1)[0].rstrip(',;:')
+            p = cut + ' …'
+        out.append(p)
+    return out
+
+def load_exercise_catalog(path):
+    cat = {}
+    try:
+        wb = openpyxl.load_workbook(path, data_only=True)
+        ws = wb['Übungssammlung Gesamt'] if 'Übungssammlung Gesamt' in wb.sheetnames else wb.worksheets[0]
+        for r in ws.iter_rows(min_row=2, values_only=True):
+            if r[2] is None or not str(r[2]).strip():
+                continue
+            k = norm(r[2])
+            e = {'name': str(r[2]).strip(), 'min': _clean(r[3]), 'sets': _clean(r[4]), 'vol': _clean(r[5]),
+                 'pause': _clean(r[6]), 'how': how_bullets(r[7])}
+            if k not in cat:
+                cat[k] = e
+            else:                      # fehlende Felder aus spaeteren Dubletten ergaenzen
+                for f in ('min', 'sets', 'vol', 'pause'):
+                    if cat[k][f] is None and e[f] is not None:
+                        cat[k][f] = e[f]
+                if not cat[k]['how'] and e['how']:
+                    cat[k]['how'] = e['how']
+    except Exception as ex:
+        print('hours2027: Exercise-Katalog nicht lesbar:', ex)
+    return cat
+
+def find_entry(name, excat):
+    n = norm(name or '')
+    if not n:
+        return None
+    al = ALIASES.get(n)
+    if n in excat and not (excat[n]['min'] is None and al and al in excat and excat[al]['min'] is not None):
+        return excat[n]
+    if al and al in excat:
+        return excat[al]
+    best = None
+    for k in excat:
+        if len(k) >= 6 and re.search(r'(?<![a-zäöüß])' + re.escape(k) + r'(?![a-zäöüß])', n):
+            if not best or len(k) > len(best):
+                best = k
+    return excat[best] if best else None

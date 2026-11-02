@@ -168,6 +168,8 @@
   .brandMark{flex:none;width:28px;height:28px;object-fit:contain}
   .headerLogo{flex:none;height:26px;width:auto;object-fit:contain}
 
+  .slotDesc{margin:3px 0 0;padding-left:15px;font:400 10.5px/1.4 Archivo,sans-serif;color:var(--mu)}
+  .slotDesc li{margin:1px 0}
   .dashGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .dashTile{background:var(--panel);border:1px solid var(--border2);border-radius:14px;padding:12px 12px 11px;display:flex;flex-direction:column;gap:5px;min-width:0}
   .dashTile.wide{grid-column:1 / -1}
@@ -608,7 +610,9 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       if(m.vol!=null && m.vol!=='' && m.vol!=='x') chips.push(`<span class="metaTag std">${esc(m.vol)}</span>`);
       if(m.pause!=null && m.pause!=='' && m.pause!=='x') chips.push(`<span class="metaTag std">Pause ${esc(m.pause)}</span>`);
     }
-    return `<div class="slotName${it.red ? ' redFlag' : ''}">${esc(it.ex)}</div>${chips.length ? `<div class="slotMeta">${chips.join('')}</div>` : ''}`;
+    const hw = (it.sx && D.EXHOW) ? D.EXHOW[it.sx] : null;
+    const bul = (hw && hw.length) ? `<ul class="slotDesc">${hw.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>` : '';
+    return `<div class="slotName${it.red ? ' redFlag' : ''}">${esc(it.ex)}</div>${chips.length ? `<div class="slotMeta">${chips.join('')}</div>` : ''}${bul}`;
   };
 
   const dk = day && day.doku ? day.doku : null;

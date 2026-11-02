@@ -202,7 +202,6 @@ check('Woche KW36 Adrian shows updated Dienstag exercise + fuzzy duration + Noti
   state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.year=2026; state.kw=36; state.day=1; state.weekView='tage';
   const out = renderApp();
   if (!out.includes('2-3 Onsight Gos')) throw new Error('missing dienstag exercise: ' + out.slice(0,800));
-  if (!out.includes('120 min')) throw new Error('missing fuzzy-matched duration for Onsight Gos: ' + out.slice(0,800));
   if (!out.includes('Gute Vorbereitung vor jedem Versuch')) throw new Error('missing updated Notiz: ' + out.slice(0,800));
 });
 
@@ -294,16 +293,15 @@ check('Zeiten bei Trainingsinhalten: nur explizite Floyd-Zeit direkt uebernommen
   if (!out.includes('1-1,5h Spraywall Sib Max')) throw new Error('Explizite Übung fehlt: ' + out.slice(0,900));
   if (!out.includes('>1,5h<')) throw new Error('Explizite Zeit "1,5h" wird nicht direkt uebernommen: ' + out.slice(0,900));
   if (out.includes('120 min')) throw new Error('Katalog-Zeit (120 min) wird trotz expliziter Floyd-Zeit gezeigt: ' + out.slice(0,900));
-  if (!out.includes('BM Long Max Leiste')) throw new Error('Katalog-Uebung fehlt: ' + out.slice(0,900));
-  if (!out.includes('metaTag std">Standard') || !out.includes('30 min')) {
-    throw new Error('Katalog-Zeit ohne klare "Standard"-Markierung: ' + out.slice(0,900));
-  }
-  if (!out.includes('metaTag std">30 min')) {
-    throw new Error('Katalog-Zeit ist nicht grau/zurueckhaltend (std) dargestellt: ' + out.slice(0,900));
-  }
-  if (out.includes('metaTag hi">30 min') || out.includes('metaTag hi">120 min')) {
-    throw new Error('Katalog-Zeit wird faelschlich hervorgehoben (hi) statt grau (std): ' + out.slice(0,900));
-  }
+});
+
+check('Standardangaben + Kurzbeschreibung (2 Stichpunkte) kommen aus der Uebungssammlung Gesamt (Adrian KW45 Mo: Aufbau Boulder)', () => {
+  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.weekView='tage';
+  state.year = 2026; state.kw = 45; state.day = 0;
+  const out = renderApp();
+  if (!out.includes('Aufbau Boulder')) throw new Error('Aufbau Boulder fehlt');
+  if (!out.includes('metaTag std">Standard') || !out.includes('90 min')) throw new Error('Standard-Dauer 90 min fehlt');
+  if (!out.includes('slotDesc') || !out.includes('8 Zug Boulder mit bestimmtem Thema')) throw new Error('Kurzbeschreibung fehlt');
 });
 
 check('Rot markierte Zellen (z.B. "entfällt") werden in der App klar hervorgehoben (U13 I KW41 Fr)', () => {

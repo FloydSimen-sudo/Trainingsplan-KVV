@@ -2153,6 +2153,30 @@ def main():
         PLANS['g:SPOGY Gruppe'] = {}
         SOURCE_INFO['g:SPOGY Gruppe'] = 'Keine Gruppen-Excel für SPOGY im Trainingsplanung Live-Ordner hinterlegt (Athlet:innen haben Einzelpläne)'
 
+    # ---- Standardangaben + Kurzbeschreibung je Uebung aus "Uebungssammlung Gesamt" (Floyd, 02.11.2026) ----
+    EXCAT = hours2027.load_exercise_catalog(BASE + 'Projekt Jahresplanung/Übungssammlung Gesamt.xlsx')
+    EXHOW = {}
+    _std_hit = _std_all = 0
+    for _k, _wks in PLANS.items():
+        for _wk in (_wks.values() if isinstance(_wks, dict) else []):
+            for _day in _wk.get('days', []):
+                for _se in _day.get('sessions', []):
+                    for _c in _se.get('cats', []):
+                        for _it in _c.get('items', []):
+                            _std_all += 1
+                            _e = hours2027.find_entry(_it.get('ex'), EXCAT)
+                            if _e:
+                                _std_hit += 1
+                                _key = hours2027.norm(_e['name'])
+                                _it['match'] = {'name': _e['name'], 'min': _e['min'], 'sets': _e['sets'], 'vol': _e['vol'], 'pause': _e['pause']}
+                                _it['sx'] = _key
+                                if _e['how']:
+                                    EXHOW[_key] = _e['how']
+                            else:
+                                _it['match'] = None
+                                _it.pop('sx', None)
+    print('Standardangaben aus Uebungssammlung Gesamt:', _std_hit, 'von', _std_all, 'Inhalten gefunden;', len(EXHOW), 'Kurzbeschreibungen')
+
     # ---- Exakte Stunden (Floyd, 02.11.2026): nach dem Merge ueber ALLE Plaene neu berechnen ----
     # Doku der Einheit > Floyds eigene Zeit > Summe der Inhalte mit Durchschnittszeiten aus der Uebungsliste Gesamt.
     today_iso = date.today().isoformat()
@@ -2256,6 +2280,7 @@ def main():
         'COACHES': coaches,
         'EX': ex,
         'PLANS': PLANS,
+        'EXHOW': EXHOW,
         'CATS_BY_VIEW': {k: [{'name': c, 'count': v.get(c, 0)} for c in CAT_ORDER] for k, v in CATS_BY_ATHLETE.items()},
         'WEEKS_BY_ATHLETE': WEEKS_BY_ATHLETE,
         'BENCH': BENCH,
