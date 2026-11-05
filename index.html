@@ -1341,13 +1341,30 @@ function renderRouteLog(view){
         </div>
       </div>`).join('');
   };
-  const body = all.length ? `<div class="routeBox">${sect('Boulder')}${sect('Lead')}</div>`
+  const rowHtml = r => `
+      <div class="routeRow">
+        <span class="routeGrad">${esc(r.gn || r.grad || '–')}</span>
+        <div style="min-width:0;flex:1">
+          <div class="routeName">${esc(r.name || '(ohne Namen)')}${r.kvoe?` <span class="metaTag hi">KVÖ-Testung</span>`:''}</div>
+          <div class="routeMeta">${[esc(r.disc==='Lead'?'Lead':'Boulder'), esc(r.style), esc(r.ort), esc(r.date)].filter(Boolean).join(' · ')}</div>
+        </div>
+      </div>`;
+  const grpSect = () => {
+    const byAth = {};
+    all.forEach(r=>{ (byAth[r.ath] = byAth[r.ath] || []).push(r); });
+    return Object.keys(byAth).sort((a,b)=>a.localeCompare(b,'de')).map(n=>{
+      const rows = byAth[n];
+      const ord = ['Boulder','Lead'].flatMap(d=>rows.filter(r=>r.disc===d).sort(sorter));
+      return `<div class="routeDisc">${esc(n)} · ${rows.length}</div>` + ord.map(rowHtml).join('');
+    }).join('');
+  };
+  const body = all.length ? `<div class="routeBox">${isSolo ? sect('Boulder')+sect('Lead') : grpSect()}</div>`
     : `<div class="empty" style="padding:14px"><div class="t1">Noch keine Routen eingetragen</div><div class="t2">Einträge aus der Routen-Datenbank erscheinen hier, geordnet nach Schwierigkeit.</div></div>`;
   return `
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:18px">
       <span class="sectionTitle">Routenliste</span>
       <div style="display:flex;align-items:center;gap:10px">
-        <span class="subMeta">${all.length} ${all.length===1?'ROUTE':'ROUTEN'} · SCHWERSTE ZUERST</span>
+        <span class="subMeta">${all.length} ${all.length===1?'ROUTE':'ROUTEN'} · ${isSolo?'SCHWERSTE ZUERST':'NACH NAME, DANN SCHWIERIGKEIT'}</span>
         ${routeBtn(view,'block')}
       </div>
     </div>
