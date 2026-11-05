@@ -171,6 +171,13 @@
 
   .slotDesc{margin:3px 0 0;padding-left:15px;font:400 10.5px/1.4 Archivo,sans-serif;color:var(--mu)}
   .slotDesc li{margin:1px 0}
+  .routeBox{max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;background:var(--panel)}
+  .routeDisc{position:sticky;top:0;background:var(--panel2);font:600 10px/1 'Roboto Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);padding:7px 12px;border-bottom:1px solid var(--border)}
+  .routeRow{display:flex;gap:10px;align-items:flex-start;padding:8px 12px;border-bottom:1px solid rgba(10,50,80,.08)}
+  .routeRow:last-child{border-bottom:none}
+  .routeGrad{flex:none;min-width:38px;text-align:center;padding:4px 6px;border-radius:8px;background:#128089;color:#fff;font:700 12px/1 Archivo,sans-serif}
+  .routeName{font:600 12.5px/1.25 Archivo,sans-serif;color:var(--tx)}
+  .routeMeta{font:400 10.5px/1.4 Archivo,sans-serif;color:var(--mu);margin-top:2px}
   .exFields{width:100%;display:flex;flex-wrap:wrap;gap:3px 12px;margin:3px 0 0}
   .exF{display:inline-flex;gap:5px;align-items:baseline;font:400 10.5px/1.4 Archivo,sans-serif;color:var(--mu)}
   .exL{font:500 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.04em;opacity:.75}
@@ -261,6 +268,8 @@
 <script>
 const AM='#00588f', LI='#128089', TX='#0f2436', MU='#6b8496', DI='#9db0bd';
 const DOKU_FORMS_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=NGKrNpwXUEOM-qEM82Zuq0rnuv3di_ZEn2AfUPm3tJdUMlgxSzhTUDQ2TUo0OEFEWEZHWVZPVFczWi4u';
+const ROUTEN_FORMS_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=NGKrNpwXUEOM-qEM82Zuq0rnuv3di_ZEn2AfUPm3tJdUNzY3RENHVExXNjdMWE1BSFZKSDY2MjJFMS4u';
+const ROUTEN_TQ = '#128089';
 const BENCHMARK_FORMS_URL = 'https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=NGKrNpwXUEOM-qEM82Zuq0rnuv3di_ZEn2AfUPm3tJdURUEzSDJJMFA5WUdYTlJNVEYxQ0JLV1RBNy4u';
 // Trainingsort-Farbe, 1:1 wie von Floyd vorgegeben und identisch zur Farbe im
 // Jahr-Ribbon der Gruppen: Grün=Lead, Blau=Bouldern, Gelb=Speed.
@@ -528,6 +537,7 @@ function renderApp(){
         <span class="caret">▾</span>
       </button>
       <a href="${DOKU_FORMS_URL}" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;gap:5px;padding:8px 12px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Doku</a>
+      ${routeBtn(view, 'head')}
       <img class="headerLogo" src="${LOGO_IMG}" alt="Austria Climbing Vorarlberg">
     </div>
     <div class="syncbar">
@@ -1299,7 +1309,49 @@ function renderStatistik(view){
       ${grpEstNote ? `<div class="footNote" style="padding-top:6px">${esc(grpEstNote)}</div>` : ''}
       ${dokuGapNote ? `<div class="footNote" style="padding-top:6px">${esc(dokuGapNote)}</div>` : ''}
     </div>
+    ${isSolo ? '' : renderRouteLog(view)}
   `;
+}
+
+function routeCanEnter(view){
+  return view.t==='a' || ['U15I','U15 II'].indexOf(view.id)>=0;
+}
+function routeBtn(view, where){
+  if(!routeCanEnter(view)) return '';
+  const pad = where==='head' ? '8px 12px' : '9px 14px';
+  return `<a href="${ROUTEN_FORMS_URL}" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;gap:5px;padding:${pad};border-radius:10px;background:${ROUTEN_TQ};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Routen</a>`;
+}
+function renderRouteLog(view){
+  const isSolo = view.t==='a';
+  let names;
+  if(isSolo) names = [view.id];
+  else { const g = D.GROUPS.find(x=>x.id===view.id); names = g ? g.athletes.map(a=>a.n) : []; }
+  const set = new Set(names);
+  const all = (D.ROUTEN||[]).filter(r=>r.ath && set.has(r.ath));
+  const sorter = (a,b)=> (b.sk-a.sk) || String(b.iso).localeCompare(String(a.iso)) || a.name.localeCompare(b.name);
+  const sect = disc => {
+    const rows = all.filter(r=>r.disc===disc).sort(sorter);
+    if(!rows.length) return '';
+    return `<div class="routeDisc">${disc==='Lead'?'Lead (franz.)':'Boulder (Fb)'} · ${rows.length}</div>` + rows.map(r=>`
+      <div class="routeRow">
+        <span class="routeGrad">${esc(r.gn || r.grad || '–')}</span>
+        <div style="min-width:0;flex:1">
+          <div class="routeName">${esc(r.name || '(ohne Namen)')}${r.kvoe?` <span class="metaTag hi">KVÖ-Testung</span>`:''}</div>
+          <div class="routeMeta">${[!isSolo?esc(r.ath):'', esc(r.style), esc(r.ort), esc(r.date)].filter(Boolean).join(' · ')}</div>
+        </div>
+      </div>`).join('');
+  };
+  const body = all.length ? `<div class="routeBox">${sect('Boulder')}${sect('Lead')}</div>`
+    : `<div class="empty" style="padding:14px"><div class="t1">Noch keine Routen eingetragen</div><div class="t2">Einträge aus der Routen-Datenbank erscheinen hier, geordnet nach Schwierigkeit.</div></div>`;
+  return `
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:18px">
+      <span class="sectionTitle">Routenliste</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="subMeta">${all.length} ${all.length===1?'ROUTE':'ROUTEN'} · SCHWERSTE ZUERST</span>
+        ${routeBtn(view,'block')}
+      </div>
+    </div>
+    ${body}`;
 }
 
 function renderBenchmarks(view){
@@ -1312,7 +1364,7 @@ function renderBenchmarks(view){
       <div class="t1">Noch keine Werte für ${esc(view.id)}</div>
       <div class="t2">Struktur steht: Technik+Taktik, Physisches Klettertraining. Sobald Werte in der Benchmark-Excel stehen, erscheinen sie hier.</div>
       <div style="margin-top:12px">${benchmarkBtn}</div>
-    </div>`;
+    </div>${renderRouteLog(view)}`;
   }
   return `
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap">
@@ -1336,6 +1388,7 @@ function renderBenchmarks(view){
           </div>`).join('')}</div>
       </div>`).join('')}
     <div class="footNote">Werte kommen aus der Benchmark-Excel bzw. den Testtag-Dateien (Maximalkraft: Bestwert (Hangs je Arm), relativ (hervorgehoben) und absolut; Tindeq-Einarmer: − = Entlastung, + = Zusatzgewicht). Fehlt ein Wert, steht hier "-" statt einer Erfindung.</div>
+    ${renderRouteLog(view)}
   `;
 }
 

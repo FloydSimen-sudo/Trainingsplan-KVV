@@ -304,6 +304,21 @@ check('Standardangaben + Kurzbeschreibung (2 Stichpunkte) kommen aus der Uebungs
   if (!out.includes('slotDesc') || !out.includes('8 Zug Boulder mit bestimmtem Thema')) throw new Error('Kurzbeschreibung fehlt');
 });
 
+check('Routenliste: Button (tuerkis) + Block bei Einzelathlet (Benchmarks) und Gruppe (Statistik); Gruppe ohne Button U13 I', () => {
+  state.view = {t:'a', id:'Levi Strolz'}; state.tab='Benchmarks';
+  let out = renderApp();
+  if (!out.includes('Routenliste') || !out.includes('routeBox')) throw new Error('Routenliste fehlt bei Levi Strolz');
+  if (!out.includes('forms.cloud.microsoft/Pages/ResponsePage.aspx?id=NGKrNpwXUEOM-qEM82Zuq0rnuv3di_ZEn2AfUPm3tJdUNzY3RENHVExXNjdMWE1BSFZKSDY2MjJFMS4u')) throw new Error('Routen-Formular-Link fehlt');
+  if (out.indexOf('Routenliste') < out.indexOf('Benchmarks')) throw new Error('Block nicht unten');
+  state.view = {t:'g', id:'U15 II'}; state.tab='Statistik';
+  out = renderApp();
+  if (!out.includes('Routenliste')) throw new Error('Routenliste fehlt bei U15 II Statistik');
+  if (out.indexOf('Routenliste') < out.indexOf('Gesamt</span>')) throw new Error('Block nicht unter Saison Gesamt');
+  state.view = {t:'g', id:'U13 I'}; state.tab='Dashboard';
+  out = renderApp();
+  if (out.includes('ResponsePage.aspx?id=NGKrNpwXUEOM-qEM82Zuq0rnuv3di_ZEn2AfUPm3tJdUNzY3RENHVExXNjdMWE1BSFZKSDY2MjJFMS4u')) throw new Error('Routen-Button bei U13 I sichtbar');
+});
+
 check('Rot markierte Zellen (z.B. "entfällt") werden in der App klar hervorgehoben (U13 I KW41 Fr)', () => {
   state.view = {t:'g', id:'U13 I'}; state.tab='Woche'; state.weekView='tage';
   state.year = 2026; state.kw = 41; state.day = 4;

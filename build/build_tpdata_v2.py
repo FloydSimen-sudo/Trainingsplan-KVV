@@ -389,6 +389,77 @@ DOKU_NAME_ALIASES = {
     norm_name('Pablo Caamana-Pfister'.replace('-', ' ')): 'Pablo Caamano-Pfister',
 }
 
+ROUTEN_FILE = 'Jahresplanung 2027/Routen-Datenbank.xlsx'
+
+def _route_key(grad):
+    """Sortierwert fuer Grade (fb./franz.): '7a+' -> 7*10+0+1; '2+' -> 21; unbekannt -> -1."""
+    g = re.sub(r'^(fb\.?|fb)\s*', '', str(grad or '').strip().lower())
+    g = g.replace(' ', '')
+    m = re.fullmatch(r'(\d{1,2})([abc])?(\+)?', g)
+    if not m:
+        return -1, g
+    return int(m.group(1)) * 10 + ({'a': 0, 'b': 3, 'c': 6}.get(m.group(2) or '', 0)) + (1 if m.group(3) else 0), g
+
+def load_routen(base, valid_names):
+    """Routen-Datenbank (Microsoft-Forms-Antworten) -> Liste; Athlet = 'Ich trage fuer jemand Anderen ein' sonst 'Dein Name'."""
+    import shutil, tempfile, time
+    src = base + ROUTEN_FILE
+    if not os.path.exists(src):
+        print('Routen-Datenbank: Datei nicht gefunden', src)
+        return [], []
+    tmp = os.path.join(tempfile.gettempdir(), 'routen_db_copy.xlsx')
+    wb = None
+    for _ in range(6):
+        try:
+            shutil.copyfile(src, tmp)
+            wb = openpyxl.load_workbook(tmp, data_only=True)
+            break
+        except Exception:
+            time.sleep(4)
+    if wb is None:
+        print('Routen-Datenbank: Datei nicht lesbar (gesperrt?) - Routen leer')
+        return None, []
+    ws = wb.worksheets[0]
+    rows = list(ws.iter_rows(values_only=True))
+    if not rows:
+        return [], []
+    head = [str(h or '').strip() for h in rows[0]]
+    def col(*keys):
+        for i, h in enumerate(head):
+            if any(h.lower().startswith(k.lower()) for k in keys):
+                return i
+        return None
+    c = {'id': col('Id'), 'own': col('Dein Name'), 'other': col('Ich trage'), 'style': col('Style'),
+         'name': col('Name der Route'), 'grad': col('Grad'), 'date': col('Datum'), 'kvoe': col('Für die KVÖ', 'Fuer die KVOE'),
+         'ort': col('Ort')}
+    norm = {re.sub(r'\s+', ' ', n).strip().lower(): n for n in valid_names}
+    out, unmatched = [], []
+    for r in rows[1:]:
+        def g(k):
+            i = c.get(k)
+            return r[i] if i is not None and i < len(r) else None
+        name_route = str(g('name') or '').strip()
+        if not name_route and not g('grad'):
+            continue
+        who = str(g('other') or '').strip() or str(g('own') or '').strip()
+        key = re.sub(r'\s+', ' ', who).strip().lower()
+        ath = norm.get(key)
+        if ath is None:
+            unmatched.append(who or '(leer)')
+        sk, gnorm = _route_key(g('grad'))
+        d = g('date')
+        style = str(g('style') or '').strip()
+        out.append({
+            'ath': ath, 'who': who, 'style': style, 'disc': 'Lead' if style.lower().startswith('lead') else 'Boulder',
+            'name': name_route, 'grad': (str(g('grad') or '').strip()), 'gn': gnorm, 'sk': sk,
+            'date': d.strftime('%d.%m.%Y') if hasattr(d, 'strftime') else str(d or ''),
+            'iso': d.strftime('%Y-%m-%d') if hasattr(d, 'strftime') else '',
+            'kvoe': str(g('kvoe') or '').strip().lower() == 'ja',
+            'ort': str(g('ort') or '').strip(),
+        })
+    return out, sorted(set(unmatched))
+
+
 def load_forms_doku(path, valid_names):
     """Liest die Microsoft-Forms-Antworten-Excel 'Trainingsdoku KVV.xlsx'.
     Eine Zeile = eine Selbstauskunft (Athlet:in + Datum + Session). Namen
@@ -2017,6 +2088,10 @@ def main():
     FORMS_BY_ATHLETE, DOKU_UNMATCHED = load_forms_doku(BASE + 'Trainingsdoku KVV.xlsx', ALL_ROSTER_NAMES)
     BENCH_FORMS_BY_ATHLETE, BENCH_UNMATCHED = load_bench_source_forms(BASE + 'Benchmark Update.xlsx', ALL_ROSTER_NAMES)
     TEST_BY_ATHLETE = load_testungen(ALL_ROSTER_NAMES)
+    ROUTEN, ROUTEN_UNMATCHED = load_routen(BASE, ALL_ROSTER_NAMES)
+    if ROUTEN is None:
+        ROUTEN = []
+    print('routen: %d Eintraege; nicht zugeordnet: %s' % (len(ROUTEN), ROUTEN_UNMATCHED))
 
     for name, fname in INDIVIDUAL_FILES.items():
         fpath = INDIVIDUAL_PATHS[name]
@@ -2297,6 +2372,7 @@ def main():
         'CATS_BY_VIEW': {k: [{'name': c, 'count': v.get(c, 0)} for c in CAT_ORDER] for k, v in CATS_BY_ATHLETE.items()},
         'WEEKS_BY_ATHLETE': WEEKS_BY_ATHLETE,
         'BENCH': BENCH,
+        'ROUTEN': ROUTEN,
         'GK': gk,
         'SOURCE_INFO': SOURCE_INFO,
         'JAHRESPLAN': JAHRESPLAN,
