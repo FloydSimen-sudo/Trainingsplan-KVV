@@ -145,13 +145,33 @@ def _fill_hex(cell):
     return '#' + rgb[2:] if cell.fill.patternType == 'solid' else None
 
 
-def _is_red_font(cell):
+def _rgb_is_red(c):
     try:
-        c = cell.font.color if cell.font else None
         rgb = c.rgb if (c is not None and c.type == 'rgb') else None
     except Exception:
         rgb = None
-    return isinstance(rgb, str) and len(rgb) == 8 and rgb[-6:].upper() == 'FF0000'
+    return isinstance(rgb, str) and len(rgb) == 8 and rgb[-6:].upper() in ('FF0000', 'C00000', 'FF3300', 'E00000')
+
+
+def _red_text(cell):
+    """Roter Textanteil der Zelle: ganzer Text bei roter Schrift, sonst nur rote Teile (Rich Text); '' wenn nichts rot."""
+    v = cell.value
+    try:
+        if cell.font and _rgb_is_red(cell.font.color):
+            return str(v).strip() if v is not None else ''
+    except Exception:
+        pass
+    try:
+        from openpyxl.cell.rich_text import CellRichText, TextBlock
+        if isinstance(v, CellRichText):
+            return ''.join(str(x.text) for x in v if isinstance(x, TextBlock) and x.font is not None and _rgb_is_red(x.font.color)).strip()
+    except Exception:
+        pass
+    return ''
+
+
+def _is_red_font(cell):
+    return bool(_red_text(cell))
 
 
 def _txt(v):
@@ -394,7 +414,7 @@ def parse_einheitenplanung(path, make_item):
     NICHT ausgegeben (damit eine leere Vorlage nichts ueberschreibt).
     make_item(text, red) -> Item-Dict ({ex, match, explicitTime, red})."""
     try:
-        wb = openpyxl.load_workbook(path, data_only=True)
+        wb = openpyxl.load_workbook(path, data_only=True, rich_text=True)
     except Exception:
         return {}
     if 'Einheitenplanung' not in wb.sheetnames:
@@ -467,6 +487,7 @@ def parse_einheitenplanung(path, make_item):
     for c, d in day_cols:
         sessions = []
         sonst_parts = []
+        sonst_red = []
         athl_for_details = None
         for nr in sorted(sess_blocks):
             rd = cat_rows(sess_blocks[nr])
@@ -491,6 +512,10 @@ def parse_einheitenplanung(path, make_item):
                 return out
 
             sonst = ' · '.join(x for x in (cell_text(r, c) for r in r_sonst) if x)
+            for _r in r_sonst:
+                _rt = _red_text(ws.cell(_r, c))
+                if _rt:
+                    sonst_red.append(_rt)
             ort = ' · '.join(x for x in (cell_text(r, c) for r in r_ort) if x)
             ort_red = any(_is_red_font(ws.cell(r, c)) for r in r_ort if cell_text(r, c))
             cats = [
@@ -580,6 +605,8 @@ def parse_einheitenplanung(path, make_item):
             'sonstiges': ' · '.join(sonst_parts) or None,
             'sessions': sessions, 'doku': doku, 'notiz': None,
         }
+        if sonst_red:
+            _day['_sonstRed'] = sonst_red
         _split_sonst(_day)
         wk['days'][wd - 1] = _day
 
@@ -609,6 +636,9 @@ def _split_sonst(day):
     """Zelle 'Sonstiges' im Gruppenformat 'Zeit | Trainer' (z. B. '14:00-16:30 | Nemo', '| Hannah', '2-3h | Selbststaendig')
     -> day['zeit'] und day['trainer']; die Zelle selbst wird dann nicht mehr als Freitext angezeigt."""
     t = day.get('sonstiges')
+    reds = day.pop('_sonstRed', None) or []
+    def _has_red(txt):
+        return any(rt and (rt in txt or txt in rt) for rt in reds)
     # Mehrere Zeitfenster in einer Zelle (z. B. Workshop 14:00-16:30 + Training 16:45-19:45):
     # jede Zeile 'Zeit | Wer' -> zeit-Anzeige mit allen Fenstern, Session-Zeit = letztes Fenster
     if t and '\n' in t.strip():
@@ -631,6 +661,8 @@ def _split_sonst(day):
             day['zeit'] = ' · '.join('%s %s' % (l, r) for l, r in slots)
             day['trainer'] = None
             day['sonstiges'] = None
+            if reds:
+                day['zeitRed'] = True
             for se in day.get('sessions', []):
                 se['time'] = slots[-1][0]
             return
@@ -640,17 +672,23 @@ def _split_sonst(day):
                 day['zeit'] = str(se['time']).strip()
                 break
     if not t or t.count('|') != 1:
+        if reds and t:
+            day['sonstigesRed'] = True
         return
     left, right = [x.strip() for x in t.split('|', 1)]
     if left and not _TIME_LIKE.match(left):
         return
     if left:
+        if _has_red(left):
+            day['zeitRed'] = True
         day['zeit'] = left
         for se in day.get('sessions', []):
             if not se.get('time'):
                 se['time'] = left
     if right:
         day['trainer'] = right
+        if _has_red(right):
+            day['trainerRed'] = True
     day['sonstiges'] = None
 
 
@@ -668,13 +706,18 @@ def merge_weeks(old, new, policy):
         ow = old[key]
         by_date = {d['date']: i for i, d in enumerate(ow['days'])}
         for nd in nw['days']:
-            if not nd['sessions'] and not nd.get('sonstiges'):
+            if not nd['sessions'] and not nd.get('sonstiges') and not nd.get('zeit') and not nd.get('trainer'):
                 continue
             i = by_date.get(nd['date'])
             if i is None:
                 continue
             od = ow['days'][i]
             if not nd['sessions']:
+                if policy == 'new_wins':
+                    for _k in ('zeit', 'trainer', 'zeitRed', 'trainerRed', 'sonstigesRed'):
+                        if nd.get(_k):
+                            od[_k] = nd[_k]
+                            stat['filled'] += 1
                 if nd.get('sonstiges') and not od.get('sonstiges') and not od.get('sessions'):
                     od['sonstiges'] = nd['sonstiges']
                     stat['filled'] += 1
@@ -689,7 +732,7 @@ def merge_weeks(old, new, policy):
                     stat['replaced'] += 1
                 continue
             od['sessions'] = nd['sessions']
-            for _k in ('zeit', 'trainer'):
+            for _k in ('zeit', 'trainer', 'zeitRed', 'trainerRed', 'sonstigesRed'):
                 if nd.get(_k):
                     od[_k] = nd[_k]
             if not od.get('ort'):
