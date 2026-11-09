@@ -591,7 +591,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
   const dayChips = days.map((dd,i)=>{
     const oc = ORT_COLORS[dd.ortType];
     return `
-    <button class="dayChip ${i===di?'sel':''}" data-act="day" data-i="${i}" style="${oc?`box-shadow:inset 0 -3px 0 0 ${oc}${i===di?', 0 0 0 1px transparent':''}`:''}">
+    <button class="dayChip ${i===di?'sel':''}" data-act="day" data-i="${i}" style="${oc?`box-shadow:inset 0 -4px 0 0 ${oc}${i===di?', 0 0 0 1px transparent':''};background:${oc}1f`:''}">
       <span class="dow">${esc((dd.dow||'').slice(0,2).toUpperCase())}</span>
       <span class="dom">${esc(dd.dom)}</span>
     </button>`;}).join('');
@@ -599,6 +599,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
   const dayMeta = [];
   if(day && day.sonstiges) dayMeta.push({k:'Sonstiges', v:day.sonstiges, c:'#E8A33D'});
   if(day && day.ort) dayMeta.push({k:'Ort', v:day.ort, c: ORT_COLORS[day.ortType], r: !!day.ortRed});
+  if(day && day.ortType && ORT_COLORS[day.ortType]) dayMeta.push({k:'Disziplin', v:day.ortType, c: ORT_COLORS[day.ortType]});
   if(day && day.zeit) dayMeta.push({k:'Zeit', v:day.zeit, r: !!day.zeitRed});
   const dayTrainerVal = day ? trainerDisplay(isSolo ? null : view.id, day) : null;
   if(dayTrainerVal) dayMeta.push({k:'Trainer', v:dayTrainerVal, r: !!(day && day.trainerRed)});

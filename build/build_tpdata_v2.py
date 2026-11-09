@@ -2229,6 +2229,21 @@ def main():
                 info27['merge'] = plans2027.merge_weeks(target27, new_weeks27, P27['einheiten_policy'])
                 info27['weeksWithContent'] = len(new_weeks27)
         PLANS2027_INFO[key27] = info27
+    # Ort-Farben (Bouldern=Blau, Lead=Gruen) laut Google Kalender "KVV Gesamt" (build/ort_kalender.json,
+    # wird bei "aktualisiere" aus dem Kalender neu erzeugt); Kalender gilt vor Excel-Farbe.
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ort_kalender.json'), encoding='utf-8') as _f:
+            _ORTCAL = json.load(_f)
+    except Exception:
+        _ORTCAL = {}
+    _ortn = 0
+    for _gid, _dm in _ORTCAL.items():
+        for _wk in (PLANS.get('g:' + _gid) or {}).values():
+            for _d in _wk.get('days', []):
+                if _d.get('date') in _dm:
+                    _d['ortType'] = _dm[_d['date']]
+                    _ortn += 1
+    print('ort_kalender: %d Tage gefaerbt' % _ortn)
     print('plans2027:', {k: (v.get('file') and (v.get('merge') or 'nur Jahresplan')) for k, v in PLANS2027_INFO.items()})
 
     # Missing sources -> explicit empty markers (kein Erfinden)
