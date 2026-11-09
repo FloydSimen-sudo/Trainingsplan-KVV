@@ -609,6 +609,31 @@ def _split_sonst(day):
     """Zelle 'Sonstiges' im Gruppenformat 'Zeit | Trainer' (z. B. '14:00-16:30 | Nemo', '| Hannah', '2-3h | Selbststaendig')
     -> day['zeit'] und day['trainer']; die Zelle selbst wird dann nicht mehr als Freitext angezeigt."""
     t = day.get('sonstiges')
+    # Mehrere Zeitfenster in einer Zelle (z. B. Workshop 14:00-16:30 + Training 16:45-19:45):
+    # jede Zeile 'Zeit | Wer' -> zeit-Anzeige mit allen Fenstern, Session-Zeit = letztes Fenster
+    if t and '\n' in t.strip():
+        slots = []
+        _lines = [x.strip() for x in t.split('\n') if x.strip()]
+        _z0 = day.get('zeit') or next((str(se['time']).strip() for se in day.get('sessions', []) if se.get('time') and _TIME_LIKE.match(str(se['time']).strip())), None)
+        if _lines and _lines[0].startswith('|') and _z0:
+            # erste Zeile hat ihre Zeit bereits an Session/Tag abgegeben ('| Wer')
+            _lines[0] = _z0 + ' ' + _lines[0]
+        for ln in _lines:
+            if ln.count('|') != 1:
+                slots = []
+                break
+            l, r = [x.strip() for x in ln.split('|', 1)]
+            if not (l and r and _TIME_LIKE.match(l)):
+                slots = []
+                break
+            slots.append((l, r))
+        if len(slots) >= 2:
+            day['zeit'] = ' · '.join('%s %s' % (l, r) for l, r in slots)
+            day['trainer'] = None
+            day['sonstiges'] = None
+            for se in day.get('sessions', []):
+                se['time'] = slots[-1][0]
+            return
     if not day.get('zeit'):
         for se in day.get('sessions', []):
             if se.get('time') and _TIME_LIKE.match(str(se['time']).strip()):
