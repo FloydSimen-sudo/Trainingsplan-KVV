@@ -481,6 +481,21 @@ check('Reiter Trainer (ganz rechts): ohne Login Passwortfeld, mit Login Doku-Kar
   state.tab='Woche';
 });
 
+check('Trainerreiter SPOGY: Tagesuebersicht zeigt alle 8 Einzelathleten mit Inhalten des Tages, Tagesnavigation', () => {
+  state.view = {t:'g', id:'U13II'}; state.tab='Trainer';
+  trainerAdd({name:'Test', groups:[{id:'SPOGY Gruppe', label:'SPOGY', entries:[]}]});
+  state.trainerGroup = 'SPOGY Gruppe'; state.trainerDay = '2026-11-19';
+  const out = renderApp();
+  ['Adrian Kathan','Mariella Vierhauser','Raphael Hubmann','Jakob Burtscher','Linus Pfleger','Sophie Bickel','Matthäus Kathan','Levi Strolz'].forEach(n=>{
+    if (!out.includes(n)) throw new Error('Einzelathlet fehlt in der Tagesuebersicht: ' + n);
+  });
+  if (!out.includes('Tagesübersicht Einzelathleten') || !out.includes('data-trday="1"')) throw new Error('Uebersicht/Navigation fehlt');
+  if (!out.includes('trChip')) throw new Error('Inhalte (Chips) fehlen');
+  if (!out.includes('Do, 19.11.2026')) throw new Error('Datum fehlt');
+  state.trainerGroup = null; state.trainerDay = null;
+  trainerLogout(); state.tab='Woche';
+});
+
 `;
 
 vm.runInContext(tpdata + '\n' + appScript + '\n' + tests, sandbox, { filename: 'combined.js' });

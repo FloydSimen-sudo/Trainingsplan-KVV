@@ -183,6 +183,15 @@
   .tlDiv{background:#a6a6a6;border:1.5px solid #222;text-align:center;font:700 12px/1 Archivo,sans-serif;padding:6px;color:#111}
   .tlTotal{background:#f2f2f2;border:1.5px solid #222;text-align:center;font:700 15px/1.2 Archivo,sans-serif;padding:9px;color:#111}
   .tlTotal .x{display:block;font:400 11px/1.3 Archivo,sans-serif;opacity:.7;margin-top:2px}
+
+  .trChips{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+  .trChip{border:1px solid #222;padding:5px 8px;font:600 12px/1.2 Archivo,sans-serif;color:#111}
+  .trChip.red{color:#b00020}
+  .trSess{display:flex;flex-direction:column;gap:2px;padding:6px 0;border-top:1px solid rgba(10,50,80,.08)}
+  .trSessL{font:500 10px/1.2 'Roboto Mono',monospace;color:var(--mu);text-transform:uppercase;letter-spacing:.05em}
+  .trNone{font:400 12px/1 Archivo,sans-serif;opacity:.5}
+  .trNote{font:italic 400 11px/1.35 Archivo,sans-serif;color:var(--mu)}
+  .trNote.red{color:#b00020}
   .slotDesc{margin:3px 0 0;padding-left:15px;font:400 10.5px/1.4 Archivo,sans-serif;color:var(--mu)}
   .slotDesc li{margin:1px 0}
   .routeBox{max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;background:var(--panel)}
@@ -434,7 +443,7 @@ const state = {
   year: NOW.year, kw: NOW.kw, day: 0,
   weekView: 'tage',
   picker: false, openSlot: null,
-  trainerGroup: null, trainerMsg: '', trainerBusy: false,
+  trainerGroup: null, trainerDay: null, trainerMsg: '', trainerBusy: false,
   statSeason: (D.SEASONS && D.SEASONS[0]) || D.SEASON_LABEL || '25/26',
 };
 
@@ -1733,6 +1742,13 @@ function wireTrainerForm(){
   }
   const lo = document.getElementById('trainerLogout');
   if(lo && typeof lo.addEventListener === 'function') lo.addEventListener('click', trainerLogout);
+  document.querySelectorAll('[data-trday]').forEach(elm=>{
+    elm.addEventListener('click', ()=>{
+      const n = parseInt(elm.getAttribute('data-trday'),10);
+      const cur = state.trainerDay || trIso(new Date());
+      setState({trainerDay: n===0 ? trIso(new Date()) : trShift(cur, n)});
+    });
+  });
   document.querySelectorAll('[data-trg]').forEach(elm=>{
     elm.addEventListener('click', ()=> setState({trainerGroup: elm.getAttribute('data-trg')}));
   });
@@ -1742,6 +1758,67 @@ function trFmtDate(iso){
   const d = new Date(iso+'T12:00:00');
   const dow = ['So','Mo','Di','Mi','Do','Fr','Sa'][d.getDay()];
   return dow+', '+iso.slice(8,10)+'.'+iso.slice(5,7)+'.'+iso.slice(0,4);
+}
+// ---- SPOGY-Tagesübersicht im Trainerreiter: alle Inhalte aller Einzelathleten fuer einen Tag (Floyd, 16.11.2026) ----
+const TR_COL = {'Theorie':'#FFFF73','Aufwärmen':'#CECECE','Motorik':'#FFFF73','Technikfokus':'#FFFF73','Technik/Taktik':'#FFFF73','Physis Klettern':'#F9D4BB','Athletik + Mentales':'#FF7373','Spezial':'#F0A5F8'};
+function trIso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function trShift(iso, n){ const d = new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n); return trIso(d); }
+function trItemMin(it){
+  const e = it.explicitTime ? String(it.explicitTime) : '';
+  let m = /(\d+(?:[.,]\d+)?)\s*(?:h|std\.?|stunden?)\b/i.exec(e);
+  if(m) return Math.round(parseFloat(m[1].replace(',','.'))*60);
+  m = /(\d+)\s*min/i.exec(e);
+  if(m) return +m[1];
+  if(it.match && typeof it.match.min==='number' && it.match.min>0) return it.match.min;
+  return null;
+}
+function trFindDay(name, iso){
+  const plans = D.PLANS['a:'+name] || {};
+  for(const k in plans){ const w = plans[k]; if(!w || !w.days) continue; const d = w.days.find(x=>x.date===iso); if(d) return d; }
+  return null;
+}
+function spogyDayOverview(){
+  const iso = state.trainerDay || trIso(new Date());
+  const sg = D.GROUPS.find(g=>g.id==='SPOGY Gruppe');
+  const names = sg ? sg.athletes.map(a=>a.n) : [];
+  const cards = names.map(nm=>{
+    const d = trFindDay(nm, iso);
+    const meta = [];
+    if(d && d.zeit) meta.push(esc(d.zeit));
+    if(d && d.ort) meta.push(esc(d.ort));
+    if(d && d.trainer) meta.push(esc(d.trainer));
+    let total = 0;
+    const sess = (d && d.sessions ? d.sessions : []).map((s,i)=>{
+      const its = [];
+      (s.cats||[]).forEach(c=>(c.items||[]).forEach(it=>{
+        const mins = trItemMin(it); if(mins) total += mins;
+        const nm2 = String(it.ex||'').replace(/^\s*\d+(?:[.,]\d+)?\s*(?:h|std\.?|min)\s*/i,'').trim() || String(it.ex||'');
+        its.push(`<span class="trChip${it.red?' red':''}" style="background:${it.col ? '#'+esc(it.col) : (TR_COL[c.name]||'#eee')}">${esc(nm2)}${mins ? ' · '+mins+' min' : ''}</span>`);
+      }));
+      const head = [s.name, s.time ? s.time+(s.end?'–'+s.end:'') : ''].filter(Boolean).join(' · ');
+      return `<div class="trSess"><span class="trSessL">${esc(head)}</span><div class="trChips">${its.length ? its.join('') : '<span class="trNone">-</span>'}</div>${s.notiz ? `<div class="trNote${s.notizRed?' red':''}">${esc(s.notiz)}</div>` : ''}</div>`;
+    }).join('');
+    const free = !d || !d.sessions || !d.sessions.length;
+    return `<div class="dokuBlock trAth">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+        <span style="font:700 14px/1.2 Archivo,sans-serif">${esc(nm)}</span>
+        <span style="font:400 10px/1.2 'Roboto Mono',monospace;color:${DI}">${total ? total+' min · '+(total/60).toFixed(1).replace('.',',')+' h' : ''}</span>
+      </div>
+      ${meta.length ? `<div style="font:400 11px/1.3 Archivo,sans-serif;color:${MU}">${meta.join(' · ')}</div>` : ''}
+      ${free ? `<div class="dashed" style="margin:2px 0">Kein Training eingetragen${d && d.sonstiges ? ' · '+esc(d.sonstiges) : ''}</div>` : sess}
+    </div>`;
+  }).join('');
+  return `
+    <div class="roster" style="margin-top:0">
+      <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">SPOGY · Tagesübersicht Einzelathleten</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:6px">
+        <button class="navBtn" data-trday="-1">‹</button>
+        <div style="text-align:center"><div style="font:700 15px/1.2 Archivo,sans-serif">${esc(trFmtDate(iso))}</div>
+          <button data-trday="0" style="margin-top:3px;font:600 11px/1 Archivo,sans-serif;padding:5px 9px;border-radius:8px;border:1px solid ${DI};background:transparent;color:${MU};cursor:pointer">Heute</button></div>
+        <button class="navBtn" data-trday="1">›</button>
+      </div>
+    </div>
+    <div class="trainerScroll" style="max-height:none">${cards}</div>`;
 }
 function renderTrainerspace(view){
   const ids = trainerSession.order;
@@ -1790,6 +1867,7 @@ function renderTrainerspace(view){
       <button id="trainerLogout" style="font:600 11px/1 Archivo,sans-serif;padding:7px 10px;border-radius:8px;border:1px solid ${DI};background:transparent;color:${MU};cursor:pointer">Abmelden</button>
     </div>
     ${chips}
+    ${gid==='SPOGY Gruppe' ? spogyDayOverview() : ''}
     <div class="roster" style="margin-top:0">
       <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">${esc(g.label)} · Übersicht</span>
       <div style="display:flex;align-items:baseline;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(10,50,80,.08)"><span style="font:400 12px/1 Archivo,sans-serif;color:${MU}">Einträge</span><span style="font:600 13px/1 'Roboto Mono',monospace">${es.length}</span></div>
