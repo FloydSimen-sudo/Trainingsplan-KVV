@@ -92,7 +92,41 @@ def _find_week_cols(ws):
     return kw_row, cols
 
 
-def _rows(ws):
+def _theme_colors(wb):
+    try:
+        xml = wb.loaded_theme.decode('utf-8') if isinstance(wb.loaded_theme, bytes) else str(wb.loaded_theme)
+    except Exception:
+        return {}
+    names = ['lt1', 'dk1', 'lt2', 'dk2', 'accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6']
+    out = {}
+    for i, n in enumerate(names):
+        m = re.search(r'<a:%s>.*?(?:val|lastClr)="([0-9A-Fa-f]{6})"' % n, xml, re.S)
+        if m:
+            out[i] = m.group(1)
+    return out
+
+
+def _fill_hex(cell, theme):
+    """Fuellfarbe der Excel-Zelle als 'RRGGBB' oder None (ohne Alpha, Theme+Tint aufgeloest)."""
+    f = cell.fill
+    if f is None or f.fill_type is None:
+        return None
+    c = f.fgColor
+    if c.type == 'rgb' and isinstance(c.rgb, str):
+        return c.rgb[-6:].upper()
+    if c.type == 'theme' and c.theme in theme:
+        base = theme[c.theme]
+        r, g, b = int(base[0:2], 16), int(base[2:4], 16), int(base[4:6], 16)
+        t = c.tint or 0
+        if t > 0:
+            r, g, b = [round(x + (255 - x) * t) for x in (r, g, b)]
+        elif t < 0:
+            r, g, b = [round(x * (1 + t)) for x in (r, g, b)]
+        return '%02X%02X%02X' % (r, g, b)
+    return None
+
+
+def _rows(ws, wb=None):
     """Inhaltszeilen ueber Beschriftung in Spalte C (nicht ueber feste Zeilennummern)."""
     out = []
     for r in range(1, ws.max_row + 1):
@@ -106,6 +140,7 @@ def _rows(ws):
             if l.startswith(key):
                 dtxt = _t(ws.cell(r, 4).value).lower()[:2]
                 out.append({'r': r, 'label': lab, 'cat': cat, 'pref': pref, 'rule': rule,
+                            'col': _fill_hex(ws.cell(r, 3), _theme_colors(wb)) if wb is not None else None,
                             'day': None if rule == 'every' else ABBR.get(dtxt)})
                 break
     return out
@@ -188,7 +223,7 @@ def compose(path, make_item, cal, today=None):
     kw_row, cols = _find_week_cols(ws)
     if not cols:
         return {}
-    rows = _rows(ws)
+    rows = _rows(ws, wb)
     heads = _head_rows(ws)
     noti = _notizen(wb)
 
@@ -308,6 +343,8 @@ def compose(path, make_item, cal, today=None):
                                  'handgelenk', 'athletik', 'beweglichkeit')) and rw['cat'] == 'Athletik + Mentales':
                 if text.lower() != rw['label'].lower() and not text.lower().startswith(rw['label'].lower()):
                     it = make_item('%s: %s' % (rw['label'], text), red)
+            if rw.get('col'):
+                it['col'] = rw['col']
             cat['items'].append(it)
         # doppelte Items entfernen
         for s in sessions:

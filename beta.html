@@ -686,7 +686,8 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
   };
 
   // ---- Einheit als Zeitleiste: Blockhoehe ~ Dauer, oben Start, unten Ende, ganz unten Gesamtdauer (Floyd, 16.11.2026) ----
-  const TL_COL = {'Theorie':'#dfeaf5','Aufwärmen':'#d0d0d0','Motorik':'#e3e3e3','Technikfokus':'#eef77a','Technik/Taktik':'#eef77a','Physis Klettern':'#e8b088','Athletik + Mentales':'#ea4b26','Spezial':'#f3b7cb'};
+  // Farben wie in der Trainingsplanungs-Excel (Fuellfarbe der Zeile; it.col kommt aus dem Build, sonst Kategorie-Standard)
+  const TL_COL = {'Theorie':'#FFFF73','Aufwärmen':'#CECECE','Motorik':'#FFFF73','Technikfokus':'#FFFF73','Technik/Taktik':'#FFFF73','Physis Klettern':'#F9D4BB','Athletik + Mentales':'#FF7373','Spezial':'#F0A5F8'};
   const PX_PER_MIN = 1.5, MIN_H = 62;
   const hm = t=>{ const m=/^(\d{1,2})[:.](\d{2})/.exec(t||''); return m ? (+m[1])*60+(+m[2]) : null; };
   const fmtHm = n=>{ n=((n%1440)+1440)%1440; return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0'); };
@@ -716,7 +717,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       if(has(m.pause)) sub.push('Pause '+m.pause+' min');
       const hw = (it.sx && D.EXHOW) ? D.EXHOW[it.sx] : null;
       const h = Math.max(MIN_H, mins ? Math.round(mins*PX_PER_MIN) : MIN_H);
-      blocks.push(`<div class="tlBlock${it.red?' red':''}" style="background:${TL_COL[cat.name]||'#eee'};min-height:${h}px">
+      blocks.push(`<div class="tlBlock${it.red?' red':''}" style="background:${it.col ? '#'+esc(it.col) : (TL_COL[cat.name]||'#eee')};min-height:${h}px">
         <div class="n">${esc(nm)}</div>
         <div class="d">${mins ? durTxt(mins) : '-'}</div>
         ${sub.length ? `<div class="s">${sub.map(esc).join(' · ')}</div>` : ''}
