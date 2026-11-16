@@ -710,7 +710,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
     let sum = 0;
     (s.cats || []).forEach(cat=>(cat.items || []).forEach(it=>{
       const mins = itemMin(it);
-      if(mins) sum += mins; else dayNoDur++;
+      if(mins) sum += mins; else if(!it.par) dayNoDur++;
       const nm = String(it.ex||'').replace(/^\s*\d+(?:[.,]\d+)?\s*(?:h|std\.?|min)\s*/i,'').trim() || String(it.ex||'');
       const m = it.match || {};
       const has = v => v!=null && v!=='' && v!=='x';
@@ -719,10 +719,10 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       if(has(m.vol)) sub.push('Wdh./Umfang: '+m.vol);
       if(has(m.pause)) sub.push('Pause: '+m.pause+' min');
       const hw = (it.sx && D.EXHOW) ? D.EXHOW[it.sx] : null;
-      const h = Math.max(MIN_H, mins ? Math.round(mins*PX_PER_MIN) : MIN_H);
+      const h = it.par ? 44 : Math.max(MIN_H, mins ? Math.round(mins*PX_PER_MIN) : MIN_H);
       blocks.push(`<div class="tlBlock${it.red?' red':''}${it.pause?' pause':''}" style="background:${it.col ? '#'+esc(it.col) : (TL_COL[cat.name]||'#eee')};min-height:${h}px">
         <div class="n">${esc(nm)}</div>
-        <div class="d">${mins ? durTxt(mins) : '-'}${(mins && it.durSrc==='std' && !it.explicitTime) ? ' <span class="src">Standardwoche</span>' : ''}</div>
+        <div class="d">${mins ? durTxt(mins) : (it.par ? 'läuft nebenbei' : '-')}${(mins && it.durSrc==='std' && !it.explicitTime) ? ' <span class="src">Standardwoche</span>' : ''}</div>
         ${sub.length ? `<div class="s">${sub.map(esc).join(' · ')}</div>` : ''}
         ${(hw && hw.length) ? `<ul>${hw.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>` : ''}
       </div>`);
@@ -1048,7 +1048,7 @@ function renderDashboard(view, isSolo, key){
   }
   const f1 = v => v==null ? '–' : (Math.round(v*10)/10).toString().replace('.',',');
   let planMin = 0, planNoDur = 0;
-  sess.forEach(s=>(s.cats||[]).forEach(c=>(c.items||[]).forEach(i=>{ const mm=tpItemMin(i); if(mm) planMin+=mm; else planNoDur++; })));
+  sess.forEach(s=>(s.cats||[]).forEach(c=>(c.items||[]).forEach(i=>{ const mm=tpItemMin(i); if(mm) planMin+=mm; else if(!i.par) planNoDur++; })));
   const planH = planMin>0 ? planMin/60 : (day && day.planH!=null ? day.planH : null);
   const loadTile = `<div class="dashTile wide"><span class="dashLbl">Load-Verlauf Saison ${esc(season||'')}</span>${
     loadPts.length>=2 ? dashLoadSvg(loadPts, jp2) : `<span class="dashSub">Noch zu wenig Load-Daten für eine Kurve (mind. 2 Wochen mit Doku).</span>`}</div>`;
