@@ -65,7 +65,8 @@ def apply(plans, parse_dauer):
                             if re.search(r'jongl', str(it.get('ex') or ''), re.I):
                                 it['par'] = True   # Floyd 16.11.: Jonglieren laeuft immer mit, keine Standarddauer
                                 continue
-                            it.pop('par', None)
+                            if it.get('par'):
+                                continue
                             if it.get('pause'):
                                 continue
                             k = _known(it, parse_dauer)

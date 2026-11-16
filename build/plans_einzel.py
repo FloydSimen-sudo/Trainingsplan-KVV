@@ -345,6 +345,8 @@ def compose(path, make_item, cal, today=None):
                     it = make_item('%s: %s' % (rw['label'], text), red)
             if rw.get('col'):
                 it['col'] = rw['col']
+            if lab_l.startswith('taktik 2'):
+                it['par'] = True   # Taktik 2 (mid Session) laeuft nebenher (Floyd 16.11.2026)
             cat['items'].append(it)
         # doppelte Items entfernen
         for s in sessions:
