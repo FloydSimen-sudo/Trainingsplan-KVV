@@ -39,15 +39,14 @@ ROWMAP = [
     ('handgelenk', 'Athletik + Mentales', 1, None),
     ('athletik', 'Athletik + Mentales', 1, None),
     ('beweglichkeit', 'Athletik + Mentales', 1, None),
-    ('mental extern', 'Spezial', 1, 'firstday'),
-    ('mental', 'Athletik + Mentales', 1, 'firstday'),
-    ('spezial allgemein', 'Spezial', 1, 'dido'),
-    ('spezial', 'Spezial', 1, 'firstday'),
-    ('ernährung', 'Spezial', 1, None),
+    ('mental extern', 'Spezial', 1, 'every'),
+    ('mental', 'Spezial', 1, 'every'),
+    ('spezial', 'Spezial', 1, 'every'),
+    ('ernährung', 'Spezial', 1, 'every'),
     ('gla', 'Athletik + Mentales', 1, None),
-    ('wk-sim', 'Technik/Taktik', 1, 'firstday'),
-    ('wk sim', 'Technik/Taktik', 1, 'firstday'),
+    # WK-Sim: nur zur Planung fuer Floyd, wird NICHT in die App uebernommen (Floyd, 16.11.2026)
 ]
+DATE_RE = re.compile(r'(?<!\d)(\d{1,2})\.(\d{1,2})\.(\d{2,4})?')
 PREFIX = re.compile(r'^\s*(Mo|Di|Mi|Do|Fr|Sa|So)\s*[:\-–]\s*(.+)$', re.S)
 SKIP = {'x', '-', '–'}
 TIME_RE = re.compile(r'(\d{1,2})[:.](\d{2})')
@@ -101,11 +100,13 @@ def _rows(ws):
         if not lab:
             continue
         l = lab.lower()
+        if l.replace('-', ' ').startswith('wk sim'):
+            continue
         for key, cat, pref, rule in ROWMAP:
             if l.startswith(key):
                 dtxt = _t(ws.cell(r, 4).value).lower()[:2]
                 out.append({'r': r, 'label': lab, 'cat': cat, 'pref': pref, 'rule': rule,
-                            'day': ABBR.get(dtxt)})
+                            'day': None if rule == 'every' else ABBR.get(dtxt)})
                 break
     return out
 
@@ -214,6 +215,18 @@ def compose(path, make_item, cal, today=None):
                     part = m.group(2).strip()
                     if not part:
                         continue
+                if dow is None and rw['rule'] == 'every':
+                    md = DATE_RE.search(part)
+                    if md:
+                        yy = int(md.group(3)) if md.group(3) else mon.year
+                        yy = yy + 2000 if yy < 100 else yy
+                        try:
+                            d = date(yy, int(md.group(2)), int(md.group(1)))
+                        except ValueError:
+                            d = None
+                        if d and d >= START_DATE:
+                            items.setdefault(d.isoformat(), []).append((rw, part, red))
+                            continue
                 if dow is None:
                     unspecific.append((mon, rw, part, red))
                 else:
@@ -238,9 +251,10 @@ def compose(path, make_item, cal, today=None):
                 targets = [x for x in days_with
                            if any(r['label'].lower().startswith(('technik boulder', 'physis bouldern'))
                                   for r, _, _ in items[x])][:3]
-            elif rule == 'dido':
-                targets = [(mon + timedelta(days=i)).isoformat() for i in (1, 3)
-                           if (mon + timedelta(days=i)) >= START_DATE]
+            elif rule == 'every':
+                # Spezial: jeder Trainingstag der Woche (Kalendertermin oder Trainingsinhalt), unabhaengig von Tag/Dauer
+                targets = sorted(set(days_with) | {(mon + timedelta(days=i)).isoformat() for i in range(7)
+                                                   if (mon + timedelta(days=i)).isoformat() in cal})
             else:  # firstday
                 targets = days_with[:1]
             for x in targets:
