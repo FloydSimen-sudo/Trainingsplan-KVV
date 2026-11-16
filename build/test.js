@@ -221,7 +221,7 @@ check('Jahr tab Adrian: kompakt mit Phase, Kraftausdauer, rote Linie, naechster 
 check('Dashboard: Kacheln fuer Adrian und alle Gruppen rendern ohne Absturz, ohne Gruppenfarben', () => {
   state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Dashboard';
   let out = renderApp();
-  ['Trainingsphase','Kraftausdauer','Dauer der geplanten Inhalte','Stunden diese Woche','Stunden Saison','Bis nächster Wettkampf','Bis nächster Deload','Load-Verlauf'].forEach(t => { if (!out.includes(t)) throw new Error('Dashboard-Kachel fehlt: ' + t); });
+  ['Trainingsphase','Kraftausdauer','Geplante Trainingszeit heute','Stunden diese Woche','Stunden Saison','Bis nächster Wettkampf','Bis nächster Deload','Load-Verlauf'].forEach(t => { if (!out.includes(t)) throw new Error('Dashboard-Kachel fehlt: ' + t); });
   if (out.includes('Aktualisierung durch Floyd')) throw new Error('syncbar-Text sollte entfernt sein');
   if (out.includes('Woche kompakt')) throw new Error('Woche kompakt sollte entfernt sein');
   ['U9','U11I','U11II','U13 I','U13II','U15I','U15 II','SPOGY Gruppe'].forEach(g => { state.view={t:'g', id:g}; state.tab='Dashboard'; if (!renderApp().includes('dashGrid')) throw new Error('Dashboard leer: '+g); });

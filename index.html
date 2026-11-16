@@ -747,7 +747,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
     </div>
     ${perSessionMode ? sessionDokuHtml(s, i+1) : ''}`;
   }).join('');
-  const dayTotalHtml = (day && day.sessions && day.sessions.length) ? `<div class="tlTotal">${dayMinSum} min · ${(dayMinSum/60).toFixed(1).replace('.',',')} h${(dayTermin||dayNoDur) ? `<span class="x">${dayTermin ? 'Termine ' + durTxt(dayTermin) : ''}${(dayTermin && dayNoDur) ? ' · ' : ''}${dayNoDur ? dayNoDur + ' Inhalt(e) ohne Dauer' : ''}</span>` : ''}</div>` : '';
+  const dayTotalHtml = (day && day.sessions && day.sessions.length) ? `<div class="tlTotal">${day.totMin ? (day.totMin+' min · '+(day.totMin/60).toFixed(1).replace('.',',')+' h') : (dayMinSum+' min · '+(dayMinSum/60).toFixed(1).replace('.',',')+' h')}<span class="x">${day.totMin ? 'Trainingszeit laut '+esc(day.totSrc||'Plan')+' · ' : ''}Inhalte mit Dauer ${dayMinSum} min${dayNoDur ? ' · '+dayNoDur+' Inhalt(e) ohne Dauer' : ''}</span></div>` : '';
 
 
   return `
@@ -1049,7 +1049,7 @@ function renderDashboard(view, isSolo, key){
   const f1 = v => v==null ? '–' : (Math.round(v*10)/10).toString().replace('.',',');
   let planMin = 0, planNoDur = 0;
   sess.forEach(s=>(s.cats||[]).forEach(c=>(c.items||[]).forEach(i=>{ const mm=tpItemMin(i); if(mm) planMin+=mm; else if(!i.par) planNoDur++; })));
-  const planH = planMin>0 ? planMin/60 : (day && day.planH!=null ? day.planH : null);
+  const planH = (day && day.totMin) ? day.totMin/60 : (planMin>0 ? planMin/60 : (day && day.planH!=null ? day.planH : null));
   const loadTile = `<div class="dashTile wide"><span class="dashLbl">Load-Verlauf Saison ${esc(season||'')}</span>${
     loadPts.length>=2 ? dashLoadSvg(loadPts, jp2) : `<span class="dashSub">Noch zu wenig Load-Daten für eine Kurve (mind. 2 Wochen mit Doku).</span>`}</div>`;
   return `
@@ -1057,7 +1057,7 @@ function renderDashboard(view, isSolo, key){
       ${todayTile}
       ${tile('Trainingsphase', phase ? `<span style="font-size:24px">${esc(phase)}</span>` : '–', hasP ? '' : 'Kein Jahresplan 2027 hinterlegt')}
       ${tile('Kraftausdauer', ka ? `<span style="font-size:24px">${esc(ka)}</span>` : '–', '')}
-      ${tile('Dauer der geplanten Inhalte', planH!=null ? f1(planH)+'<small>h</small>' : '–', planH!=null ? (planMin>0 ? planMin+' min'+(planNoDur ? ' · '+planNoDur+' Inhalt(e) ohne Dauer' : '') : '') : 'keine Einheit geplant')}
+      ${tile('Geplante Trainingszeit heute', planH!=null ? f1(planH)+'<small>h</small>' : '–', planH!=null ? ((day && day.totMin ? 'laut '+esc(day.totSrc||'Plan')+' · ' : '')+'Inhalte mit Dauer '+planMin+' min'+(planNoDur ? ' · '+planNoDur+' ohne' : '')) : 'keine Einheit geplant')}
       ${tile('Stunden diese Woche', f1(hWeek)+'<small>h</small>', hWeekTot!=null ? 'bis heute · Woche geplant '+f1(hWeekTot)+' h' : 'bis heute, inkl. Plan')}
       ${tile('Stunden Saison', f1(hSeason)+'<small>h</small>', 'Saison '+esc(season||''))}
       ${tile('Bis nächster Wettkampf', nextWk ? nextWk.days+'<small>Tage</small>' : '–', nextWk ? esc(nextWk.name)+(nextWk.approx?' (Datum ungefähr)':'') : '')}

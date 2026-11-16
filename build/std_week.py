@@ -26,6 +26,8 @@ ATH = [
 # Typischer Standardwert, wenn der Wochentag in der Standardwoche keinen Block hat (Floyd, 16.11.: immer an Standardwoche orientieren)
 TYPICAL = {'bb': 75, 'physis': 60, 'lead': 180, 'warm': 30, 'theorie': 15}
 WALL = ('bb', 'physis', 'lead')  # Blocks an der Wand
+USE_ITEM_STD = False  # Floyd 16.11.: Inhalte ohne Dauer in Excel/Uebungssammlung bleiben ohne Dauer ('-')
+STD_DAY = {0: 120, 1: 285, 2: 150, 3: 305, 4: 195, 5: 30, 6: 165}  # Summe je Wochentag laut Standardwoche SPOGY
 EXPL = re.compile(r'(\d+(?:[.,]\d+)?)\s*(h|std|stunden?|min)\b', re.I)
 
 
@@ -83,7 +85,7 @@ def apply(plans, parse_dauer):
                                 g = 'lead' if si >= 1 else 'bb'
                             elif c['name'] == 'Physis Klettern':
                                 g = 'lead' if si >= 1 else 'physis'
-                            elif c['name'] == 'Athletik + Mentales' and not k:
+                            elif USE_ITEM_STD and c['name'] == 'Athletik + Mentales' and not k:
                                 t = str(it.get('ex') or '').lower()
                                 for rx, mins in ATH:
                                     if re.search(rx, t):
@@ -93,7 +95,7 @@ def apply(plans, parse_dauer):
                                         break
                             if g:
                                 groups.setdefault(g, []).append((it, k))
-                for g, lst in groups.items():
+                for g, lst in (groups.items() if USE_ITEM_STD else []):
                     tot = BLOCK[g].get(wd)
                     if not tot and g == 'warm' and not wall:
                         continue   # kein Wandtraining an diesem Tag: kein Standard-Warm-Up erfinden
@@ -138,4 +140,30 @@ def apply_diff(plans):
                         it['dur'] = max(5, int(round(rem * wt / tot / 5.0)) * 5)
                         it['durSrc'] = 'diff'
                         n += 1
+    return n
+
+
+def apply_total(plans):
+    """Gesamte Trainingszeit je Tag: Summe der Kalender-Sessions, sonst Summe der Standardwoche SPOGY (day['totMin'], day['totSrc'])."""
+    n = 0
+    for key, weeks in plans.items():
+        if not key.startswith('a:'):
+            continue
+        for w in weeks.values():
+            for day in w.get('days', []):
+                day.pop('totMin', None); day.pop('totSrc', None)
+                if not day.get('sessions'):
+                    continue
+                cal = sum(s.get('dur') or 0 for s in day['sessions'])
+                if cal:
+                    day['totMin'] = cal; day['totSrc'] = 'Kalender'
+                else:
+                    try:
+                        wd = date.fromisoformat(day['date']).weekday()
+                    except Exception:
+                        continue
+                    if STD_DAY.get(wd):
+                        day['totMin'] = STD_DAY[wd]; day['totSrc'] = 'Standardwoche'
+                if day.get('totMin'):
+                    n += 1
     return n
