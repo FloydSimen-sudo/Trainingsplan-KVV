@@ -249,7 +249,22 @@ def find_entry(name, excat):
         if len(k) >= 6 and re.search(r'(?<![a-zäöüß])' + re.escape(k) + r'(?![a-zäöüß])', n):
             if not best or len(k) > len(best):
                 best = k
-    return excat[best] if best else None
+    if best:
+        return excat[best]
+    # Praefix 'Beweglichkeit 4: Passives Dehnen' -> Text hinter dem Doppelpunkt nochmals suchen
+    if ':' in str(name):
+        tail = str(name).split(':', 1)[1]
+        if norm(tail) and norm(tail) != n:
+            r = find_entry(tail, excat)
+            if r:
+                return r
+    # Eintrag beginnt mit dem Text (ganze Woerter): kuerzester Treffer, bevorzugt mit Dauer
+    if len(n) >= 6:
+        cands = [k for k in excat if k.startswith(n + ' ')]
+        if cands:
+            cands.sort(key=lambda k: (excat[k]['min'] is None, len(k)))
+            return excat[cands[0]]
+    return None
 
 
 def find_latest_exercise_list(base):

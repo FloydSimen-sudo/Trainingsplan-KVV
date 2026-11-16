@@ -177,6 +177,7 @@
   .tlBlock{border:1px solid rgba(10,50,80,.16);border-radius:14px;padding:10px 13px;display:flex;flex-direction:column;gap:3px;box-sizing:border-box;color:var(--tx)}
   .tlBlock .n{font:600 13px/1.3 Archivo,sans-serif}
   .tlBlock .d{font:500 10.5px/1.2 'Roboto Mono',monospace;color:var(--tx3)}
+  .tlBlock .d .src{font:500 8.5px/1 Archivo,sans-serif;color:var(--mu);margin-left:4px}
   .tlBlock .s{font:500 11px/1.35 Archivo,sans-serif;color:var(--tx3)}
   .tlBlock ul{margin:2px 0 0;padding-left:15px;font:400 10.5px/1.4 Archivo,sans-serif;color:var(--tx3)}
   .tlBlock.pause{border-style:dashed}
@@ -701,15 +702,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
   const PX_PER_MIN = 1.5, MIN_H = 62;
   const hm = t=>{ const m=/^(\d{1,2})[:.](\d{2})/.exec(t||''); return m ? (+m[1])*60+(+m[2]) : null; };
   const fmtHm = n=>{ n=((n%1440)+1440)%1440; return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0'); };
-  const itemMin = it=>{
-    const e = it.explicitTime ? String(it.explicitTime) : '';
-    let m = /(\d+(?:[.,]\d+)?)\s*(?:h|std\.?|stunden?)\b/i.exec(e);
-    if(m) return Math.round(parseFloat(m[1].replace(',','.'))*60);
-    m = /(\d+)\s*min/i.exec(e);
-    if(m) return +m[1];
-    if(it.match && typeof it.match.min==='number' && it.match.min>0) return it.match.min;
-    return null;
-  };
+  const itemMin = tpItemMin;
   const durTxt = n=> n>=60 ? (Math.floor(n/60)+' h'+(n%60?' '+(n%60)+' min':'')) : (n+' min');
   let dayMinSum = 0, dayNoDur = 0, dayTermin = 0;
   const sessionsHtml = (day && day.sessions ? day.sessions : []).map((s,i)=>{
@@ -722,14 +715,14 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       const m = it.match || {};
       const has = v => v!=null && v!=='' && v!=='x';
       const sub = [];
-      if(has(m.sets)) sub.push(m.sets);
-      if(has(m.vol)) sub.push(m.vol);
-      if(has(m.pause)) sub.push('Pause '+m.pause+' min');
+      if(has(m.sets)) sub.push('Sätze: '+m.sets);
+      if(has(m.vol)) sub.push('Wdh./Umfang: '+m.vol);
+      if(has(m.pause)) sub.push('Pause: '+m.pause+' min');
       const hw = (it.sx && D.EXHOW) ? D.EXHOW[it.sx] : null;
       const h = Math.max(MIN_H, mins ? Math.round(mins*PX_PER_MIN) : MIN_H);
       blocks.push(`<div class="tlBlock${it.red?' red':''}${it.pause?' pause':''}" style="background:${it.col ? '#'+esc(it.col) : (TL_COL[cat.name]||'#eee')};min-height:${h}px">
         <div class="n">${esc(nm)}</div>
-        <div class="d">${mins ? durTxt(mins) : '-'}</div>
+        <div class="d">${mins ? durTxt(mins) : '-'}${(mins && it.durSrc==='std' && !it.explicitTime) ? ' <span class="src">Standardwoche</span>' : ''}</div>
         ${sub.length ? `<div class="s">${sub.map(esc).join(' · ')}</div>` : ''}
         ${(hw && hw.length) ? `<ul>${hw.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>` : ''}
       </div>`);
@@ -980,6 +973,16 @@ function dashLoadSvg(pts, jp2){
     <path d="${path}" fill="none" stroke="var(--am)" stroke-width="2.2" stroke-linejoin="round"/>${dots}
     ${lab({kw:pts[0].kw,t:t0},'start')}${lab({kw:getISOWeek(new Date(t1)).kw,t:t1},'end')}${msHtml}</svg>`;
 }
+function tpItemMin(it){
+  const e = it.explicitTime ? String(it.explicitTime) : '';
+  let m = /(\d+(?:[.,]\d+)?)\s*(?:h|std\.?|stunden?)\b/i.exec(e);
+  if(m) return Math.round(parseFloat(m[1].replace(',','.'))*60);
+  m = /(\d+)\s*min/i.exec(e);
+  if(m) return +m[1];
+  if(typeof it.dur==='number' && it.dur>0) return it.dur;
+  if(it.match && typeof it.match.min==='number' && it.match.min>0) return it.match.min;
+  return null;
+}
 function renderDashboard(view, isSolo, key){
   const jp2 = D.JAHRESPLAN2027 ? D.JAHRESPLAN2027[key] : null;
   const plans = D.PLANS[key] || {};
@@ -1003,7 +1006,7 @@ function renderDashboard(view, isSolo, key){
   sess.forEach(s=>{
     (s.cats||[]).forEach(c=>{
       if(MAIN.includes(c.name) && c.items && c.items.length)
-        parts.push(`<div class="dashPart"><b>${esc(c.name)}:</b> ${c.items.map(i=>esc(i.ex)).join(', ')}</div>`);
+        parts.push(`<div class="dashPart"><b>${esc(c.name)}:</b> ${c.items.map(i=>{ const mm=tpItemMin(i); return esc(i.ex)+(mm?' ('+mm+' min)':''); }).join(', ')}</div>`);
     });
   });
   const hasToday = day && (day.ort || zeit || parts.length);
@@ -1044,7 +1047,9 @@ function renderDashboard(view, isSolo, key){
     }
   }
   const f1 = v => v==null ? '–' : (Math.round(v*10)/10).toString().replace('.',',');
-  const planH = day && day.planH!=null ? day.planH : null;
+  let planMin = 0, planNoDur = 0;
+  sess.forEach(s=>(s.cats||[]).forEach(c=>(c.items||[]).forEach(i=>{ const mm=tpItemMin(i); if(mm) planMin+=mm; else planNoDur++; })));
+  const planH = planMin>0 ? planMin/60 : (day && day.planH!=null ? day.planH : null);
   const loadTile = `<div class="dashTile wide"><span class="dashLbl">Load-Verlauf Saison ${esc(season||'')}</span>${
     loadPts.length>=2 ? dashLoadSvg(loadPts, jp2) : `<span class="dashSub">Noch zu wenig Load-Daten für eine Kurve (mind. 2 Wochen mit Doku).</span>`}</div>`;
   return `
@@ -1052,7 +1057,7 @@ function renderDashboard(view, isSolo, key){
       ${todayTile}
       ${tile('Trainingsphase', phase ? `<span style="font-size:24px">${esc(phase)}</span>` : '–', hasP ? '' : 'Kein Jahresplan 2027 hinterlegt')}
       ${tile('Kraftausdauer', ka ? `<span style="font-size:24px">${esc(ka)}</span>` : '–', '')}
-      ${tile('Dauer der geplanten Inhalte', planH!=null ? f1(planH)+'<small>h</small>' : '–', planH!=null ? '' : 'keine Einheit geplant')}
+      ${tile('Dauer der geplanten Inhalte', planH!=null ? f1(planH)+'<small>h</small>' : '–', planH!=null ? (planMin>0 ? planMin+' min'+(planNoDur ? ' · '+planNoDur+' Inhalt(e) ohne Dauer' : '') : '') : 'keine Einheit geplant')}
       ${tile('Stunden diese Woche', f1(hWeek)+'<small>h</small>', hWeekTot!=null ? 'bis heute · Woche geplant '+f1(hWeekTot)+' h' : 'bis heute, inkl. Plan')}
       ${tile('Stunden Saison', f1(hSeason)+'<small>h</small>', 'Saison '+esc(season||''))}
       ${tile('Bis nächster Wettkampf', nextWk ? nextWk.days+'<small>Tage</small>' : '–', nextWk ? esc(nextWk.name)+(nextWk.approx?' (Datum ungefähr)':'') : '')}

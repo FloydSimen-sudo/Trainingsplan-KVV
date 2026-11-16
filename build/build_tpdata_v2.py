@@ -2317,6 +2317,8 @@ def main():
                                 else:
                                     _it['match'] = None
                                     _it.pop('sx', None)
+        import std_week
+        print('Standardwoche-Dauer (Fallback):', std_week.apply(PLANS, hours2027.parse_dauer), 'Inhalte')
         print('Standardangaben aus Uebungssammlung Gesamt:', _std_hit, 'von', _std_all, 'Inhalten gefunden;', len(EXHOW), 'Kurzbeschreibungen')
 
         # ---- Exakte Stunden (Floyd, 02.11.2026): nach dem Merge ueber ALLE Plaene neu berechnen ----

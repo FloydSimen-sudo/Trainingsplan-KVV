@@ -54,5 +54,6 @@ for(const k of Object.keys(cur.PLANS).filter(k=>k.startsWith('a:'))){
   const nm=k.slice(2);
   for(const f of ['JAHRESPLAN','JAHRESPLAN_SOURCE']) if(cur[f]&&cur[f][nm]!==undefined){prev[f]=prev[f]||{};prev[f][nm]=cur[f][nm];}
 }
+prev.EXHOW=Object.assign(prev.EXHOW||{},cur.EXHOW||{});
 fs.writeFileSync('tp-data.js','window.TPDATA = '+JSON.stringify(prev)+';\n');
 console.log('Vergangene Tage mit altem Inhalt:',keptPast,' neu zusammengesetzte Tage:',newDays);
