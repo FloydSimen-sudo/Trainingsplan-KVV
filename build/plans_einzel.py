@@ -359,7 +359,7 @@ def compose(path, make_item, cal, today=None):
                     seen.add(k); keep.append(it)
                 c['items'] = keep
         # Essen/Trinken (Trinkpause): laut Standardwoche SPOGY fest am Dienstag, 10 min, nach Technik/Taktik und vor Physis (Session 1)
-        if wd == 2 and sessions and any(c['items'] for c in sessions[0]['cats']):
+        if wd == 2 and sessions and any(c['items'] for c in sessions[0]['cats'] if c['name'] in ('Technik/Taktik', 'Physis Klettern')):
             _tc = next(c for c in sessions[0]['cats'] if c['name'] == 'Technik/Taktik')
             _pi = make_item('Essen / Trinken', False)
             _pi['match'] = {}

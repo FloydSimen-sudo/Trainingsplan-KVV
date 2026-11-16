@@ -266,17 +266,17 @@
   .ribbonBar.cur{outline:2px solid var(--am);outline-offset:1px}
   .zsWrap{position:relative;overflow-x:auto;padding:4px 0 10px;-webkit-overflow-scrolling:touch}
   .zsInner{position:relative;display:flex;flex-direction:column;gap:3px}
-  .zsRow{display:flex;align-items:stretch}
-  .zsLbl{flex:none;position:sticky;left:0;z-index:3;width:118px;padding:0 6px 0 2px;background:var(--bg);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:600 9px/1.15 'Roboto Mono',monospace;color:var(--mu);display:flex;align-items:center;letter-spacing:.01em}
-  .zsLbl.cat{color:var(--am);text-transform:uppercase;cursor:pointer;border:none;text-align:left;padding:5px 8px 5px 2px;width:auto;max-width:260px;background:var(--panel)}
+  .zsRow{display:flex;align-items:stretch;margin-bottom:1px}
+  .zsLbl{flex:none;position:sticky;left:0;z-index:3;width:132px;padding:0 6px 0 2px;background:var(--bg);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:600 11px/1.2 Archivo,sans-serif;color:var(--tx3);display:flex;align-items:center;letter-spacing:.01em}
+  .zsLbl.cat{color:var(--am);font:700 11px/1.2 Archivo,sans-serif;text-transform:uppercase;cursor:pointer;border:none;text-align:left;padding:5px 8px 5px 2px;width:auto;max-width:260px;background:var(--panel)}
   .zsCatFill{flex:1;background:var(--panel)}
-  .zsTrack{position:relative;flex:none;height:22px}
-  .zsTrack.hdr{height:24px}
-  .zsBlk{position:absolute;top:1px;bottom:1px;border-radius:4px;border:none;padding:0 4px;font:600 8.5px/1 'Roboto Mono',monospace;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:left;cursor:pointer;background:#dfe7ee;color:var(--tx2)}
+  .zsTrack{position:relative;flex:none;height:30px}
+  .zsTrack.hdr{height:30px}
+  .zsBlk{position:absolute;top:1px;bottom:1px;border-radius:7px;border:none;padding:0 6px;font:600 11px/1 Archivo,sans-serif;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:left;cursor:pointer;background:#dfe7ee;color:var(--tx2)}
   .zsBlk.sel{outline:2px solid var(--am);outline-offset:0;z-index:2}
   .zsBlk.thin{padding:0}
-  .zsHdrCell{position:absolute;top:0;font:500 8px/1 'Roboto Mono',monospace;color:var(--di);text-align:center}
-  .zsHdrCell.month{color:var(--tx);font-weight:700}
+  .zsHdrCell{position:absolute;top:0;font:500 10px/1 'Roboto Mono',monospace;color:var(--mu);text-align:center}
+  .zsHdrCell.month{color:var(--tx);font-weight:700;font-size:12px;text-align:left;padding-left:3px;white-space:nowrap}
   .zsNow{position:absolute;top:0;bottom:0;background:rgba(0,88,143,.10);border-left:1px solid rgba(0,88,143,.45);border-right:1px solid rgba(0,88,143,.45);pointer-events:none;z-index:1}
   .zsDetail{padding:9px 12px;border-radius:10px;background:var(--panel);border:1px solid var(--border);font:400 12px/1.45 Archivo,sans-serif;color:var(--tx)}
   .zsDetail .k{font:600 9.5px/1.2 'Roboto Mono',monospace;color:var(--mu);text-transform:uppercase;letter-spacing:.03em}
@@ -722,7 +722,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       const h = it.par ? 44 : Math.max(MIN_H, mins ? Math.round(mins*PX_PER_MIN) : MIN_H);
       blocks.push(`<div class="tlBlock${it.red?' red':''}${it.pause?' pause':''}" style="background:${it.col ? '#'+esc(it.col) : (TL_COL[cat.name]||'#eee')};min-height:${h}px">
         <div class="n">${esc(nm)}</div>
-        <div class="d">${mins ? durTxt(mins) : (it.par ? 'läuft nebenbei' : '-')}${(mins && it.durSrc==='std' && !it.explicitTime) ? ' <span class="src">Standardwoche</span>' : ''}</div>
+        <div class="d">${mins ? durTxt(mins) : (it.par ? 'läuft nebenbei' : '-')}${(mins && !it.explicitTime && it.durSrc==='std') ? ' <span class="src">Standardwoche</span>' : ((mins && !it.explicitTime && it.durSrc==='diff') ? ' <span class="src">Rest der Einheit</span>' : '')}</div>
         ${sub.length ? `<div class="s">${sub.map(esc).join(' · ')}</div>` : ''}
         ${(hw && hw.length) ? `<ul>${hw.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>` : ''}
       </div>`);
@@ -892,7 +892,7 @@ function renderJahr(view, isSolo, athlete, group){
 
 // Zeitstrahl der Jahresplanung 2027: Spalte = Kalenderwoche, Blöcke = zusammengeführte
 // Excel-Zellen (Farben 1:1 aus der Excel). Nur lesen/anzeigen — nichts wird erfunden.
-const ZS_CW = 24, ZS_LW = 118;
+const ZS_CW = 34, ZS_LW = 132;
 const ZS_TRACKS = [
   ['phase','Phase'], ['ka','Kraftausdauer'], ['deload','Deload'],
   ['wkB','WK Bouldern'], ['wkWC','World Cups'], ['wkL','WK Lead'],
@@ -1131,7 +1131,7 @@ function renderJahrZeitstrahl(view, jp2, src){
     const m = mon.getUTCMonth();
     const isM = m !== lastM; lastM = m;
     if(w.y===NOW.year && w.kw===NOW.kw) curIdx = i;
-    return `<span class="zsHdrCell ${isM?'month':''}" style="left:${i*W}px;width:${W}px;top:${isM?0:7}px">${isM ? MNAMES[m] : w.kw}</span>`;
+    return `<span class="zsHdrCell ${isM?'month':''}" style="left:${i*W}px;width:${W}px;top:${isM?1:13}px">${isM ? MNAMES[m] : w.kw}</span>`;
   }).join('');
   const header = `<div class="zsRow"><div class="zsLbl">KW</div><div class="zsTrack hdr" style="width:${total}px">${hdrCells}</div></div>`;
 

@@ -68,6 +68,7 @@ def apply(plans, parse_dauer):
                             if it.get('par'):
                                 continue
                             if it.get('pause'):
+                                it['dur'] = 10; it['durSrc'] = 'excel'
                                 continue
                             k = _known(it, parse_dauer)
                             if k:
@@ -107,3 +108,34 @@ def apply(plans, parse_dauer):
                     for it in unk:
                         it['dur'] = each; it['durSrc'] = 'std'; n_set += 1
     return n_set
+
+
+def apply_diff(plans):
+    """Floyd 16.11.2026: Inhalte ohne Zeit in der Excel und ohne Dauer in der Uebungssammlung bekommen die Differenz zur
+    geplanten Gesamtdauer der Session (aus dem Google Kalender). Aufteilung nach Standardwoche-Gewichten, sonst gleichmaessig."""
+    n = 0
+    for key, weeks in plans.items():
+        if not key.startswith('a:'):
+            continue
+        for w in weeks.values():
+            for day in w.get('days', []):
+                for s in day.get('sessions', []):
+                    D = s.get('dur')
+                    if not D:
+                        continue
+                    items = [it for c in s.get('cats', []) for it in c.get('items', [])]
+                    known = sum(it.get('dur') or 0 for it in items if it.get('durSrc') in ('excel', 'sammlung') or it.get('pause'))
+                    unk = [it for it in items if not it.get('par') and not it.get('pause') and it.get('durSrc') not in ('excel', 'sammlung')]
+                    rem = D - known
+                    if not unk or rem < 5:
+                        continue
+                    wts = [it.get('dur') if it.get('durSrc') == 'std' and it.get('dur') else None for it in unk]
+                    have = [x for x in wts if x]
+                    mean = (sum(have) / len(have)) if have else 1
+                    wts = [x if x else mean for x in wts]
+                    tot = float(sum(wts))
+                    for it, wt in zip(unk, wts):
+                        it['dur'] = max(5, int(round(rem * wt / tot / 5.0)) * 5)
+                        it['durSrc'] = 'diff'
+                        n += 1
+    return n

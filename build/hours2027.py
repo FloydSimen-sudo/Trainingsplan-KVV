@@ -239,6 +239,8 @@ def find_entry(name, excat):
     n = norm(name or '')
     if not n:
         return None
+    # Floyd 16.11.2026: BB bedeutet immer Bewegungsbouldern
+    n = re.sub(r'(?<![a-zäöüß])bb(?![a-zäöüß])', 'bewegungsbouldern', n)
     al = ALIASES.get(n)
     if n in excat and not (excat[n]['min'] is None and al and al in excat and excat[al]['min'] is not None):
         return excat[n]

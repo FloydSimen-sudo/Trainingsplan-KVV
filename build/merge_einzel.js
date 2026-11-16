@@ -57,6 +57,24 @@ for(const k of Object.keys(cur.PLANS).filter(k=>k.startsWith('a:'))){
 // Jahresplanung der Gruppen (nur Jahresplan, keine Einheiten) ebenfalls aktualisieren
 for(const k of Object.keys(cur.JAHRESPLAN2027||{}).filter(k=>k.startsWith('g:'))){prev.JAHRESPLAN2027=prev.JAHRESPLAN2027||{};prev.JAHRESPLAN2027[k]=cur.JAHRESPLAN2027[k];}
 for(const f of ['JAHRESPLAN_GROUP','JAHRESPLAN_GROUP_SOURCE']) if(cur[f]){prev[f]=prev[f]||{};for(const g of Object.keys(cur[f])) prev[f][g]=cur[f][g];}
+// Trainingsorte der Gruppen laut Google Kalender "KVV Gesamt" (build/ort_kalender.json: Farbe 7 = Bouldern/SB Dornbirn, 10 = Lead/K1).
+// Kalender gewinnt: Ort+Typ werden gesetzt; Tage ohne Termin der Gruppe im gefaerbten Zeitraum verlieren den Ort. Inhalte bleiben unveraendert.
+{
+  const ok=JSON.parse(fs.readFileSync('build/ort_kalender.json','utf8'));
+  const ORT={Bouldern:'SB Dornbirn',Lead:'K1'};
+  const all=Object.values(ok).flatMap(o=>Object.keys(o)).sort(); const HORIZON=all[all.length-1];
+  let setN=0,clrN=0;
+  for(const gid of Object.keys(ok)){
+    const P=prev.PLANS['g:'+gid]; if(!P) continue;
+    for(const w of Object.values(P)) for(const d of (w.days||[])){
+      if(d.date<TODAY||d.date>HORIZON) continue;
+      const t=ok[gid][d.date];
+      if(t){ if(d.ort!==ORT[t]||d.ortType!==t){setN++;} d.ort=ORT[t]; d.ortType=t; }
+      else if(d.ort||d.ortType){ d.ort=null; d.ortType=null; clrN++; }
+    }
+  }
+  console.log('Gruppen-Orte aus Kalender: gesetzt/geaendert',setN,' geleert (kein Termin im Kalender)',clrN,' bis',HORIZON);
+}
 prev.EXHOW=Object.assign(prev.EXHOW||{},cur.EXHOW||{});
 fs.writeFileSync('tp-data.js','window.TPDATA = '+JSON.stringify(prev)+';\n');
 console.log('Vergangene Tage mit altem Inhalt:',keptPast,' neu zusammengesetzte Tage:',newDays);
