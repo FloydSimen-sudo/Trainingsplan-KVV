@@ -675,8 +675,9 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
     <div class="card">
       <div class="cardHead">
         <span class="name"><span class="dotSm"></span>${esc(s.name)}</span>
-        ${s.time ? `<span class="time">${esc(s.time)}</span>` : ''}
+        ${s.time ? `<span class="time">${esc(s.time)}${s.end ? '–'+esc(s.end) : ''}${s.dur ? ' · '+(s.dur>=60 ? Math.floor(s.dur/60)+' h'+(s.dur%60 ? ' '+(s.dur%60)+' min' : '') : s.dur+' min') : ''}${s.trainer ? ' · '+esc(s.trainer) : ''}</span>` : ''}
       </div>
+      ${(()=>{ if(!s.dur) return ''; let sum=0; (s.cats||[]).forEach(c=>(c.items||[]).forEach(it=>{ if(it.match && it.match.min) sum+=it.match.min; })); return (sum>0 && Math.abs(sum-s.dur)>15) ? `<div style="font-size:11px;opacity:.65;padding:0 14px 6px">Summe der Inhalte ca. ${sum} min, Termin ${s.dur} min</div>` : ''; })()}
       <div>
         ${ (s.cats || []).map(cat=>`
           <div class="slotRow">

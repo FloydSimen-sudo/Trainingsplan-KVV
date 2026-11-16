@@ -223,9 +223,10 @@ def parse_jahresplanung(path, cfg=None):
         wb = openpyxl.load_workbook(path, data_only=True)
     except Exception:
         return None
-    if 'Jahresplanung' not in wb.sheetnames:
+    _sn = 'Jahresplanung' if 'Jahresplanung' in wb.sheetnames else ('Trainingsplanung' if 'Trainingsplanung' in wb.sheetnames else None)
+    if _sn is None:
         return None
-    ws = wb['Jahresplanung']
+    ws = wb[_sn]
     mm = _merge_map(ws)
 
     kw_row = None

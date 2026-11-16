@@ -12,6 +12,7 @@ import openpyxl, json, re, subprocess, sys, glob, os
 from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import plans2027
+import plans_einzel
 import hours2027
 DURCAT = {}
 HOURS_MISSING = {}
@@ -2222,7 +2223,45 @@ def main():
             else:
                 JAHRESPLAN_GROUP[gid27] = legacy27
                 JAHRESPLAN_GROUP_SOURCE[gid27] = src27
-        if P27['einheiten_policy'] != 'off':
+        if key27.startswith('a:') and not LIVE_MODE:
+            # Einzelathleten (Struktur ab 16.11.2026): Einheit aus 'Trainingsplanung' + 'Notizen' + Google-Kalender
+            _ekal = plans_einzel.load_calendar(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'einzel_kalender.json'))
+            _nw = plans_einzel.compose(f27, _mk27, _ekal)
+            _tg = PLANS.setdefault(key27, {})
+            for _wk, _w in _nw.items():
+                _old = _tg.get(_wk)
+                if _old and _old.get('days'):
+                    _od = {d['date']: d for d in _old['days']}
+                    for i, d in enumerate(_w['days']):
+                        if d['date'] < plans_einzel.START_DATE.isoformat() and d['date'] in _od:
+                            _w['days'][i] = _od[d['date']]
+                        elif d['date'] in _od:
+                            _o = _od[d['date']]
+                            if _o.get('doku') and not d.get('doku'):
+                                d['doku'] = _o['doku']
+                            # Vergangene Tage ohne Inhalt in 'Trainingsplanung': bisherigen Inhalt behalten (Zeit/Ort/Trainer neu)
+                            _has = lambda x: any(c['items'] for s in x.get('sessions', []) for c in s['cats'] if c['name'] in ('Technik/Taktik', 'Physis Klettern', 'Aufwärmen'))
+                            if d['date'] < date.today().isoformat() and not _has(d) and _has(_o):
+                                _ns = d['sessions']
+                                d['sessions'] = _o['sessions']
+                                for _i, _s in enumerate(d['sessions']):
+                                    if _i < len(_ns):
+                                        for _k in ('time', 'end', 'dur', 'trainer'):
+                                            if _ns[_i].get(_k):
+                                                _s[_k] = _ns[_i][_k]
+                _tg[_wk] = _w
+            # Tage ab START_DATE in Wochen, die die neue Struktur nicht mehr enthaelt, leeren
+            for _wk, _w in list(_tg.items()):
+                if _wk in _nw:
+                    continue
+                for d in _w.get('days', []):
+                    if d['date'] >= plans_einzel.START_DATE.isoformat() and d.get('sessions'):
+                        d['sessions'] = []; d['sonstiges'] = None; d['ort'] = None
+                        for k in ('zeit', 'trainer', 'ortType'):
+                            d.pop(k, None)
+            info27['merge'] = {'neu_aus_trainingsplanung': len(_nw)}
+            info27['weeksWithContent'] = len(_nw)
+        elif P27['einheiten_policy'] != 'off':
             new_weeks27 = plans2027.parse_einheitenplanung(f27, _mk27)
             if new_weeks27:
                 target27 = PLANS.setdefault(key27, {})
