@@ -168,6 +168,20 @@
   .brandMark{flex:none;width:28px;height:28px;object-fit:contain}
   .headerLogo{flex:none;height:26px;width:auto;object-fit:contain}
 
+
+  .tl{display:flex;flex-direction:column;gap:7px;margin:4px 0}
+  .tlTime{display:flex;justify-content:space-between;align-items:center;font:600 12px/1 Archivo,sans-serif;padding:7px 12px;border:1.5px solid #222;background:#a9c3e0;color:#111}
+  .tlTime.end{background:#eceff3}
+  .tlTime .a{font:400 10.5px/1 Archivo,sans-serif;opacity:.7}
+  .tlBlock{border:1.5px solid #222;padding:10px 12px;display:flex;flex-direction:column;gap:3px;box-sizing:border-box;color:#111}
+  .tlBlock .n{font:700 15px/1.2 Archivo,sans-serif}
+  .tlBlock .d{font:400 13px/1.2 Archivo,sans-serif}
+  .tlBlock .s{font:italic 400 11.5px/1.35 Archivo,sans-serif}
+  .tlBlock ul{margin:2px 0 0;padding-left:15px;font:400 11px/1.35 Archivo,sans-serif}
+  .tlBlock.red .n{color:#b00020}
+  .tlDiv{background:#a6a6a6;border:1.5px solid #222;text-align:center;font:700 12px/1 Archivo,sans-serif;padding:6px;color:#111}
+  .tlTotal{background:#f2f2f2;border:1.5px solid #222;text-align:center;font:700 15px/1.2 Archivo,sans-serif;padding:9px;color:#111}
+  .tlTotal .x{display:block;font:400 11px/1.3 Archivo,sans-serif;opacity:.7;margin-top:2px}
   .slotDesc{margin:3px 0 0;padding-left:15px;font:400 10.5px/1.4 Archivo,sans-serif;color:var(--mu)}
   .slotDesc li{margin:1px 0}
   .routeBox{max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;background:var(--panel)}
@@ -671,30 +685,66 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
     </div>`;
   };
 
-  const sessionsHtml = (day && day.sessions ? day.sessions : []).map((s,i)=>`
-    <div class="card">
-      <div class="cardHead">
-        <span class="name"><span class="dotSm"></span>${esc(s.name)}</span>
-        ${s.time ? `<span class="time">${esc(s.time)}${s.end ? '–'+esc(s.end) : ''}${s.dur ? ' · '+(s.dur>=60 ? Math.floor(s.dur/60)+' h'+(s.dur%60 ? ' '+(s.dur%60)+' min' : '') : s.dur+' min') : ''}${s.trainer ? ' · '+esc(s.trainer) : ''}</span>` : ''}
-      </div>
-      ${(()=>{ if(!s.dur) return ''; let sum=0; (s.cats||[]).forEach(c=>(c.items||[]).forEach(it=>{ if(it.match && it.match.min) sum+=it.match.min; })); return (sum>0 && Math.abs(sum-s.dur)>15) ? `<div style="font-size:11px;opacity:.65;padding:0 14px 6px">Summe der Inhalte ca. ${sum} min, Termin ${s.dur} min</div>` : ''; })()}
-      <div>
-        ${ (s.cats || []).map(cat=>`
-          <div class="slotRow">
-            <div class="slotK" style="${catStyle(cat.name)}">${esc(cat.name)}</div>
-            <div>
-              ${ cat.items && cat.items.length
-                  ? cat.items.map(renderItem).join('<div style="height:8px"></div>')
-                  : `<div class="slotName" style="color:${DI}">-</div>` }
-            </div>
-          </div>`).join('') }
-      </div>
+  // ---- Einheit als Zeitleiste: Blockhoehe ~ Dauer, oben Start, unten Ende, ganz unten Gesamtdauer (Floyd, 16.11.2026) ----
+  const TL_COL = {'Theorie':'#dfeaf5','Aufwärmen':'#d0d0d0','Motorik':'#e3e3e3','Technikfokus':'#eef77a','Technik/Taktik':'#eef77a','Physis Klettern':'#e8b088','Athletik + Mentales':'#ea4b26','Spezial':'#f3b7cb'};
+  const PX_PER_MIN = 1.5, MIN_H = 62;
+  const hm = t=>{ const m=/^(\d{1,2})[:.](\d{2})/.exec(t||''); return m ? (+m[1])*60+(+m[2]) : null; };
+  const fmtHm = n=>{ n=((n%1440)+1440)%1440; return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0'); };
+  const itemMin = it=>{
+    const e = it.explicitTime ? String(it.explicitTime) : '';
+    let m = /(\d+(?:[.,]\d+)?)\s*(?:h|std\.?|stunden?)\b/i.exec(e);
+    if(m) return Math.round(parseFloat(m[1].replace(',','.'))*60);
+    m = /(\d+)\s*min/i.exec(e);
+    if(m) return +m[1];
+    if(it.match && typeof it.match.min==='number' && it.match.min>0) return it.match.min;
+    return null;
+  };
+  const durTxt = n=> n>=60 ? (Math.floor(n/60)+' h'+(n%60?' '+(n%60)+' min':'')) : (n+' min');
+  let dayMinSum = 0, dayNoDur = 0, dayTermin = 0;
+  const sessionsHtml = (day && day.sessions ? day.sessions : []).map((s,i)=>{
+    const blocks = [];
+    let sum = 0;
+    (s.cats || []).forEach(cat=>(cat.items || []).forEach(it=>{
+      const mins = itemMin(it);
+      if(mins) sum += mins; else dayNoDur++;
+      const nm = String(it.ex||'').replace(/^\s*\d+(?:[.,]\d+)?\s*(?:h|std\.?|min)\s*/i,'').trim() || String(it.ex||'');
+      const m = it.match || {};
+      const has = v => v!=null && v!=='' && v!=='x';
+      const sub = [];
+      if(has(m.sets)) sub.push(m.sets);
+      if(has(m.vol)) sub.push(m.vol);
+      if(has(m.pause)) sub.push('Pause '+m.pause+' min');
+      const hw = (it.sx && D.EXHOW) ? D.EXHOW[it.sx] : null;
+      const h = Math.max(MIN_H, mins ? Math.round(mins*PX_PER_MIN) : MIN_H);
+      blocks.push(`<div class="tlBlock${it.red?' red':''}" style="background:${TL_COL[cat.name]||'#eee'};min-height:${h}px">
+        <div class="n">${esc(nm)}</div>
+        <div class="d">${mins ? durTxt(mins) : '-'}</div>
+        ${sub.length ? `<div class="s">${sub.map(esc).join(' · ')}</div>` : ''}
+        ${(hw && hw.length) ? `<ul>${hw.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+      </div>`);
+    }));
+    dayMinSum += sum;
+    const st = hm(s.time);
+    let endTxt = s.end || null, endApprox = false;
+    if(!endTxt && st!=null && sum>0){ endTxt = fmtHm(st+sum); endApprox = true; }
+    if(s.dur) dayTermin += s.dur;
+    const lbl = (i>0) ? `<div class="tlDiv">${(st!=null && st>=720) ? 'Nachmittag' : esc(s.name)}</div>` : '';
+    const top = s.time ? `<div class="tlTime"><span>${esc(s.time)}</span><span class="a">Start${s.trainer ? ' · '+esc(s.trainer) : ''}${s.ort ? ' · '+esc(s.ort) : ''}</span></div>` : '';
+    const bot = endTxt ? `<div class="tlTime end"><span>${esc(endTxt)}</span><span class="a">Ende${endApprox ? ' (berechnet)' : ''}</span></div>` : '';
+    return `${lbl}
+    <div class="tl">
+      ${top}
+      ${blocks.length ? blocks.join('') : `<div class="dashed">Keine Inhalte eingetragen</div>`}
+      ${bot}
     </div>
     <div class="noteBlock">
       <span class="l">Notizen</span>
       <span class="t${s.notizRed ? ' redNote' : (s.notiz ? ' trainerNote' : '')}">${s.notiz ? esc(s.notiz) : '-'}</span>
     </div>
-    ${perSessionMode ? sessionDokuHtml(s, i+1) : ''}`).join('');
+    ${perSessionMode ? sessionDokuHtml(s, i+1) : ''}`;
+  }).join('');
+  const dayTotalHtml = (day && day.sessions && day.sessions.length) ? `<div class="tlTotal">${dayMinSum} min · ${(dayMinSum/60).toFixed(1).replace('.',',')} h${(dayTermin||dayNoDur) ? `<span class="x">${dayTermin ? 'Termine ' + durTxt(dayTermin) : ''}${(dayTermin && dayNoDur) ? ' · ' : ''}${dayNoDur ? dayNoDur + ' Inhalt(e) ohne Dauer' : ''}</span>` : ''}</div>` : '';
+
 
   return `
     <div class="weekNav">
@@ -718,7 +768,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       <div class="dayHead"><div class="dayTitle">${esc(day ? (day.dow+', '+day.dom) : '')}</div></div>
       ${dayMeta.length ? `<div class="metaRow">${dayMeta.map(m=>`<div class="metaPill${m.r?' redFlag':''}"${(m.c && !m.r)?` style="border-color:${m.c}"`:''}>${(m.c && !m.r)?`<span class="dotSm" style="background:${m.c}"></span>`:''}<span class="k">${esc(m.k)}</span><span class="v">${esc(m.v)}</span></div>`).join('')}</div>` : ''}
       ${dayHint(key, day)}
-      ${ (day && day.sessions && day.sessions.length) ? sessionsHtml : `<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>` }
+      ${ (day && day.sessions && day.sessions.length) ? sessionsHtml + dayTotalHtml : `<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>` }
       ${dk && !perSessionMode ? `
         <div class="dokuBlock">
           <div style="display:flex;align-items:baseline;justify-content:space-between">

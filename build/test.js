@@ -291,7 +291,7 @@ check('Zeiten bei Trainingsinhalten: nur explizite Floyd-Zeit direkt uebernommen
   state.year = 2026; state.kw = 32; state.day = 0;
   const out = renderApp();
   if (!out.includes('1-1,5h Spraywall Sib Max')) throw new Error('Explizite Übung fehlt: ' + out.slice(0,900));
-  if (!out.includes('>1,5h<')) throw new Error('Explizite Zeit "1,5h" wird nicht direkt uebernommen: ' + out.slice(0,900));
+  if (!out.includes('1 h 30 min')) throw new Error('Explizite Zeit "1,5h" wird nicht als Dauer 1 h 30 min uebernommen: ' + out.slice(0,900));
   if (out.includes('120 min')) throw new Error('Katalog-Zeit (120 min) wird trotz expliziter Floyd-Zeit gezeigt: ' + out.slice(0,900));
 });
 
@@ -300,8 +300,8 @@ check('Standardangaben + Kurzbeschreibung (2 Stichpunkte) kommen aus der Uebungs
   state.year = 2026; state.kw = 45; state.day = 3;
   const out = renderApp();
   if (!out.includes('Aufbau Boulder')) throw new Error('Aufbau Boulder fehlt');
-  if (!out.includes('exFields') || !out.includes('>Dauer<') || !out.includes('90 min')) throw new Error('Rubrik Dauer 90 min fehlt');
-  if (!out.includes('slotDesc') || !out.includes('8 Zug Boulder mit bestimmtem Thema')) throw new Error('Kurzbeschreibung fehlt');
+  if (!out.includes('tlBlock') || !out.includes('1 h 30 min')) throw new Error('Dauer 1 h 30 min (90 min) fehlt im Block');
+  if (!out.includes('8 Zug Boulder mit bestimmtem Thema')) throw new Error('Kurzbeschreibung fehlt');
 });
 
 check('Routenliste: Button (tuerkis) + Block bei Einzelathlet (Benchmarks) und Gruppe (Statistik); Gruppe ohne Button U13 I', () => {
@@ -327,12 +327,21 @@ check('Rot markierte Zellen (z.B. "entfällt") werden in der App klar hervorgeho
   if (!out.includes('metaPill redFlag')) throw new Error('Rot markierter Ort wird nicht als redFlag hervorgehoben: ' + out.slice(0,900));
 });
 
+check('Einheit-Reiter als Zeitleiste: Start oben, Ende unten, Gesamtdauer am Tagesende, Blockhoehe ~ Dauer (Adrian Do 05.11.)', () => {
+  state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.weekView='tage';
+  state.year = 2026; state.kw = 45; state.day = 3;
+  const out = renderApp();
+  if (!out.includes('class="tlTotal"')) throw new Error('Gesamtdauer fehlt');
+  if (!/min-height:\\d+px/.test(out)) throw new Error('Blockhoehe fehlt');
+  const hs = [...out.matchAll(/tlBlock[^>]*min-height:(\\d+)px/g)].map(m=>+m[1]);
+  if (hs.length < 2) throw new Error('zu wenige Bloecke');
+});
 check('Rot markierter Trainingsinhalt (Kategorie-Item) bekommt die redFlag-Klasse (Adrian KW34 Mo "Haut!")', () => {
   state.view = {t:'a', id:'Adrian Kathan'}; state.tab='Woche'; state.weekView='tage';
   state.year = 2026; state.kw = 34; state.day = 0;
   const out = renderApp();
   if (!out.includes('Haut!')) throw new Error('Rot markierter Trainingsinhalt-Text fehlt: ' + out.slice(0,900));
-  if (!out.includes('slotName redFlag') || !out.includes('Haut!')) {
+  if (!out.includes('tlBlock red') || !out.includes('Haut!')) {
     throw new Error('Rot markierter Trainingsinhalt bekommt keine redFlag-Klasse: ' + out.slice(0,900));
   }
 });
@@ -359,9 +368,9 @@ check('Doku pro Session (Mariella, Do 17.09., zwei dokumentierte Sessions): je S
   state.view = {t:'a', id:'Mariella Vierhauser'}; state.tab='Woche'; state.weekView='tage';
   state.year = 2026; state.kw = 38; state.day = 3;
   const out = renderApp();
-  const iS1card = out.indexOf('Session 1</span>');
+  const iS1card = out.indexOf('<div class="tl">');
   const iD1 = out.indexOf('Doku Session 1');
-  const iS2card = out.indexOf('Session 2</span>');
+  const iS2card = out.indexOf('<div class="tl">', iS1card + 10);
   const iD2 = out.indexOf('Doku Session 2');
   const iGesamt = out.indexOf('Gesamt-Load');
   if (iS1card < 0 || iD1 < 0 || iS2card < 0 || iD2 < 0 || iGesamt < 0)
