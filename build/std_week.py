@@ -18,11 +18,14 @@ ATH = [
     (r'jule', 90),
     (r'mobi\s*andr|mobility\s*\(?andr', 60),
     (r'jogg', 30),
-    (r'passives dehnen', {1: 5, 6: 15}),
-    (r'aktive mobility', 15),
-    (r'^finger|finger \d|individuell finger', {3: 30}),
-    (r'ziehen|athletik', {4: 30}),
+    (r'passives dehnen|dehnen', {1: 5, 6: 15, 'x': 15}),
+    (r'aktive mobility|mobility|mobi', {'x': 15}),
+    (r'^finger|finger \d|individuell finger|long max|max hang|tendon|pinch|zangen|aufleger', {'x': 30}),
+    (r'ziehen|athletik|klimmzug|rudern|campus|hangeln|stütz|core|handgelenk|curl|beweglichkeit', {4: 30, 'x': 30}),
 ]
+# Typischer Standardwert, wenn der Wochentag in der Standardwoche keinen Block hat (Floyd, 16.11.: immer an Standardwoche orientieren)
+TYPICAL = {'bb': 75, 'physis': 60, 'lead': 180, 'warm': 30, 'theorie': 15}
+WALL = ('bb', 'physis', 'lead')  # Blocks an der Wand
 EXPL = re.compile(r'(\d+(?:[.,]\d+)?)\s*(h|std|stunden?|min)\b', re.I)
 
 
@@ -53,6 +56,8 @@ def apply(plans, parse_dauer):
                 except Exception:
                     continue
                 groups = {}
+                wall = any(c['name'] in ('Technik/Taktik', 'Physis Klettern') and any(not i.get('pause') for i in c.get('items', []))
+                           for se_ in day.get('sessions', []) for c in se_.get('cats', []))
                 for si, s in enumerate(day.get('sessions', [])):
                     for c in s.get('cats', []):
                         for it in c.get('items', []):
@@ -76,7 +81,7 @@ def apply(plans, parse_dauer):
                                 t = str(it.get('ex') or '').lower()
                                 for rx, mins in ATH:
                                     if re.search(rx, t):
-                                        v = mins.get(wd) if isinstance(mins, dict) else mins
+                                        v = (mins.get(wd, mins.get('x')) if isinstance(mins, dict) else mins)
                                         if v:
                                             it['dur'] = v; it['durSrc'] = 'std'; n_set += 1
                                         break
@@ -84,8 +89,10 @@ def apply(plans, parse_dauer):
                                 groups.setdefault(g, []).append((it, k))
                 for g, lst in groups.items():
                     tot = BLOCK[g].get(wd)
+                    if not tot and g == 'warm' and not wall:
+                        continue   # kein Wandtraining an diesem Tag: kein Standard-Warm-Up erfinden
                     if not tot:
-                        continue
+                        tot = TYPICAL[g]
                     known = sum(k for _, k in lst if k)
                     unk = [it for it, k in lst if not k]
                     rem = tot - known
