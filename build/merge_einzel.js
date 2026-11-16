@@ -34,6 +34,21 @@ for(const k of Object.keys(cur.PLANS).filter(k=>k.startsWith('a:'))){
     });
     out[wk]=w;
   }
+  // Mobi Andre ist immer mittwochs: an anderen Tagen entfernen, in der Woche am Mittwoch ergaenzen
+  const isMobi=it=>/mobi\s*andr/i.test(it.ex||'');
+  for(const wk of Object.keys(out)){
+    const w=out[wk]; if(!w||!w.days) continue;
+    let moved=null;
+    w.days.forEach((d,i)=>{ if(i===2) return;
+      (d.sessions||[]).forEach(s=>s.cats.forEach(c=>{ const keep=c.items.filter(it=>!isMobi(it)); if(keep.length!==c.items.length){ moved=moved||c.items.find(isMobi); c.items=keep; } })); });
+    const wed=w.days[2];
+    if(moved&&wed){
+      const has=(wed.sessions||[]).some(s=>s.cats.some(c=>c.items.some(isMobi)));
+      if(!has&&wed.sessions&&wed.sessions.length){
+        const c=wed.sessions[0].cats.find(c=>c.name==='Athletik + Mentales'); if(c) c.items.push(moved);
+      }
+    }
+  }
   prev.PLANS[k]=out;
   for(const f of ['JAHRESPLAN2027','PLANS2027_INFO']) if(cur[f]&&cur[f][k]!==undefined){prev[f]=prev[f]||{};prev[f][k]=cur[f][k];}
   const nm=k.slice(2);

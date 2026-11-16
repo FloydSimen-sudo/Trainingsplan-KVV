@@ -210,7 +210,12 @@ def compose(path, make_item, cal, today=None):
                     continue
                 dow = rw['day']
                 m = PREFIX.match(part)
-                if m:
+                if rw['label'].lower().startswith(('andré', 'andre')):
+                    # Mobi Andre ist immer mittwochs (Floyd, 16.11.2026)
+                    dow = 2
+                    if m:
+                        part = m.group(2).strip()
+                elif m:
                     dow = ABBR[m.group(1).lower()]
                     part = m.group(2).strip()
                     if not part:
