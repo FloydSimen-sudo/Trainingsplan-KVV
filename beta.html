@@ -169,19 +169,20 @@
   .headerLogo{flex:none;height:26px;width:auto;object-fit:contain}
 
 
-  .tl{display:flex;flex-direction:column;gap:7px;margin:4px 0}
-  .tlTime{display:flex;justify-content:space-between;align-items:center;font:600 12px/1 Archivo,sans-serif;padding:7px 12px;border:1.5px solid #222;background:#a9c3e0;color:#111}
-  .tlTime.end{background:#eceff3}
-  .tlTime .a{font:400 10.5px/1 Archivo,sans-serif;opacity:.7}
-  .tlBlock{border:1.5px solid #222;padding:10px 12px;display:flex;flex-direction:column;gap:3px;box-sizing:border-box;color:#111}
-  .tlBlock .n{font:700 15px/1.2 Archivo,sans-serif}
-  .tlBlock .d{font:400 13px/1.2 Archivo,sans-serif}
-  .tlBlock .s{font:italic 400 11.5px/1.35 Archivo,sans-serif}
-  .tlBlock ul{margin:2px 0 0;padding-left:15px;font:400 11px/1.35 Archivo,sans-serif}
-  .tlBlock.red .n{color:#b00020}
-  .tlDiv{background:#a6a6a6;border:1.5px solid #222;text-align:center;font:700 12px/1 Archivo,sans-serif;padding:6px;color:#111}
-  .tlTotal{background:#f2f2f2;border:1.5px solid #222;text-align:center;font:700 15px/1.2 Archivo,sans-serif;padding:9px;color:#111}
-  .tlTotal .x{display:block;font:400 11px/1.3 Archivo,sans-serif;opacity:.7;margin-top:2px}
+  .tl{display:flex;flex-direction:column;gap:6px;margin:4px 0}
+  .tlTime{display:flex;justify-content:space-between;align-items:center;font:600 12px/1 'Roboto Mono',monospace;padding:9px 13px;border-radius:12px;border:1px solid var(--border2);background:var(--panel3);color:var(--tx)}
+  .tlTime.end{background:var(--panel)}
+  .tlTime .a{font:500 9.5px/1 'Roboto Mono',monospace;letter-spacing:.04em;color:var(--mu)}
+  .tlBlock{border:1px solid rgba(10,50,80,.16);border-radius:14px;padding:10px 13px;display:flex;flex-direction:column;gap:3px;box-sizing:border-box;color:var(--tx)}
+  .tlBlock .n{font:600 13px/1.3 Archivo,sans-serif}
+  .tlBlock .d{font:500 10.5px/1.2 'Roboto Mono',monospace;color:var(--tx3)}
+  .tlBlock .s{font:500 11px/1.35 Archivo,sans-serif;color:var(--tx3)}
+  .tlBlock ul{margin:2px 0 0;padding-left:15px;font:400 10.5px/1.4 Archivo,sans-serif;color:var(--tx3)}
+  .tlBlock.pause{border-style:dashed}
+  .tlBlock.red .n{color:var(--red);font-weight:700}
+  .tlDiv{background:var(--panel3);border-radius:10px;text-align:center;font:500 9.5px/1 'Roboto Mono',monospace;letter-spacing:.08em;text-transform:uppercase;padding:8px;color:var(--mu)}
+  .tlTotal{background:var(--panel2);border:1px solid var(--border2);border-radius:14px;text-align:center;font:600 14px/1.2 Archivo,sans-serif;padding:11px;color:var(--tx)}
+  .tlTotal .x{display:block;font:500 10px/1.3 'Roboto Mono',monospace;color:var(--mu);margin-top:3px}
 
   .trChips{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
   .trChip{border:1px solid #222;padding:5px 8px;font:600 12px/1.2 Archivo,sans-serif;color:#111}
@@ -726,7 +727,7 @@ function renderWoche(view, isSolo, key, hasSource, srcInfo){
       if(has(m.pause)) sub.push('Pause '+m.pause+' min');
       const hw = (it.sx && D.EXHOW) ? D.EXHOW[it.sx] : null;
       const h = Math.max(MIN_H, mins ? Math.round(mins*PX_PER_MIN) : MIN_H);
-      blocks.push(`<div class="tlBlock${it.red?' red':''}" style="background:${it.col ? '#'+esc(it.col) : (TL_COL[cat.name]||'#eee')};min-height:${h}px">
+      blocks.push(`<div class="tlBlock${it.red?' red':''}${it.pause?' pause':''}" style="background:${it.col ? '#'+esc(it.col) : (TL_COL[cat.name]||'#eee')};min-height:${h}px">
         <div class="n">${esc(nm)}</div>
         <div class="d">${mins ? durTxt(mins) : '-'}</div>
         ${sub.length ? `<div class="s">${sub.map(esc).join(' · ')}</div>` : ''}

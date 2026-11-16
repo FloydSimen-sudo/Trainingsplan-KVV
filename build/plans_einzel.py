@@ -356,6 +356,15 @@ def compose(path, make_item, cal, today=None):
                         continue
                     seen.add(k); keep.append(it)
                 c['items'] = keep
+        # Essen/Trinken (Trinkpause): laut Standardwoche SPOGY fest am Dienstag, 10 min, nach Technik/Taktik und vor Physis (Session 1)
+        if wd == 2 and sessions and any(c['items'] for c in sessions[0]['cats']):
+            _tc = next(c for c in sessions[0]['cats'] if c['name'] == 'Technik/Taktik')
+            _pi = make_item('Essen / Trinken', False)
+            _pi['match'] = {}
+            _pi['explicitTime'] = '10 min'
+            _pi['col'] = 'DDEBF7'
+            _pi['pause'] = True
+            _tc['items'].append(_pi)
         # Notizen (haben Vorrang)
         for si, s in enumerate(sessions):
             sfx = str(si + 1)
