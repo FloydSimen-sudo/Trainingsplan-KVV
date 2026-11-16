@@ -54,6 +54,9 @@ for(const k of Object.keys(cur.PLANS).filter(k=>k.startsWith('a:'))){
   const nm=k.slice(2);
   for(const f of ['JAHRESPLAN','JAHRESPLAN_SOURCE']) if(cur[f]&&cur[f][nm]!==undefined){prev[f]=prev[f]||{};prev[f][nm]=cur[f][nm];}
 }
+// Jahresplanung der Gruppen (nur Jahresplan, keine Einheiten) ebenfalls aktualisieren
+for(const k of Object.keys(cur.JAHRESPLAN2027||{}).filter(k=>k.startsWith('g:'))){prev.JAHRESPLAN2027=prev.JAHRESPLAN2027||{};prev.JAHRESPLAN2027[k]=cur.JAHRESPLAN2027[k];}
+for(const f of ['JAHRESPLAN_GROUP','JAHRESPLAN_GROUP_SOURCE']) if(cur[f]){prev[f]=prev[f]||{};for(const g of Object.keys(cur[f])) prev[f][g]=cur[f][g];}
 prev.EXHOW=Object.assign(prev.EXHOW||{},cur.EXHOW||{});
 fs.writeFileSync('tp-data.js','window.TPDATA = '+JSON.stringify(prev)+';\n');
 console.log('Vergangene Tage mit altem Inhalt:',keptPast,' neu zusammengesetzte Tage:',newDays);
