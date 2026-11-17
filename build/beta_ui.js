@@ -31,12 +31,12 @@ const CSS = `
 const JS = `
 const BT_COL = {Bouldern:'#0090c9', Lead:'#78b83f', Speed:'#c9a227'};
 const BT_UEB = 'https://kletternvorarlberg-my.sharepoint.com/:x:/g/personal/floyd_simen_klettern-vorarlberg_at/IQC9XgUg3engR7KFVrcHcok8AZ1cxB0C8wP0TQrGWXO8Y18?e=onBkcG';
-const BT_H1 = ['Theorie','Technikfokus','Technik/Taktik'], BT_H2 = ['Physis Klettern'];
+const BT_H1 = ['Technikfokus','Technik/Taktik'], BT_H2 = ['Physis Klettern'];
 function btName(it){ return String(it.ex||'').replace(/^\\s*\\d+(?:[.,]\\d+)?\\s*(?:h|std\\.?|min)\\s*/i,'').trim() || String(it.ex||''); }
 function btDur(n){ return n>=60 ? (Math.floor(n/60)+' h'+(n%60?' '+(n%60)+' min':'')) : (n+' min'); }
 function btItems(day, names){
   const out = [];
-  (day && day.sessions || []).forEach(s=>(s.cats||[]).forEach(c=>{ if(names.indexOf(c.name)>=0) (c.items||[]).forEach(it=>out.push({it:it, cat:c.name})); }));
+  (day && day.sessions || []).forEach(s=>(s.cats||[]).forEach(c=>{ if(names.indexOf(c.name)>=0) (c.items||[]).forEach(it=>{ if(!(names===BT_H1 && it.par)) out.push({it:it, cat:c.name}); }); }));
   return out;
 }
 function btCard(e){
@@ -65,7 +65,7 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
   const day = days[di] || null;
   const chips = days.map((dd,i)=>{
     const col = BT_COL[dd.ortType] || '#dfe5e9';
-    const main = btItems(dd, BT_H1.concat(BT_H2)).map(e=>btName(e.it)).slice(0,4).join(' · ');
+    const main = btItems(dd, BT_H1).concat(btItems(dd, BT_H2)).map(e=>btName(e.it)).slice(0,4).join(' · ');
     return '<button class="btChip'+(i===di?' sel':'')+'" data-act="day" data-i="'+i+'" style="background:'+col+'"><span class="dw">'+esc((dd.dow||'').slice(0,2).toUpperCase())+'</span><span class="dm">'+esc(dd.dom)+'</span>'+(main?'<span class="ct">'+esc(main)+'</span>':'')+'</button>';
   }).join('');
   let body = '';
@@ -79,7 +79,7 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     if(h1.length) body += '<div class="btSec"><div class="btSecH">Hauptteil 1</div>'+h1.map(btCard).join('')+'</div>';
     if(h2.length) body += '<div class="btSec"><div class="btSecH">Hauptteil 2</div>'+h2.map(btCard).join('')+'</div>';
     const rest = [];
-    (day.sessions||[]).forEach(s=>(s.cats||[]).forEach(c=>{ if(BT_H1.indexOf(c.name)<0 && BT_H2.indexOf(c.name)<0) (c.items||[]).forEach(it=>rest.push({it:it,cat:c.name})); }));
+    (day.sessions||[]).forEach(s=>(s.cats||[]).forEach(c=>{ (c.items||[]).forEach(it=>{ const inMain = (BT_H1.indexOf(c.name)>=0 && !it.par) || BT_H2.indexOf(c.name)>=0; if(!inMain) rest.push({it:it,cat:(c.name==='Technik/Taktik'?'Taktik':c.name)}); }); }));
     const notes = [];
     [day.sonstiges, day.notiz].concat((day.sessions||[]).map(s=>s.notiz)).forEach(t=>{ t=String(t||'').trim(); if(!t || t==='-' || notes.indexOf(t)>=0) return; if(/^mit\\s/i.test(t) || (day.zeit && t.indexOf(day.zeit.replace(/\\s/g,''))>=0) || (day.zeit && t.replace(/\\s/g,'').indexOf(day.zeit.replace(/\\s/g,''))>=0)) return; notes.push(t); });
     if(rest.length || notes.length){
