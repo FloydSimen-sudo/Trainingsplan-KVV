@@ -14,9 +14,9 @@ const CSS = `
 .btWk .n{font:800 22px/1.1 Archivo,sans-serif}
 .btWk .m{display:flex;flex-wrap:wrap;gap:4px 16px;font:700 14px/1.2 Archivo,sans-serif}
 .btChip .wk.st{background:#E8A33D;color:#000}
-.btPills{display:flex;gap:6px}
-.btPill{flex:1;text-align:center;padding:5px 8px;border-radius:999px;background:#eef2f5;border:1px solid rgba(10,50,80,.12);font:600 11px/1.2 Archivo,sans-serif;color:#000}
-.btPill b{font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.05em;color:#4a5b66;margin-right:4px}
+.btPills{display:flex;flex-direction:column;gap:5px}
+.btPill{display:block;width:100%;box-sizing:border-box;text-align:center;padding:5px 8px;border-radius:999px;background:#eef2f5;border:1px solid rgba(10,50,80,.12);font:600 11px/1.2 Archivo,sans-serif;color:#000}
+.btPill b{font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.05em;opacity:.7;margin-right:4px}
 .btBanner{border-radius:16px;padding:16px 16px 14px;color:#000;display:flex;flex-direction:column;gap:6px}
 .btBanner .d{font:600 12px/1 'Roboto Mono',monospace;letter-spacing:.04em;text-transform:uppercase}
 .btBanner .o{font:800 34px/1.05 Archivo,sans-serif;word-break:break-word}
@@ -105,7 +105,7 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     if(!hasTr && !notes.length) body += '<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>';
   }
   const wkOpen = btWkOpen(key, days).map(e=>'<div class="btNote">Wettkampf diese Woche (Tag offen): '+esc(e.name)+' · '+esc(e.ort)+' · '+esc(e.disc)+'</div>').join('') + btWkOpen(key, days, 'sonst').map(e=>'<div class="btNote">Termin diese Woche (Tag offen): '+esc(e.name)+'</div>').join('');
-  const ueb = '<a class="btUeb" href="'+BT_UEB+'" target="_blank" rel="noopener">Übungen</a>';
+  const ueb = '<a class="btUeb" href="'+BT_UEB+'" target="_blank" rel="noopener">Übungssammlung</a>';
   return nav + '<div class="btChips">'+chips+'</div>' + wkOpen + btPhasePills(key) + ueb + body;
 }
 `;

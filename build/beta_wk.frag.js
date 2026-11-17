@@ -57,6 +57,11 @@ function btBlockAt(bl, i){ return (bl||[]).find(b=>i>=b.s && i<b.s+b.n) || null;
 function btPhasePills(key){
   const J = (D.JAHRESPLAN2027||{})[key]; if(!J) return '';
   const i = (J.weeks||[]).findIndex(w=>w.y===state.year && w.kw===state.kw);
-  const t = (bl)=>{ const b = i>=0 ? btBlockAt(bl, i) : null; return b ? b.t : '-'; };
-  return '<div class="btPills"><span class="btPill"><b>Phase</b> '+esc(t((J.tracks||{}).phase))+'</span><span class="btPill"><b>Kraftausdauer</b> '+esc(t((J.tracks||{}).ka))+'</span></div>';
+  const pill = (label, bl)=>{
+    const b = i>=0 ? btBlockAt(bl, i) : null;
+    const col = (b && /^#[0-9a-f]{6}$/i.test(b.c||'')) ? b.c : '#eef2f5';
+    const n = parseInt(col.slice(1),16), lum = (0.299*(n>>16) + 0.587*((n>>8)&255) + 0.114*(n&255))/255;
+    return '<span class="btPill" style="background:'+col+';color:'+(lum<0.45?'#fff':'#000')+'"><b>'+label+'</b> '+esc(b ? b.t : '-')+'</span>';
+  };
+  return '<div class="btPills">'+pill('Phase', (J.tracks||{}).phase)+pill('Kraftausdauer', (J.tracks||{}).ka)+'</div>';
 }

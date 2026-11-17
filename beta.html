@@ -313,9 +313,9 @@
 .btWk .n{font:800 22px/1.1 Archivo,sans-serif}
 .btWk .m{display:flex;flex-wrap:wrap;gap:4px 16px;font:700 14px/1.2 Archivo,sans-serif}
 .btChip .wk.st{background:#E8A33D;color:#000}
-.btPills{display:flex;gap:6px}
-.btPill{flex:1;text-align:center;padding:5px 8px;border-radius:999px;background:#eef2f5;border:1px solid rgba(10,50,80,.12);font:600 11px/1.2 Archivo,sans-serif;color:#000}
-.btPill b{font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.05em;color:#4a5b66;margin-right:4px}
+.btPills{display:flex;flex-direction:column;gap:5px}
+.btPill{display:block;width:100%;box-sizing:border-box;text-align:center;padding:5px 8px;border-radius:999px;background:#eef2f5;border:1px solid rgba(10,50,80,.12);font:600 11px/1.2 Archivo,sans-serif;color:#000}
+.btPill b{font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.05em;opacity:.7;margin-right:4px}
 .btBanner{border-radius:16px;padding:16px 16px 14px;color:#000;display:flex;flex-direction:column;gap:6px}
 .btBanner .d{font:600 12px/1 'Roboto Mono',monospace;letter-spacing:.04em;text-transform:uppercase}
 .btBanner .o{font:800 34px/1.05 Archivo,sans-serif;word-break:break-word}
@@ -716,7 +716,7 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     if(!hasTr && !notes.length) body += '<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>';
   }
   const wkOpen = btWkOpen(key, days).map(e=>'<div class="btNote">Wettkampf diese Woche (Tag offen): '+esc(e.name)+' · '+esc(e.ort)+' · '+esc(e.disc)+'</div>').join('') + btWkOpen(key, days, 'sonst').map(e=>'<div class="btNote">Termin diese Woche (Tag offen): '+esc(e.name)+'</div>').join('');
-  const ueb = '<a class="btUeb" href="'+BT_UEB+'" target="_blank" rel="noopener">Übungen</a>';
+  const ueb = '<a class="btUeb" href="'+BT_UEB+'" target="_blank" rel="noopener">Übungssammlung</a>';
   return nav + '<div class="btChips">'+chips+'</div>' + wkOpen + btPhasePills(key) + ueb + body;
 }
 // ---- Wettkaempfe aus der Jahresplanung (JAHRESPLAN2027[key].wk, Quelle: WK-Zeilen der Trainingsplanung) ----
@@ -778,8 +778,13 @@ function btBlockAt(bl, i){ return (bl||[]).find(b=>i>=b.s && i<b.s+b.n) || null;
 function btPhasePills(key){
   const J = (D.JAHRESPLAN2027||{})[key]; if(!J) return '';
   const i = (J.weeks||[]).findIndex(w=>w.y===state.year && w.kw===state.kw);
-  const t = (bl)=>{ const b = i>=0 ? btBlockAt(bl, i) : null; return b ? b.t : '-'; };
-  return '<div class="btPills"><span class="btPill"><b>Phase</b> '+esc(t((J.tracks||{}).phase))+'</span><span class="btPill"><b>Kraftausdauer</b> '+esc(t((J.tracks||{}).ka))+'</span></div>';
+  const pill = (label, bl)=>{
+    const b = i>=0 ? btBlockAt(bl, i) : null;
+    const col = (b && /^#[0-9a-f]{6}$/i.test(b.c||'')) ? b.c : '#eef2f5';
+    const n = parseInt(col.slice(1),16), lum = (0.299*(n>>16) + 0.587*((n>>8)&255) + 0.114*(n&255))/255;
+    return '<span class="btPill" style="background:'+col+';color:'+(lum<0.45?'#fff':'#000')+'"><b>'+label+'</b> '+esc(b ? b.t : '-')+'</span>';
+  };
+  return '<div class="btPills">'+pill('Phase', (J.tracks||{}).phase)+pill('Kraftausdauer', (J.tracks||{}).ka)+'</div>';
 }
 
 function renderWochenplan(view, isSolo, key, hasSource, srcInfo){
