@@ -76,5 +76,8 @@ for(const f of ['JAHRESPLAN_GROUP','JAHRESPLAN_GROUP_SOURCE']) if(cur[f]){prev[f
   console.log('Gruppen-Orte aus Kalender: gesetzt/geaendert',setN,' geleert (kein Termin im Kalender)',clrN,' bis',HORIZON);
 }
 prev.EXHOW=Object.assign(prev.EXHOW||{},cur.EXHOW||{});
+const _p=n=>String(n).padStart(2,'0');
+{const f=new Intl.DateTimeFormat('de-AT',{timeZone:'Europe/Vienna',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()).reduce((o,x)=>(o[x.type]=x.value,o),{});
+prev.GENERATED=f.day+'.'+f.month+'.'+f.year+', '+f.hour+':'+f.minute;}
 fs.writeFileSync('tp-data.js','window.TPDATA = '+JSON.stringify(prev)+';\n');
 console.log('Vergangene Tage mit altem Inhalt:',keptPast,' neu zusammengesetzte Tage:',newDays);

@@ -17,6 +17,11 @@ const CSS = `
 .btPills{display:flex;flex-direction:column;gap:5px}
 .btPill{display:block;width:100%;box-sizing:border-box;text-align:center;padding:5px 8px;border-radius:999px;background:#eef2f5;border:1px solid rgba(10,50,80,.12);font:600 11px/1.2 Archivo,sans-serif;color:#000}
 .btPill b{font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.05em;opacity:.7;margin-right:4px}
+.btStand{margin:12px 18px 4px;padding:12px 14px;border-radius:14px;background:#e3f4f5;border:2px solid #128089;display:flex;align-items:center;gap:12px}
+.btStand .dot{width:12px;height:12px;border-radius:50%;background:#128089;flex:none;box-shadow:0 0 0 4px rgba(18,128,137,.2)}
+.btStand .k{font:700 10px/1 'Roboto Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#0b5a60}
+.btStand .v{font:800 18px/1.15 Archivo,sans-serif;color:#000}
+.btStand .f{font:500 10px/1.2 'Roboto Mono',monospace;color:#33565a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .btBanner{border-radius:16px;padding:16px 16px 14px;color:#000;display:flex;flex-direction:column;gap:6px}
 .btBanner .d{font:600 12px/1 'Roboto Mono',monospace;letter-spacing:.04em;text-transform:uppercase}
 .btBanner .o{font:800 34px/1.05 Archivo,sans-serif;word-break:break-word}
@@ -121,6 +126,20 @@ function apply(html) {
   rep("const tabNames = ['Dashboard','Woche','Wochenplan','Jahr','Statistik'];\n  if(isSolo){ tabNames.push('Benchmarks'); }\n  tabNames.push('Trainer');\n  if(tabNames.indexOf(state.tab) < 0) state.tab = 'Dashboard';",
       "const tabNames = ['Woche'];\n  state.tab = 'Woche';");
   rep("${state.tab==='Woche' ? renderWoche(view, isSolo, key, hasSource, srcInfo) : ''}", "${renderEinheitBeta(view, isSolo, key, hasSource, srcInfo)}");
+  rep(`<div class="syncbar">
+      <span class="dot"></span>
+      <div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0">
+        <span class="syncFile">\${esc(srcInfo)}</span>
+        <span class="syncInfo">Stand \${esc(D.GENERATED || '-')}</span>
+      </div>
+    </div>`, `<div class="btStand">
+      <span class="dot"></span>
+      <div style="flex:1;display:flex;flex-direction:column;gap:3px;min-width:0">
+        <span class="k">Letzte Aktualisierung</span>
+        <span class="v">\${esc(btStand(D.GENERATED))}</span>
+        <span class="f">\${esc(srcInfo)}</span>
+      </div>
+    </div>`);
   rep('<div class="tabs">\n      ${tabNames', '<div class="tabs" style="display:none">\n      ${tabNames');
   rep("      </div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){", "      </div>\n      <div class=\"btTrainer\">${renderTrainerspace(null)}</div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){");
   return html;

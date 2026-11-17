@@ -24,5 +24,8 @@ if(ok[GID]) for(const w of Object.values(P)) for(const d of (w.days||[])){
   if(t){ if(d.ort!==ORT[t]||d.ortType!==t) setN++; d.ort=ORT[t]; d.ortType=t; }
   else if(d.ort||d.ortType){ d.ort=null; d.ortType=null; clrN++; }
 }
+const _p=n=>String(n).padStart(2,'0');
+{const f=new Intl.DateTimeFormat('de-AT',{timeZone:'Europe/Vienna',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()).reduce((o,x)=>(o[x.type]=x.value,o),{});
+prev.GENERATED=f.day+'.'+f.month+'.'+f.year+', '+f.hour+':'+f.minute;}
 fs.writeFileSync('tp-data.js','window.TPDATA = '+JSON.stringify(prev)+';\n');
 console.log('Gruppe',GKEY,'aktualisiert; Orte aus Kalender gesetzt',setN,'geleert',clrN);
