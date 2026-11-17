@@ -106,7 +106,7 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
   }
   const wkOpen = btWkOpen(key, days).map(e=>'<div class="btNote">Wettkampf diese Woche (Tag offen): '+esc(e.name)+' · '+esc(e.ort)+' · '+esc(e.disc)+'</div>').join('') + btWkOpen(key, days, 'sonst').map(e=>'<div class="btNote">Termin diese Woche (Tag offen): '+esc(e.name)+'</div>').join('');
   const ueb = '<a class="btUeb" href="'+BT_UEB+'" target="_blank" rel="noopener">Übungssammlung</a>';
-  return nav + '<div class="btChips">'+chips+'</div>' + wkOpen + btPhasePills(key) + ueb + body;
+  return nav + btPhasePills(key) + '<div class="btChips">'+chips+'</div>' + wkOpen + ueb + body;
 }
 `;
 
