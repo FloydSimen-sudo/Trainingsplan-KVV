@@ -227,6 +227,14 @@ check('Dashboard: Kacheln fuer Adrian und alle Gruppen rendern ohne Absturz, ohn
   ['U9','U11I','U11II','U13 I','U13II','U15I','U15 II','SPOGY Gruppe'].forEach(g => { state.view={t:'g', id:g}; state.tab='Dashboard'; if (!renderApp().includes('dashGrid')) throw new Error('Dashboard leer: '+g); });
 });
 
+check('Woche-Reiter (Wochenplan): Inhalte nach Kategorie, kompakt, fuer Einzel und Gruppen', () => {
+  state.view = {t:'a', id:'Levi Strolz'}; state.tab='Wochenplan'; state.year=2026; state.kw=50;
+  let out = renderApp();
+  if (!out.includes('wpCat')) throw new Error('Wochenplan zeigt keine Kategorien');
+  if (out.includes('tlBlock')) throw new Error('Wochenplan darf keine Zeitleisten-Bloecke zeigen');
+  ['U9','U11I','U13 I','SPOGY Gruppe'].forEach(g => { state.view={t:'g', id:g}; state.tab='Wochenplan'; renderApp(); });
+});
+
 check('Jahr tab Gruppen (alle 7 + SPOGY) rendern den Zeitstrahl ohne Absturz', () => {
   ['U9','U11I','U11II','U13 I','U13II','U15I','U15 II','SPOGY Gruppe'].forEach(g => {
     state.view = {t:'g', id:g}; state.tab='Jahr';
