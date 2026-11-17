@@ -8,6 +8,11 @@ const CSS = `
 .btChip .dm{font:800 13px/1.1 Archivo,sans-serif}
 .btChip .ct{font:500 8.5px/1.2 Archivo,sans-serif;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:break-word;hyphens:auto}
 .btUeb{display:block;text-align:center;padding:12px;border-radius:12px;background:#005A96;color:#fff;font:700 14px/1 Archivo,sans-serif;text-decoration:none}
+.btChip .wk{margin-top:3px;padding:2px 4px;border-radius:5px;background:#000;color:#fff;font:700 8px/1.2 Archivo,sans-serif;overflow-wrap:anywhere}
+.btWk{border-radius:14px;padding:12px 14px;background:#fff;border:3px solid #d20028;color:#000;display:flex;flex-direction:column;gap:4px}
+.btWk .h{font:700 11px/1 'Roboto Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#d20028}
+.btWk .n{font:800 22px/1.1 Archivo,sans-serif}
+.btWk .m{display:flex;flex-wrap:wrap;gap:4px 16px;font:700 14px/1.2 Archivo,sans-serif}
 .btBanner{border-radius:16px;padding:16px 16px 14px;color:#000;display:flex;flex-direction:column;gap:6px}
 .btBanner .d{font:600 12px/1 'Roboto Mono',monospace;letter-spacing:.04em;text-transform:uppercase}
 .btBanner .o{font:800 34px/1.05 Archivo,sans-serif;word-break:break-word}
@@ -65,8 +70,10 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
   const day = days[di] || null;
   const chips = days.map((dd,i)=>{
     const col = BT_COL[dd.ortType] || '#dfe5e9';
-    const main = btItems(dd, BT_H1).concat(btItems(dd, BT_H2)).map(e=>btName(e.it)).slice(0,4).join(' · ');
-    return '<button class="btChip'+(i===di?' sel':'')+'" data-act="day" data-i="'+i+'" style="background:'+col+'"><span class="dw">'+esc((dd.dow||'').slice(0,2).toUpperCase())+'</span><span class="dm">'+esc(dd.dom)+'</span>'+(main?'<span class="ct">'+esc(main)+'</span>':'')+'</button>';
+    const main = btItems(dd, BT_H1).concat(btItems(dd, BT_H2)).filter(e=>!e.it.pause).map(e=>btName(e.it)).slice(0,4).join(' · ');
+    const wks = btWkDay(key, dd.date);
+    const wkTag = wks.length ? '<span class="wk">WK '+esc(wks.map(e=>e.ort!=='-'?e.ort:e.name).join(', '))+'</span>' : '';
+    return '<button class="btChip'+(i===di?' sel':'')+'" data-act="day" data-i="'+i+'" style="background:'+col+'"><span class="dw">'+esc((dd.dow||'').slice(0,2).toUpperCase())+'</span><span class="dm">'+esc(dd.dom)+'</span>'+wkTag+(main?'<span class="ct">'+esc(main)+'</span>':'')+'</button>';
   }).join('');
   let body = '';
   if(day){
@@ -75,13 +82,15 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     const hasTr = day.sessions && day.sessions.length;
     body += '<div class="btBanner" style="background:'+col+'"><span class="d">'+esc(day.dow+', '+day.dom)+'</span><span class="o">'+esc(day.ort || (hasTr ? 'Ort offen' : 'Trainingsfrei'))+'</span>'
       + ((day.zeit || trainer) ? '<div class="m">'+(day.zeit?'<span>'+esc(day.zeit)+'</span>':'')+(trainer?'<span>'+esc(trainer)+'</span>':'')+'</div>' : '')+'</div>';
+    const wkDay = btWkDay(key, day.date);
+    wkDay.forEach(e=>{ body += btWkCard(e); });
     const h1 = btItems(day, BT_H1), h2 = btItems(day, BT_H2);
     if(h1.length) body += '<div class="btSec"><div class="btSecH">Hauptteil 1</div>'+h1.map(btCard).join('')+'</div>';
     if(h2.length) body += '<div class="btSec"><div class="btSecH">Hauptteil 2</div>'+h2.map(btCard).join('')+'</div>';
     const rest = [];
     (day.sessions||[]).forEach(s=>(s.cats||[]).forEach(c=>{ (c.items||[]).forEach(it=>{ const inMain = (BT_H1.indexOf(c.name)>=0 && !it.par) || BT_H2.indexOf(c.name)>=0; if(!inMain) rest.push({it:it,cat:(c.name==='Technik/Taktik'?'Taktik':c.name)}); }); }));
     const notes = [];
-    [day.sonstiges, day.notiz].concat((day.sessions||[]).map(s=>s.notiz)).forEach(t=>{ t=String(t||'').trim(); if(!t || t==='-' || notes.indexOf(t)>=0) return; if(/^mit\\s/i.test(t) || (day.zeit && t.indexOf(day.zeit.replace(/\\s/g,''))>=0) || (day.zeit && t.replace(/\\s/g,'').indexOf(day.zeit.replace(/\\s/g,''))>=0)) return; notes.push(t); });
+    [day.sonstiges, day.notiz].concat((day.sessions||[]).map(s=>s.notiz)).forEach(t=>{ t=String(t||'').trim(); if(!t || t==='-' || notes.indexOf(t)>=0) return; if(wkDay.some(e=>e.ort!=='-' && t.indexOf(e.ort)>=0)) return; if(/^mit\\s/i.test(t) || (day.zeit && t.indexOf(day.zeit.replace(/\\s/g,''))>=0) || (day.zeit && t.replace(/\\s/g,'').indexOf(day.zeit.replace(/\\s/g,''))>=0)) return; notes.push(t); });
     if(rest.length || notes.length){
       body += '<div class="btSec"><div class="btSecH">Sonstige Inhalte</div>'
         + rest.map(e=>{ const mins = tpItemMin(e.it); return '<div class="btRow" style="background:'+(e.it.col?'#'+esc(e.it.col)+'55':'#fff')+'"><span class="c">'+esc(e.cat)+'</span><span class="n">'+esc(btName(e.it))+'</span><span class="d">'+(mins?esc(btDur(mins)):(e.it.par?'nebenbei':''))+'</span></div>'; }).join('')
@@ -89,8 +98,9 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     }
     if(!hasTr && !notes.length) body += '<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>';
   }
+  const wkOpen = btWkOpen(key, days).map(e=>'<div class="btNote">Wettkampf diese Woche (Tag offen): '+esc(e.name)+' · '+esc(e.ort)+' · '+esc(e.disc)+'</div>').join('');
   const ueb = '<a class="btUeb" href="'+BT_UEB+'" target="_blank" rel="noopener">Übungen</a>';
-  return nav + '<div class="btChips">'+chips+'</div>' + ueb + body;
+  return nav + '<div class="btChips">'+chips+'</div>' + wkOpen + ueb + body;
 }
 `;
 
@@ -101,7 +111,7 @@ function apply(html) {
     html = html.replace(a, () => b);
   };
   rep('</style>', CSS + '</style>');
-  rep('function renderWochenplan(', JS + '\nfunction renderWochenplan(');
+  rep('function renderWochenplan(', JS + require('fs').readFileSync(__dirname + '/beta_wk.frag.js', 'utf8') + '\nfunction renderWochenplan(');
   rep("const tabNames = ['Dashboard','Woche','Wochenplan','Jahr','Statistik'];\n  if(isSolo){ tabNames.push('Benchmarks'); }\n  tabNames.push('Trainer');\n  if(tabNames.indexOf(state.tab) < 0) state.tab = 'Dashboard';",
       "const tabNames = ['Woche'];\n  state.tab = 'Woche';");
   rep("${state.tab==='Woche' ? renderWoche(view, isSolo, key, hasSource, srcInfo) : ''}", "${renderEinheitBeta(view, isSolo, key, hasSource, srcInfo)}");
