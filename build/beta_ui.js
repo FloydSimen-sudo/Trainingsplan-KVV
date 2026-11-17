@@ -7,6 +7,7 @@ const CSS = `
 .btChip .dw{font:700 10px/1 'Roboto Mono',monospace}
 .btChip .dm{font:800 13px/1.1 Archivo,sans-serif}
 .btChip .ct{font:500 8.5px/1.2 Archivo,sans-serif;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:break-word;hyphens:auto}
+.btUeb{display:block;text-align:center;padding:12px;border-radius:12px;background:#005A96;color:#fff;font:700 14px/1 Archivo,sans-serif;text-decoration:none}
 .btBanner{border-radius:16px;padding:16px 16px 14px;color:#000;display:flex;flex-direction:column;gap:6px}
 .btBanner .d{font:600 12px/1 'Roboto Mono',monospace;letter-spacing:.04em;text-transform:uppercase}
 .btBanner .o{font:800 34px/1.05 Archivo,sans-serif;word-break:break-word}
@@ -29,7 +30,8 @@ const CSS = `
 
 const JS = `
 const BT_COL = {Bouldern:'#0090c9', Lead:'#78b83f', Speed:'#c9a227'};
-const BT_H1 = ['Technikfokus','Technik/Taktik'], BT_H2 = ['Physis Klettern'];
+const BT_UEB = 'https://kletternvorarlberg-my.sharepoint.com/:x:/g/personal/floyd_simen_klettern-vorarlberg_at/IQC9XgUg3engR7KFVrcHcok8AZ1cxB0C8wP0TQrGWXO8Y18?e=onBkcG';
+const BT_H1 = ['Theorie','Technikfokus','Technik/Taktik'], BT_H2 = ['Physis Klettern'];
 function btName(it){ return String(it.ex||'').replace(/^\\s*\\d+(?:[.,]\\d+)?\\s*(?:h|std\\.?|min)\\s*/i,'').trim() || String(it.ex||''); }
 function btDur(n){ return n>=60 ? (Math.floor(n/60)+' h'+(n%60?' '+(n%60)+' min':'')) : (n+' min'); }
 function btItems(day, names){
@@ -87,7 +89,8 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     }
     if(!hasTr && !notes.length) body += '<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>';
   }
-  return nav + '<div class="btChips">'+chips+'</div>' + body;
+  const ueb = '<a class="btUeb" href="'+BT_UEB+'" target="_blank" rel="noopener">Übungen</a>';
+  return nav + '<div class="btChips">'+chips+'</div>' + ueb + body;
 }
 `;
 
