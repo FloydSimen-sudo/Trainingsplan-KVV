@@ -2223,10 +2223,14 @@ def main():
             else:
                 JAHRESPLAN_GROUP[gid27] = legacy27
                 JAHRESPLAN_GROUP_SOURCE[gid27] = src27
-        if key27.startswith('a:') and not LIVE_MODE:
-            # Einzelathleten (Struktur ab 16.11.2026): Einheit aus 'Trainingsplanung' + 'Notizen' + Google-Kalender
-            _ekal = plans_einzel.load_calendar(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'einzel_kalender.json'))
-            _nw = plans_einzel.compose(f27, _mk27, _ekal)
+        if (key27.startswith('a:') or key27.startswith('g:')) and not LIVE_MODE:
+            # Einzelathleten UND Gruppen (Struktur ab 16.11.2026): Einheit aus 'Trainingsplanung' + 'Notizen' + Google-Kalender
+            _bd = os.path.dirname(os.path.abspath(__file__))
+            if key27.startswith('a:'):
+                _ekal = plans_einzel.load_calendar(os.path.join(_bd, 'einzel_kalender.json'))
+            else:
+                _ekal = (plans_einzel.load_calendar(os.path.join(_bd, 'gruppen_kalender.json')) or {}).get(fname27, {})
+            _nw = plans_einzel.compose(f27, _mk27, _ekal, pause=key27.startswith('a:'))
             _tg = PLANS.setdefault(key27, {})
             for _wk, _w in _nw.items():
                 _old = _tg.get(_wk)

@@ -26,6 +26,7 @@ ROWMAP = [
     ('physis lead', 'Physis Klettern', 2, None),
     ('aerob', 'Physis Klettern', 1, None),
     ('jule', 'Athletik + Mentales', 2, None),
+    ('selbst', 'Athletik + Mentales', 1, None),
     ('andré', 'Athletik + Mentales', 1, None),
     ('andre', 'Athletik + Mentales', 1, None),
     ('finger', 'Athletik + Mentales', 1, None),
@@ -211,7 +212,7 @@ def _notizen(wb):
     return out
 
 
-def compose(path, make_item, cal, today=None):
+def compose(path, make_item, cal, today=None, pause=True):
     """-> weeks dict {'YYYY-KW': {'days':[7], 'span','year','kw'}} ab START_DATE."""
     try:
         wb = openpyxl.load_workbook(path, data_only=True)
@@ -359,7 +360,7 @@ def compose(path, make_item, cal, today=None):
                     seen.add(k); keep.append(it)
                 c['items'] = keep
         # Essen/Trinken (Trinkpause): laut Standardwoche SPOGY fest am Dienstag, 10 min, nach Technik/Taktik und vor Physis (Session 1)
-        if wd == 2 and sessions and any(c['items'] for c in sessions[0]['cats'] if c['name'] in ('Technik/Taktik', 'Physis Klettern')):
+        if pause and wd == 2 and sessions and any(c['items'] for c in sessions[0]['cats'] if c['name'] in ('Technik/Taktik', 'Physis Klettern')):
             _tc = next(c for c in sessions[0]['cats'] if c['name'] == 'Technik/Taktik')
             _pi = make_item('Essen / Trinken', False)
             _pi['match'] = {}

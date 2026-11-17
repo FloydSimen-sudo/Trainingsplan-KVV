@@ -49,7 +49,7 @@ def _known(it, parse_dauer):
 def apply(plans, parse_dauer):
     n_set = 0
     for key, weeks in plans.items():
-        if not key.startswith('a:'):
+        if not key.startswith(('a:', 'g:')):
             continue
         for w in weeks.values():
             for day in w.get('days', []):
@@ -117,7 +117,7 @@ def apply_diff(plans):
     geplanten Gesamtdauer der Session (aus dem Google Kalender). Aufteilung nach Standardwoche-Gewichten, sonst gleichmaessig."""
     n = 0
     for key, weeks in plans.items():
-        if not key.startswith('a:'):
+        if not key.startswith(('a:', 'g:')):
             continue
         for w in weeks.values():
             for day in w.get('days', []):
@@ -147,17 +147,34 @@ def apply_total(plans):
     """Gesamte Trainingszeit je Tag: Summe der Kalender-Sessions, sonst Summe der Standardwoche SPOGY (day['totMin'], day['totSrc'])."""
     n = 0
     for key, weeks in plans.items():
-        if not key.startswith('a:'):
+        if not key.startswith(('a:', 'g:')):
             continue
         for w in weeks.values():
             for day in w.get('days', []):
                 day.pop('totMin', None); day.pop('totSrc', None)
                 if not day.get('sessions'):
                     continue
-                cal = sum(s.get('dur') or 0 for s in day['sessions'])
+                iv = []
+                for s_ in day['sessions']:
+                    try:
+                        a = [int(x) for x in str(s_.get('time')).split(':')[:2]]; b = [int(x) for x in str(s_.get('end')).split(':')[:2]]
+                        if s_.get('dur'):
+                            iv.append((a[0] * 60 + a[1], b[0] * 60 + b[1]))
+                    except Exception:
+                        pass
+                iv.sort(); cal = 0; cur = None
+                for a_, b_ in iv:   # Vereinigung, damit sich ueberlappende Termine nicht doppelt zaehlen
+                    if cur and a_ <= cur[1]:
+                        cur = (cur[0], max(cur[1], b_))
+                    else:
+                        if cur: cal += cur[1] - cur[0]
+                        cur = (a_, b_)
+                if cur: cal += cur[1] - cur[0]
                 if cal:
                     day['totMin'] = cal; day['totSrc'] = 'Kalender'
                 else:
+                    if not key.startswith('a:'):
+                        continue   # Standardwoche SPOGY gilt nur fuer Einzelathleten
                     try:
                         wd = date.fromisoformat(day['date']).weekday()
                     except Exception:
