@@ -5,7 +5,7 @@ function btParseWk(text, kind){
   const parts = String(text||'').split(/\s+\/\s+(?=[A-Za-zÖ])/);
   return parts.map(p=>{
     let range = null, m;
-    if((m = /(\d{1,2})\.(\d{1,2})\.\s*[-–]\s*(\d{1,2})\.(\d{1,2})\./.exec(p))) range = [(+m[2])*100+(+m[1]), (+m[4])*100+(+m[3])];
+    if((m = /(\d{1,2})\.(\d{1,2})\.\s*[-–\/]\s*(\d{1,2})\.(\d{1,2})\./.exec(p))) range = [(+m[2])*100+(+m[1]), (+m[4])*100+(+m[3])];
     else if((m = /(\d{1,2})\.?\s*[-–\/]+\s*(\d{1,2})\.(\d{1,2})\./.exec(p))) range = [(+m[3])*100+(+m[1]), (+m[3])*100+(+m[2])];
     else if((m = /(\d{1,2})\.(\d{1,2})\./.exec(p))) range = [(+m[2])*100+(+m[1]), (+m[2])*100+(+m[1])];
     let c = p.replace(/\b\d{1,2}\.\s*oder\b/g,' ').replace(/[\d.\/\-–]*\d\.\d{1,2}\.+/g,' ').replace(/\((?:TBC|AK\?|Ort TBC)\)|\?/g,' ').replace(/\s+/g,' ').trim();
@@ -23,11 +23,11 @@ function btParseWk(text, kind){
   });
 }
 function btDayNum(ds){ const m = /(\d{4})-(\d{2})-(\d{2})/.exec(ds||''); return m ? [new Date(ds+'T00:00:00Z').getTime(), (+m[2])*100+(+m[3])] : null; }
-function btWkDay(key, ds){
-  const J = (D.JAHRESPLAN2027||{})[key]; const dn = btDayNum(ds);
-  if(!J || !J.wk || !dn) return [];
+function btWkDay(key, ds, field){
+  const J = (D.JAHRESPLAN2027||{})[key]; const dn = btDayNum(ds); field = field || 'wk';
+  if(!J || !J[field] || !dn) return [];
   const out = [], seen = {};
-  J.wk.forEach(w=>{
+  J[field].forEach(w=>{
     const wd = btDayNum(w.date); if(!wd || Math.abs(wd[0]-dn[0]) > 12*86400000) return;
     btParseWk(w.name, w.kind).forEach(e=>{
       if(!e.range || dn[1] < e.range[0] || dn[1] > e.range[1]) return;
@@ -36,11 +36,12 @@ function btWkDay(key, ds){
   });
   return out;
 }
-function btWkOpen(key, days){
-  const J = (D.JAHRESPLAN2027||{})[key]; if(!J || !J.wk || !days.length) return [];
+function btWkOpen(key, days, field){
+  field = field || 'wk';
+  const J = (D.JAHRESPLAN2027||{})[key]; if(!J || !J[field] || !days.length) return [];
   const a = btDayNum(days[0].date), b = btDayNum(days[days.length-1].date); if(!a || !b) return [];
   const out = [];
-  J.wk.forEach(w=>{
+  J[field].forEach(w=>{
     const wd = btDayNum(w.date); if(!wd || wd[0] < a[0] || wd[0] > b[0]) return;
     btParseWk(w.name, w.kind).forEach(e=>{ if(!e.range) out.push(e); });
   });
@@ -48,4 +49,14 @@ function btWkOpen(key, days){
 }
 function btWkCard(e){
   return '<div class="btWk"><div class="h">Wettkampf</div><div class="n">'+esc(e.name)+'</div><div class="m"><span>Ort: '+esc(e.ort)+'</span><span>Disziplin: '+esc(e.disc)+'</span></div></div>';
+}
+function btSonstCard(e){
+  return '<div class="btWk" style="border-color:#E8A33D"><div class="h" style="color:#b9770e">Termin</div><div class="n">'+esc(e.name)+'</div></div>';
+}
+function btBlockAt(bl, i){ return (bl||[]).find(b=>i>=b.s && i<b.s+b.n) || null; }
+function btPhasePills(key){
+  const J = (D.JAHRESPLAN2027||{})[key]; if(!J) return '';
+  const i = (J.weeks||[]).findIndex(w=>w.y===state.year && w.kw===state.kw);
+  const t = (bl)=>{ const b = i>=0 ? btBlockAt(bl, i) : null; return b ? b.t : '-'; };
+  return '<div class="btPills"><span class="btPill"><b>Phase</b> '+esc(t((J.tracks||{}).phase))+'</span><span class="btPill"><b>Kraftausdauer</b> '+esc(t((J.tracks||{}).ka))+'</span></div>';
 }

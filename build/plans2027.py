@@ -205,7 +205,9 @@ def _val(ws, mm, r, c):
 TRACKS = [  # (key, Label in Spalte A/B, Anzeigename)
     ('wkB', 'bouldern', 'WK Bouldern'),
     ('wkWC', 'world cups', 'World Cups'),
+    ('wkS', 'speed', 'WK Speed'),
     ('wkL', 'lead', 'WK Lead'),
+    ('sonst', 'sonstiges', 'Sonstiges (Termine)'),
     ('test', 'testung', 'Testung'),
     ('fels', 'fels', 'Fels'),
     ('ferien', 'schulferien', 'Schulferien'),
@@ -328,18 +330,19 @@ def parse_jahresplanung(path, cfg=None):
         })
 
     return {'source': os.path.basename(path), 'weeks': weeks, 'tracks': tracks, 'rows': rows,
-            'wk': wk_list(weeks, tracks)}
+            'wk': wk_list(weeks, tracks),
+            'sonst': wk_list(weeks, tracks, (('sonst', 'Sonstiges'),))}
 
 
-WK_DATE_FULL_RE = re.compile(r'(\d{1,2})\.(\d{1,2})\.\s*[-–]\s*\d{1,2}\.\d{1,2}\.')
+WK_DATE_FULL_RE = re.compile(r'(\d{1,2})\.(\d{1,2})\.\s*[-–/]\s*\d{1,2}\.\d{1,2}\.')
 WK_DATE_RE = re.compile(r'(\d{1,2})(?:\s*[.\/,\-–]{1,3}\s*\d{1,2})*\.\s*(\d{1,2})\.')
 
 
-def wk_list(weeks, tracks):
+def wk_list(weeks, tracks, kinds=(('wkB', 'Bouldern'), ('wkS', 'Speed'), ('wkWC', 'World Cup'), ('wkL', 'Lead'))):
     """Wettkampfliste [{date, name, kind}] aus den WK-Zeilen. Datum = erstes Datum im Text
     (z.B. '21/22.11.' -> 21.11.); ohne lesbares Datum der Montag der Blockwoche (approx=True)."""
     out = []
-    for key, kind in (('wkB', 'Bouldern'), ('wkWC', 'World Cup'), ('wkL', 'Lead')):
+    for key, kind in kinds:
         for b in tracks.get(key, []):
             mon = date.fromisoformat(weeks[b['s']]['mon'])
             end = mon + timedelta(days=7 * b['n'] - 1)

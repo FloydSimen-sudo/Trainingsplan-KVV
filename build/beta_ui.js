@@ -13,6 +13,10 @@ const CSS = `
 .btWk .h{font:700 11px/1 'Roboto Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#d20028}
 .btWk .n{font:800 22px/1.1 Archivo,sans-serif}
 .btWk .m{display:flex;flex-wrap:wrap;gap:4px 16px;font:700 14px/1.2 Archivo,sans-serif}
+.btChip .wk.st{background:#E8A33D;color:#000}
+.btPills{display:flex;gap:6px}
+.btPill{flex:1;text-align:center;padding:5px 8px;border-radius:999px;background:#eef2f5;border:1px solid rgba(10,50,80,.12);font:600 11px/1.2 Archivo,sans-serif;color:#000}
+.btPill b{font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.05em;color:#4a5b66;margin-right:4px}
 .btBanner{border-radius:16px;padding:16px 16px 14px;color:#000;display:flex;flex-direction:column;gap:6px}
 .btBanner .d{font:600 12px/1 'Roboto Mono',monospace;letter-spacing:.04em;text-transform:uppercase}
 .btBanner .o{font:800 34px/1.05 Archivo,sans-serif;word-break:break-word}
@@ -72,7 +76,8 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     const col = BT_COL[dd.ortType] || '#dfe5e9';
     const main = btItems(dd, BT_H1).concat(btItems(dd, BT_H2)).filter(e=>!e.it.pause).map(e=>btName(e.it)).slice(0,4).join(' · ');
     const wks = btWkDay(key, dd.date);
-    const wkTag = wks.length ? '<span class="wk">WK '+esc(wks.map(e=>e.ort!=='-'?e.ort:e.name).join(', '))+'</span>' : '';
+    const sts = btWkDay(key, dd.date, 'sonst');
+    const wkTag = (wks.length ? '<span class="wk">WK '+esc(wks.map(e=>e.ort!=='-'?e.ort:e.name).join(', '))+'</span>' : '') + (sts.length ? '<span class="wk st">'+esc(sts.map(e=>e.name).join(', '))+'</span>' : '');
     return '<button class="btChip'+(i===di?' sel':'')+'" data-act="day" data-i="'+i+'" style="background:'+col+'"><span class="dw">'+esc((dd.dow||'').slice(0,2).toUpperCase())+'</span><span class="dm">'+esc(dd.dom)+'</span>'+wkTag+(main?'<span class="ct">'+esc(main)+'</span>':'')+'</button>';
   }).join('');
   let body = '';
@@ -84,6 +89,7 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
       + ((day.zeit || trainer) ? '<div class="m">'+(day.zeit?'<span>'+esc(day.zeit)+'</span>':'')+(trainer?'<span>'+esc(trainer)+'</span>':'')+'</div>' : '')+'</div>';
     const wkDay = btWkDay(key, day.date);
     wkDay.forEach(e=>{ body += btWkCard(e); });
+    btWkDay(key, day.date, 'sonst').forEach(e=>{ body += btSonstCard(e); });
     const h1 = btItems(day, BT_H1), h2 = btItems(day, BT_H2);
     if(h1.length) body += '<div class="btSec"><div class="btSecH">Hauptteil 1</div>'+h1.map(btCard).join('')+'</div>';
     if(h2.length) body += '<div class="btSec"><div class="btSecH">Hauptteil 2</div>'+h2.map(btCard).join('')+'</div>';
@@ -98,9 +104,9 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     }
     if(!hasTr && !notes.length) body += '<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>';
   }
-  const wkOpen = btWkOpen(key, days).map(e=>'<div class="btNote">Wettkampf diese Woche (Tag offen): '+esc(e.name)+' · '+esc(e.ort)+' · '+esc(e.disc)+'</div>').join('');
+  const wkOpen = btWkOpen(key, days).map(e=>'<div class="btNote">Wettkampf diese Woche (Tag offen): '+esc(e.name)+' · '+esc(e.ort)+' · '+esc(e.disc)+'</div>').join('') + btWkOpen(key, days, 'sonst').map(e=>'<div class="btNote">Termin diese Woche (Tag offen): '+esc(e.name)+'</div>').join('');
   const ueb = '<a class="btUeb" href="'+BT_UEB+'" target="_blank" rel="noopener">Übungen</a>';
-  return nav + '<div class="btChips">'+chips+'</div>' + wkOpen + ueb + body;
+  return nav + '<div class="btChips">'+chips+'</div>' + wkOpen + btPhasePills(key) + ueb + body;
 }
 `;
 
