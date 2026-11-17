@@ -41,11 +41,12 @@ function filterBeta(D){
   out.GROUPS = D.GROUPS.filter(g => g.id === GRP).concat(spogy ? [Object.assign({}, spogy, {athletes: spogy.athletes.filter(a => a.n === ATH)})] : []);
   return out;
 }
-function makeBetaHtml(html){
+function makeBetaHtml(html, ui){
   html = addBetaButton(html);
+  if (ui) html = require('./beta_ui').apply(html);
   const rep = (a, b) => { if (!html.includes(a)) throw new Error('nicht gefunden: ' + a.slice(0,50)); html = html.split(a).join(b); };
   rep('<script src="./tp-data.enc.js"></script>', '<script src="./beta-data.enc.js"></script>');
-  rep('<script src="./trainer-data.enc.js"></script>\n', '');
+  if (!ui) rep('<script src="./trainer-data.enc.js"></script>\n', '');
   rep("sessionStorage.getItem('tpPw')", "sessionStorage.getItem('tpPwBeta')");
   rep("sessionStorage.setItem('tpPw', password)", "sessionStorage.setItem('tpPwBeta', password)");
   rep('<title>Trainingspläne KVV</title>', '<title>BETA · Trainingspläne KVV</title>');
@@ -70,11 +71,11 @@ if (a[0] === '--live') {            // alte UI + Beta-Button
   fs.writeFileSync('index.html', addBetaButton(fs.readFileSync(a[1], 'utf8')));
   console.log('OK index.html (alte Oberflaeche + Beta-Button)');
 } else if (a[0] === '--promote') {  // neue UI fuer alle
-  fs.writeFileSync('index.html', fromBetaToLive(fs.readFileSync('beta.html', 'utf8')));
+  fs.writeFileSync('index.html', fromBetaToLive(makeBetaHtml(fs.readFileSync('index-live.html', 'utf8'), false)));
   console.log('OK index.html aus beta.html. Danach: TP_PASSWORD=... node build/encrypt_tpdata.js');
 } else {
   const src = fs.readFileSync('index-live.html', 'utf8');
-  fs.writeFileSync('beta.html', makeBetaHtml(src));
+  fs.writeFileSync('beta.html', makeBetaHtml(src, true));
   fs.writeFileSync('beta-data.enc.js', encrypt(JSON.stringify(filterBeta(loadData())), BETA_PW));
   console.log('OK beta.html + beta-data.enc.js (Passwort ' + BETA_PW + ')');
 }
