@@ -113,7 +113,7 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     const trainer = trainerDisplay(isSolo ? null : view.id, day);
     const hasTr = day.sessions && day.sessions.length;
     const cxd = day.cancel && !day.cancel.p;
-    body += '<div class="btBanner" style="background:'+(cxd?'#9aa3a9;color:#000':col)+'"><span class="d">'+esc(day.dow+', '+day.dom)+'</span><span class="o">'+(cxd?'Training entfällt':esc(day.ort || (hasTr ? 'Ort offen' : 'Trainingsfrei')))+'</span>'+(day.cancel?'<span style="font:700 16px Archivo,sans-serif">'+esc(day.cancel.r)+'</span>':'')+'
+    body += '<div class="btBanner" style="background:'+(cxd?'#9aa3a9;color:#000':col)+'"><span class="d">'+esc(day.dow+', '+day.dom)+'</span><span class="o">'+(cxd?'Training entfällt':esc(day.ort || (hasTr ? 'Ort offen' : 'Trainingsfrei')))+'</span>'+(day.cancel?'<span style="font:700 16px Archivo,sans-serif">'+esc(day.cancel.r)+'</span>':'')
       + ((day.zeit || trainer) ? '<div class="m">'+(day.zeit?'<span>'+esc(day.zeit)+'</span>':'')+(trainer?'<span>'+esc(trainer)+'</span>':'')+'</div>' : '')+'</div>';
     const wkDay = btWkDay(key, day.date);
     wkDay.forEach(e=>{ body += btWkCard(e); });
