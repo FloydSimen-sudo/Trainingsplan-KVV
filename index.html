@@ -380,8 +380,8 @@ function addDays(year, kw, day, delta){
   const dayIdx = Math.round((d - wkMonday) / 86400000);
   return {year: wk.year, kw: wk.kw, day: dayIdx};
 }
-const NOW = getISOWeek(new Date());
-const NOW_TODAY = (() => {
+let NOW = getISOWeek(new Date());
+let NOW_TODAY = (() => {
   const now = new Date();
   const wk = getISOWeek(now);
   const monday = isoWeekMonday(wk.year, wk.kw);
@@ -456,7 +456,7 @@ const state = {
   zsOpen: {}, zsSel: null,
   view: null,
   tab: 'Dashboard',
-  year: NOW.year, kw: NOW.kw, day: 0,
+  year: NOW_TODAY.year, kw: NOW_TODAY.kw, day: NOW_TODAY.day,
   weekView: 'tage',
   picker: false, openSlot: null,
   trainerGroup: null, trainerDay: null, trainerMsg: '', trainerBusy: false,
@@ -464,6 +464,25 @@ const state = {
 };
 
 function setState(patch){ Object.assign(state, patch); render(); }
+
+// Tageswechsel: NOW/NOW_TODAY neu berechnen, wenn die Seite ueber Mitternacht offen blieb.
+let LAST_TODAY_KEY = new Date().toDateString();
+function syncToday(){
+  const k = new Date().toDateString();
+  if(k === LAST_TODAY_KEY) return;
+  LAST_TODAY_KEY = k;
+  const now = new Date();
+  NOW = getISOWeek(now);
+  const wk = getISOWeek(now);
+  const monday = isoWeekMonday(wk.year, wk.kw);
+  const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  NOW_TODAY = {year: wk.year, kw: wk.kw, day: Math.round((today - monday) / 86400000)};
+  setState({year: NOW_TODAY.year, kw: NOW_TODAY.kw, day: NOW_TODAY.day});
+}
+if(typeof document !== 'undefined' && document.addEventListener){
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) syncToday(); });
+  window.addEventListener('focus', syncToday);
+}
 
 // ---- Render ----
 function render(){
@@ -1761,9 +1780,9 @@ function wireEvents(){
         const t = elm.getAttribute('data-t');
         const isAll = t === 'all';
         setState({view:{t, id:elm.getAttribute('data-id')}, picker:false, tab:'Dashboard',
-          day: isAll ? NOW_TODAY.day : 0, year: isAll ? NOW_TODAY.year : NOW.year, kw: isAll ? NOW_TODAY.kw : NOW.kw});
+          day: NOW_TODAY.day, year: NOW_TODAY.year, kw: NOW_TODAY.kw});
       }
-      else if(act==='pickGroup'){ setState({view:{t:'g', id:elm.getAttribute('data-id')}, tab:'Dashboard', day:0, year:NOW.year, kw:NOW.kw}); }
+      else if(act==='pickGroup'){ setState({view:{t:'g', id:elm.getAttribute('data-id')}, tab:'Dashboard', day:NOW_TODAY.day, year:NOW_TODAY.year, kw:NOW_TODAY.kw}); }
     });
   });
 }
