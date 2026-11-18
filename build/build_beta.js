@@ -82,7 +82,7 @@ function fromBetaToLive(beta){
   rep("tpPwBeta", "tpPw");
   rep('<title>BETA · Trainingspläne KVV</title>', '<title>Trainingspläne KVV</title>');
   rep(BADGE, '');
-  rep(LIVE_A, BETA_A);
+  rep(LIVE_A, '');
   rep('BETA-Testversion (alle Einzel- und Gruppenpläne). Bitte Passwort eingeben.', 'Bitte Passwort eingeben, um die Trainingspläne zu öffnen.');
   return h;
 }
@@ -91,8 +91,10 @@ if (a[0] === '--live') {            // alte UI + Beta-Button
   fs.writeFileSync('index.html', addBetaButton(fs.readFileSync(a[1], 'utf8')));
   console.log('OK index.html (alte Oberflaeche + Beta-Button)');
 } else if (a[0] === '--promote') {  // neue UI fuer alle
-  fs.writeFileSync('index.html', fromBetaToLive(makeBetaHtml(fs.readFileSync('index-live.html', 'utf8'), false)));
-  console.log('OK index.html aus beta.html. Danach: TP_PASSWORD=... node build/encrypt_tpdata.js');
+  if (!process.env.TP_PASSWORD) throw new Error('TP_PASSWORD fehlt');
+  fs.writeFileSync('index.html', fromBetaToLive(makeBetaHtml(fs.readFileSync('index-live.html', 'utf8'), true)));
+  fs.writeFileSync('tp-data.enc.js', encrypt(JSON.stringify(filterBeta(loadData())), process.env.TP_PASSWORD.trim()));
+  console.log('OK index.html (neue UI) + tp-data.enc.js (inkl. Kalender-Orte/Entfaellt). Alte Fassung: archiv/ + Tag live-2026-11-18-alt');
 } else {
   const src = fs.readFileSync('index-live.html', 'utf8');
   fs.writeFileSync('beta.html', makeBetaHtml(src, true));

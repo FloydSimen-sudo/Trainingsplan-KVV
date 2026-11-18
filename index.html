@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="./tp-data.enc.js"></script>
 <script src="./trainer-data.enc.js"></script>
+<script src="./trainer-data.enc.js"></script>
 <style>
   :root{
     --bg:#eef3f7; --bg2:#ffffff; --panel:#f5f8fb; --panel2:#e9eff5; --panel3:#e0e8f0; --panel4:#f7fafc;
@@ -299,6 +300,66 @@
   .phaseChip{padding:3px 8px;border-radius:7px;font:600 9.5px/1 'Roboto Mono',monospace;letter-spacing:.05em;text-transform:uppercase;flex:none}
   .reduTag{padding:2px 6px;border-radius:5px;font:500 8px/1 'Roboto Mono',monospace;letter-spacing:.04em;color:var(--di);border:1px dashed var(--border2);flex:none}
   .jahrRowHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+.btChips{display:flex;gap:5px}
+.btChip{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:6px 5px 7px;border-radius:10px;border:2px solid transparent;cursor:pointer;color:#000;text-align:left;font-family:Archivo,sans-serif;overflow:hidden}
+.btChip.sel{border-color:#000}
+.btChip .dw{font:700 10px/1 'Roboto Mono',monospace}
+.btChip .dm{font:800 13px/1.1 Archivo,sans-serif}
+.btChip .ct{font:500 8.5px/1.2 Archivo,sans-serif;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:break-word;hyphens:auto}
+.btUeb{display:block;text-align:center;padding:12px;border-radius:12px;background:#005A96;color:#fff;font:700 14px/1 Archivo,sans-serif;text-decoration:none}
+.btChip .wk{margin-top:3px;padding:2px 4px;border-radius:5px;background:#000;color:#fff;font:700 8px/1.2 Archivo,sans-serif;overflow-wrap:anywhere}
+.btWk{border-radius:14px;padding:12px 14px;background:#fff;border:3px solid #d20028;color:#000;display:flex;flex-direction:column;gap:4px}
+.btWk .h{font:700 11px/1 'Roboto Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#d20028}
+.btWk .n{font:800 22px/1.1 Archivo,sans-serif}
+.btWk .m{display:flex;flex-wrap:wrap;gap:4px 16px;font:700 14px/1.2 Archivo,sans-serif}
+.btChip .wk.st{background:#E8A33D;color:#000}
+.btPills{display:flex;flex-direction:column;gap:5px}
+.btPill{display:block;width:100%;box-sizing:border-box;text-align:center;padding:5px 8px;border-radius:999px;background:#eef2f5;border:1px solid rgba(10,50,80,.12);font:600 11px/1.2 Archivo,sans-serif;color:#000}
+.btPill b{font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.05em;opacity:.7;margin-right:4px}
+.btStand{margin:10px 18px 2px;padding:5px 10px;border-radius:999px;background:#f3f6f8;border:1px solid rgba(10,50,80,.12);display:flex;align-items:center;gap:7px}
+.btStand .dot{width:7px;height:7px;border-radius:50%;background:#128089;flex:none}
+.btStand .k{display:none}
+.btStand .v{font:600 11px/1.2 Archivo,sans-serif;color:#33434d;white-space:nowrap}
+.btStand .f{display:none}
+.header{flex-wrap:wrap;row-gap:8px}
+.header .headerBtn{flex:1 1 220px !important;min-width:0}
+.header .headerLogo{order:2}
+.header > :not(.brandMark):not(.headerBtn):not(.headerLogo){order:3;flex:1 1 28% !important;justify-content:center;background:#005A96 !important}
+.jz{display:flex;flex-direction:column;gap:3px;padding-bottom:90px}
+.jzHead,.jzRow{display:grid;grid-template-columns:58px 74px 74px 1fr;gap:4px}
+.jzHead{background:#fff;padding:6px 0;font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.06em;color:#4a5b66;border-bottom:1px solid rgba(10,50,80,.15)}
+.jzYear{font:800 18px/1 Archivo,sans-serif;padding:8px 0 2px}
+.jzRow{min-height:46px;align-items:stretch}
+.jzRow.cur .jzW{outline:2px solid #d20028;border-radius:6px}
+.jzW{display:flex;flex-direction:column;justify-content:center;padding:2px 4px}
+.jzW b{font:800 12px/1.1 Archivo,sans-serif}
+.jzW span{font:500 9px/1.2 'Roboto Mono',monospace;color:#4a5b66}
+.jzC{display:flex;align-items:flex-start;justify-content:center;text-align:center;padding:4px 3px;font:700 10.5px/1.15 Archivo,sans-serif;overflow-wrap:anywhere;background:#f3f6f8;border-radius:0}
+.jzE{display:flex;flex-direction:column;gap:3px;justify-content:center;padding:2px 0}
+.jzEv{padding:4px 7px;border-radius:7px;border:1px solid rgba(10,50,80,.15);background:#fff;font:500 11px/1.25 Archivo,sans-serif;color:#000}
+.jzEv b{font-weight:800}
+.jzEv span{font-weight:600}
+.jzEv i{font:600 10px/1 'Roboto Mono',monospace;font-style:normal;opacity:.75}
+.jzEv.wk{border-left:5px solid #d20028}
+.btBanner{border-radius:16px;padding:16px 16px 14px;color:#000;display:flex;flex-direction:column;gap:6px}
+.btBanner .d{font:800 22px/1.1 Archivo,sans-serif}
+.btBanner .o{font:800 34px/1.05 Archivo,sans-serif;word-break:break-word}
+.btBanner .m{display:flex;flex-wrap:wrap;gap:6px 16px;font:700 16px/1.2 Archivo,sans-serif}
+.btSec{display:flex;flex-direction:column;gap:8px}
+.btSecH{font:700 11px/1 'Roboto Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#4a5b66;padding-top:6px}
+.btCard{border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:5px;border:1px solid rgba(10,50,80,.10)}
+.btCard.red .n{color:#d20028}
+.btCard .n{font:700 16px/1.25 Archivo,sans-serif}
+.btCard .d{font:600 12px/1.2 'Roboto Mono',monospace}
+.btCard .s{font:500 12px/1.3 Archivo,sans-serif;color:#33434d}
+.btCard ul{margin:2px 0 0;padding-left:18px;font:400 12.5px/1.45 Archivo,sans-serif}
+.btRow{display:flex;gap:8px;align-items:baseline;padding:7px 10px;border-radius:10px;border:1px solid rgba(10,50,80,.08)}
+.btRow .c{font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;color:#4a5b66;flex:none;width:78px}
+.btRow .n{flex:1;font:600 13px/1.3 Archivo,sans-serif}
+.btRow .d{font:600 11px/1 'Roboto Mono',monospace;flex:none}
+.btNote{font:500 12.5px/1.4 Archivo,sans-serif;padding:8px 12px;border-radius:10px;background:#f3f6f8;color:#33434d}
+.btTrainer{padding:6px 16px 90px;display:flex;flex-direction:column;gap:10px;width:100%;max-width:560px;margin:0 auto;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -579,10 +640,8 @@ function renderApp(){
   const srcInfo = D.SOURCE_INFO[key] || '-';
   const hasSource = !!(D.PLANS[key] && Object.keys(D.PLANS[key]).length);
 
-  const tabNames = ['Dashboard','Woche','Wochenplan','Jahr','Statistik'];
-  if(isSolo){ tabNames.push('Benchmarks'); }
-  tabNames.push('Trainer');
-  if(tabNames.indexOf(state.tab) < 0) state.tab = 'Dashboard';
+  const tabNames = ['Woche','Jahr'];
+  if(tabNames.indexOf(state.tab) < 0) state.tab = 'Woche';
 
   return `
     <div class="header">
@@ -595,21 +654,23 @@ function renderApp(){
         <span class="caret">▾</span>
       </button>
       <a href="${DOKU_FORMS_URL}" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;gap:5px;padding:8px 12px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Doku</a>
+      ${view.t==='a' ? '<a href="'+BT_UEB+'" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;padding:8px 10px;border-radius:10px;background:'+AM+';color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Übungssammlung</a>' : ''}
       ${routeBtn(view, 'head')}
       <img class="headerLogo" src="${LOGO_IMG}" alt="Austria Climbing Vorarlberg">
     </div>
-    <div class="syncbar">
+    <div class="btStand">
       <span class="dot"></span>
-      <div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0">
-        <span class="syncFile">${esc(srcInfo)}</span>
-        <span class="syncInfo">Stand ${esc(D.GENERATED || '-')}</span>
+      <div style="flex:1;display:flex;flex-direction:column;gap:3px;min-width:0">
+        <span class="k">Letzte Aktualisierung</span>
+        <span class="v">App-Stand: ${esc(btStand(BT_BUILD))}</span>
+        <span class="f">${esc(srcInfo)}</span>
       </div>
     </div>
     <div class="content">
       ${state.tab==='Dashboard' ? renderDashboard(view, isSolo, key) : ''}
-      ${state.tab==='Woche' ? renderWoche(view, isSolo, key, hasSource, srcInfo) : ''}
+      ${state.tab==='Jahr' ? renderJahrBeta(view, key) : renderEinheitBeta(view, isSolo, key, hasSource, srcInfo)}
       ${state.tab==='Wochenplan' ? renderWochenplan(view, isSolo, key, hasSource, srcInfo) : ''}
-      ${state.tab==='Jahr' ? renderJahr(view, isSolo, athlete, group) : ''}
+      
       ${state.tab==='Statistik' ? renderStatistik(view) : ''}
       ${state.tab==='Benchmarks' ? renderBenchmarks(view) : ''}
       ${state.tab==='Trainer' ? renderTrainerspace(view) : ''}
@@ -617,7 +678,7 @@ function renderApp(){
     <div class="tabs">
       ${tabNames.map(n=>`
         <button class="tab ${state.tab===n?'sel':''}" data-act="tab" data-tab="${n}">
-          <span class="icon">${TAB_ICONS[n]||''}</span><span class="lbl">${(n==='Woche'?'Einheit':(n==='Wochenplan'?'Woche':n)).toUpperCase()}</span>
+          <span class="icon">${TAB_ICONS[n]||''}</span><span class="lbl">${(n==='Woche'?'Einheit':(n==='Jahr'?'Jahresplanung':n)).toUpperCase()}</span>
         </button>`).join('')}
     </div>
     ${state.picker ? renderPicker() : ''}
@@ -633,6 +694,214 @@ function dayHint(key, day){
   if(!key || key.indexOf('g:')!==0 || key==='g:SPOGY Gruppe') return '';
   return `<div class="noteBlock"><span class="l">Hinweis</span><span class="t trainerNote">${esc(DAY_HINTS[day.date])}</span></div>`;
 }
+const BT_BUILD = "18.11.2026, 19:45";
+
+const BT_COL = {Bouldern:'#0090c9', Lead:'#78b83f', Speed:'#c9a227'};
+const BT_UEB = 'https://kletternvorarlberg-my.sharepoint.com/:x:/g/personal/floyd_simen_klettern-vorarlberg_at/IQC9XgUg3engR7KFVrcHcok8AZ1cxB0C8wP0TQrGWXO8Y18?e=onBkcG';
+const BT_H1 = ['Technikfokus','Technik/Taktik'], BT_H2 = ['Physis Klettern'];
+function btName(it){ return String(it.ex||'').replace(/^\s*\d+(?:[.,]\d+)?\s*(?:h|std\.?|min)\s*/i,'').trim() || String(it.ex||''); }
+function btDur(n){ return n>=60 ? (Math.floor(n/60)+' h'+(n%60?' '+(n%60)+' min':'')) : (n+' min'); }
+function btItems(day, names){
+  const out = [];
+  (day && day.sessions || []).forEach(s=>(s.cats||[]).forEach(c=>{ if(names.indexOf(c.name)>=0) (c.items||[]).forEach(it=>{ if(!(names===BT_H1 && it.par)) out.push({it:it, cat:c.name}); }); }));
+  return out;
+}
+function btCard(e){
+  const it = e.it, m = it.match || {}, mins = tpItemMin(it);
+  const has = v => v!=null && v!=='' && v!=='x';
+  const sub = [];
+  if(has(m.sets)) sub.push('Sätze: '+m.sets);
+  if(has(m.vol)) sub.push('Wdh./Umfang: '+m.vol);
+  if(has(m.pause)) sub.push('Pause: '+m.pause+(typeof m.pause==='number'?' min':''));
+  const hw = (it.sx && D.EXHOW) ? D.EXHOW[it.sx] : null;
+  const dur = mins ? btDur(mins) : (it.par ? 'läuft nebenbei' : '');
+  return '<div class="btCard'+(it.red?' red':'')+'" style="background:'+(it.col?'#'+esc(it.col):'#fff')+'">'
+    + '<div class="n">'+esc(btName(it))+'</div>'
+    + (dur ? '<div class="d">'+esc(dur)+'</div>' : '')
+    + (sub.length ? '<div class="s">'+sub.map(esc).join(' · ')+'</div>' : '')
+    + ((hw && hw.length) ? '<ul>'+hw.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>' : '')
+    + '</div>';
+}
+function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
+  if(!hasSource) return '<div class="empty"><div class="t1">Keine Daten hinterlegt</div><div class="t2">'+esc(srcInfo)+'</div></div>';
+  const plan = (D.PLANS[key] || {})[state.year + '-' + state.kw] || null;
+  const kl0 = btKwLab(((plan && plan.days && plan.days[0]) ? plan.days[0].date : ''), state.kw, state.year);
+  const nav = '<div class="weekNav"><button class="navBtn" data-act="prevWeek">‹</button><div class="weekTitle"><div class="weekKw">KW '+kl0.kw+' · '+kl0.y+'</div><div class="weekMeta">'+(plan ? esc(plan.span) : 'NOCH NICHT GEPLANT')+'</div></div><button class="navBtn" data-act="nextWeek">›</button></div>';
+  if(!plan) return nav + '<div class="empty"><div class="t1">Kein Plan für diese Woche</div></div>';
+  const days = plan.days || [];
+  const di = Math.min(state.day, Math.max(0, days.length-1));
+  const day = days[di] || null;
+  const chips = days.map((dd,i)=>{
+    const cx = dd.cancel && !dd.cancel.p;
+    const col = cx ? '#9aa3a9' : (BT_COL[dd.ortType] || '#dfe5e9');
+    const main = btItems(dd, BT_H1).concat(btItems(dd, BT_H2)).filter(e=>!e.it.pause).map(e=>btName(e.it)).slice(0,4).join(' · ');
+    const wks = btWkDay(key, dd.date);
+    const sts = btWkDay(key, dd.date, 'sonst');
+    const wkTag = (wks.length ? '<span class="wk">WK '+esc(wks.map(e=>e.ort!=='-'?e.ort:e.name).join(', '))+'</span>' : '') + (sts.length ? '<span class="wk st">'+esc(sts.map(e=>e.name).join(', '))+'</span>' : '');
+    return '<button class="btChip'+(i===di?' sel':'')+'" data-act="day" data-i="'+i+'" style="background:'+col+(cx?';color:#000':'')+'"><span class="dw">'+esc((dd.dow||'').slice(0,2).toUpperCase())+'</span><span class="dm">'+esc(dd.dom)+'</span>'+(dd.cancel?'<span class="wk" style="background:#fff;color:#333">ENTFÄLLT</span>':'')+wkTag+(main?'<span class="ct">'+esc(main)+'</span>':'')+'</button>';
+  }).join('');
+  let body = '';
+  if(day){
+    const col = BT_COL[day.ortType] || '#dfe5e9';
+    const trainer = trainerDisplay(isSolo ? null : view.id, day);
+    const hasTr = day.sessions && day.sessions.length;
+    const cxd = day.cancel && !day.cancel.p;
+    body += '<div class="btBanner" style="background:'+(cxd?'#9aa3a9;color:#000':col)+'"><span class="d">'+esc(day.dow+', '+day.dom)+'</span><span class="o">'+(cxd?'Training entfällt':esc(day.ort || (hasTr ? 'Ort offen' : 'Trainingsfrei')))+'</span>'+(day.cancel?'<span style="font:700 16px Archivo,sans-serif">'+esc(day.cancel.r)+'</span>':'')+'
+      + ((day.zeit || trainer) ? '<div class="m">'+(day.zeit?'<span>'+esc(day.zeit)+'</span>':'')+(trainer?'<span>'+esc(trainer)+'</span>':'')+'</div>' : '')+'</div>';
+    const wkDay = btWkDay(key, day.date);
+    wkDay.forEach(e=>{ body += btWkCard(e); });
+    btWkDay(key, day.date, 'sonst').forEach(e=>{ body += btSonstCard(e); });
+    const h1 = btItems(day, BT_H1), h2 = btItems(day, BT_H2);
+    if(h1.length) body += '<div class="btSec"><div class="btSecH">Hauptteil 1</div>'+h1.map(btCard).join('')+'</div>';
+    if(h2.length) body += '<div class="btSec"><div class="btSecH">Hauptteil 2</div>'+h2.map(btCard).join('')+'</div>';
+    const rest = [];
+    (day.sessions||[]).forEach(s=>(s.cats||[]).forEach(c=>{ (c.items||[]).forEach(it=>{ const inMain = (BT_H1.indexOf(c.name)>=0 && !it.par) || BT_H2.indexOf(c.name)>=0; if(!inMain) rest.push({it:it,cat:(c.name==='Technik/Taktik'?'Taktik':c.name)}); }); }));
+    const notes = [];
+    [day.sonstiges, day.notiz].concat((day.sessions||[]).map(s=>s.notiz)).forEach(t=>{ t=String(t||'').trim(); if(!t || t==='-' || notes.indexOf(t)>=0) return; if(wkDay.some(e=>e.ort!=='-' && t.indexOf(e.ort)>=0)) return; if(/^mit\s/i.test(t) || (day.zeit && t.indexOf(day.zeit.replace(/\s/g,''))>=0) || (day.zeit && t.replace(/\s/g,'').indexOf(day.zeit.replace(/\s/g,''))>=0)) return; notes.push(t); });
+    if(rest.length || notes.length){
+      body += '<div class="btSec"><div class="btSecH">Sonstige Inhalte</div>'
+        + rest.map(e=>{ const mins = tpItemMin(e.it); return '<div class="btRow" style="background:'+(e.it.col?'#'+esc(e.it.col):'#fff')+'"><span class="c">'+esc(e.cat)+'</span><span class="n">'+esc(btName(e.it))+'</span><span class="d">'+(mins?esc(btDur(mins)):(e.it.par?'nebenbei':''))+'</span></div>'; }).join('')
+        + notes.map(t=>'<div class="btNote">'+esc(t)+'</div>').join('')+'</div>';
+    }
+    if(!hasTr && !notes.length) body += '<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>';
+  }
+  const wkOpen = btWkOpen(key, days).map(e=>'<div class="btNote">Wettkampf diese Woche (Tag offen): '+esc(e.name)+' · '+esc(e.ort)+' · '+esc(e.disc)+'</div>').join('') + btWkOpen(key, days, 'sonst').map(e=>'<div class="btNote">Termin diese Woche (Tag offen): '+esc(e.name)+'</div>').join('');
+  const ueb = '<a class="btUeb" href="'+BT_UEB+'" target="_blank" rel="noopener">Übungssammlung</a>';
+  return nav + btPhasePills(key) + '<div class="btChips">'+chips+'</div>' + wkOpen + body;
+}
+// ---- Wettkaempfe aus der Jahresplanung (JAHRESPLAN2027[key].wk, Quelle: WK-Zeilen der Trainingsplanung) ----
+const BT_WK_PREFIX = ['Wild Cartd A-Cup','Wild Card A-Cup Lead','Wild Card A-Cup','A-Cup Lead','A-Cup L','A-Cup S','A-Cup','EYCH L','EYCH','EYC L','EYC','EC L','EC','WC','WM','OQ','ÖSTM Lead','ÖSTM','ÖM L','ÖM','LM','West Cup','Kids House MS','House MS','Talents Cup','Arge Alp','Jugend-WM','WYCH'];
+const BT_DISC = {B:'Bouldern', L:'Lead', S:'Speed'};
+function btParseWk(text, kind){
+  const parts = String(text||'').split(/\s+\/\s+(?=[A-Za-zÖ])/);
+  return parts.map(p=>{
+    let range = null, m;
+    if((m = /(\d{1,2})\.(\d{1,2})\.\s*[-–\/]\s*(\d{1,2})\.(\d{1,2})\./.exec(p))) range = [(+m[2])*100+(+m[1]), (+m[4])*100+(+m[3])];
+    else if((m = /(\d{1,2})\.?\s*[-–\/]+\s*(\d{1,2})\.(\d{1,2})\./.exec(p))) range = [(+m[3])*100+(+m[1]), (+m[3])*100+(+m[2])];
+    else if((m = /(\d{1,2})\.(\d{1,2})\./.exec(p))) range = [(+m[2])*100+(+m[1]), (+m[2])*100+(+m[1])];
+    let c = p.replace(/\b\d{1,2}\.\s*oder\b/g,' ').replace(/[\d.\/\-–]*\d\.\d{1,2}\.+/g,' ').replace(/\((?:TBC|AK\?|Ort TBC)\)|\?/g,' ').replace(/\s+/g,' ').trim();
+    let name = c, ort = '', disc = '';
+    const pref = BT_WK_PREFIX.find(x=>c===x || c.indexOf(x+' ')===0);
+    if(pref){
+      name = pref.replace(/ (L|Lead|S)$/,'').replace('Wild Cartd','Wild Card'); ort = c.slice(pref.length).trim();
+      if(/ (L|Lead)$/.test(pref)) disc = 'Lead'; else if(/ S$/.test(pref)) disc = 'Speed';
+    }
+    const dm = /(?:^|\s)([BLS](?:\/[BLS])*)$/.exec(ort);
+    if(dm){ disc = dm[1].split('/').map(x=>BT_DISC[x]).join('/'); ort = ort.slice(0, ort.length-dm[0].length).trim(); }
+    ort = ort.replace(/^(?:L|Lead)\s+/,'').trim();
+    if(!disc && (kind==='Bouldern' || kind==='Lead')) disc = kind;
+    return {name:name, ort:ort||'-', disc:disc||'-', range:range, raw:p};
+  });
+}
+function btDayNum(ds){ const m = /(\d{4})-(\d{2})-(\d{2})/.exec(ds||''); return m ? [new Date(ds+'T00:00:00Z').getTime(), (+m[2])*100+(+m[3])] : null; }
+function btWkDay(key, ds, field){
+  const J = (D.JAHRESPLAN2027||{})[key]; const dn = btDayNum(ds); field = field || 'wk';
+  if(!J || !J[field] || !dn) return [];
+  const out = [], seen = {};
+  J[field].forEach(w=>{
+    const wd = btDayNum(w.date); if(!wd || Math.abs(wd[0]-dn[0]) > 12*86400000) return;
+    btParseWk(w.name, w.kind).forEach(e=>{
+      if(!e.range || dn[1] < e.range[0] || dn[1] > e.range[1]) return;
+      const k = e.name+'|'+e.ort; if(seen[k]) return; seen[k] = 1; out.push(e);
+    });
+  });
+  return out;
+}
+function btWkOpen(key, days, field){
+  field = field || 'wk';
+  const J = (D.JAHRESPLAN2027||{})[key]; if(!J || !J[field] || !days.length) return [];
+  const a = btDayNum(days[0].date), b = btDayNum(days[days.length-1].date); if(!a || !b) return [];
+  const out = [];
+  J[field].forEach(w=>{
+    const wd = btDayNum(w.date); if(!wd || wd[0] < a[0] || wd[0] > b[0]) return;
+    btParseWk(w.name, w.kind).forEach(e=>{ if(!e.range) out.push(e); });
+  });
+  return out;
+}
+function btWkCard(e){
+  return '<div class="btWk"><div class="h">Wettkampf</div><div class="n">'+esc(e.name)+'</div><div class="m"><span>Ort: '+esc(e.ort)+'</span><span>Disziplin: '+esc(e.disc)+'</span></div></div>';
+}
+function btSonstCard(e){
+  return '<div class="btWk" style="border-color:#E8A33D"><div class="h" style="color:#b9770e">Termin</div><div class="n">'+esc(e.name)+'</div></div>';
+}
+function btBlockAt(bl, i){ return (bl||[]).find(b=>i>=b.s && i<b.s+b.n) || null; }
+function btPhasePills(key){
+  const J = (D.JAHRESPLAN2027||{})[key]; if(!J) return '';
+  const i = (J.weeks||[]).findIndex(w=>w.y===state.year && w.kw===state.kw);
+  const pill = (label, bl)=>{
+    const b = i>=0 ? btBlockAt(bl, i) : null;
+    const col = (b && /^#[0-9a-f]{6}$/i.test(b.c||'')) ? b.c : '#eef2f5';
+    const n = parseInt(col.slice(1),16), lum = (0.299*(n>>16) + 0.587*((n>>8)&255) + 0.114*(n&255))/255;
+    return '<span class="btPill" style="background:'+col+';color:'+(lum<0.45?'#fff':'#000')+'"><b>'+label+'</b> '+esc(b ? b.t : '-')+'</span>';
+  };
+  return '<div class="btPills">'+pill('Phase', (J.tracks||{}).phase)+pill('Kraftausdauer', (J.tracks||{}).ka)+'</div>';
+}
+function btStand(g){
+  const m = /^(\d{2})\.(\d{2})\.(\d{4}),\s*(\d{2}:\d{2})/.exec(g||'');
+  if(!m) return g || '-';
+  const d = new Date(Date.UTC(+m[3], +m[2]-1, +m[1]));
+  const wd = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'][d.getUTCDay()];
+  return wd+', '+m[1]+'.'+m[2]+'.'+m[3]+' · '+m[4]+' Uhr';
+}
+// ---- Jahresplanung: KW47/2026 bis KW47/2027, eine Zeile je Woche, Phase + Kraftausdauer als senkrechte Balken, Termine rechts ----
+function btTxtCol(col){ const n = parseInt(col.slice(1),16), l = (0.299*(n>>16) + 0.587*((n>>8)&255) + 0.114*(n&255))/255; return l < 0.45 ? '#fff' : '#000'; }
+function btFmtDM(t){ const d = new Date(t); return d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'.'; }
+// KW-Zaehlung wie in den Trainingsplaenen: ab der Woche 28.12.2026-3.1.2027 beginnt die Zaehlung neu bei 1 (keine KW53)
+function btKwLab(monIso, isoKw, isoY){
+  if(monIso >= '2027-01-01' || monIso >= '2026-12-28'){
+    const n = Math.round((Date.parse(monIso+'T00:00:00Z') - Date.parse('2026-12-28T00:00:00Z'))/(7*864e5)) + 1;
+    return {kw:n, y:2027};
+  }
+  return {kw:isoKw, y:isoY};
+}
+function renderJahrBeta(view, key){
+  const J = (D.JAHRESPLAN2027||{})[key];
+  if(!J || !J.weeks) return '<div class="empty"><div class="t1">Keine Jahresplanung hinterlegt</div></div>';
+  const W = J.weeks, tr = J.tracks || {};
+  let s = W.findIndex(w=>w.mon==='2026-11-16'), e = W.findIndex(w=>w.mon==='2027-11-15');
+  if(s<0) s = 0; if(e<0) e = W.length-1;
+  const now = Date.now(), DAY = 864e5;
+  const cell = (bl, i, first)=>{
+    const b = btBlockAt(bl, i);
+    if(!b) return '<div class="jzC"></div>';
+    const col = /^#[0-9a-f]{6}$/i.test(b.c||'') ? b.c : '#e3e8ec';
+    const lab = (i===Math.max(b.s, s)) ? esc(b.t) : '';
+    const top = (i===Math.max(b.s, s)), bot = (i===Math.min(b.s+b.n-1, e));
+    return '<div class="jzC" style="background:'+col+';color:'+btTxtCol(col)+';border-radius:'+(top?'8px':'0')+' '+(top?'8px':'0')+' '+(bot?'8px':'0')+' '+(bot?'8px':'0')+'"><span>'+lab+'</span></div>';
+  };
+  let html = '', lastY = null;
+  for(let i=s;i<=e;i++){
+    const w = W[i], monT = Date.parse(w.mon+'T00:00:00Z'), endT = monT + 6*DAY;
+    const days = [0,1,2,3,4,5,6].map(k=>{ const t = new Date(monT+k*DAY); return {md:(t.getUTCMonth()+1)*100+t.getUTCDate(), dm:t.getUTCDate()+'.'+(t.getUTCMonth()+1)+'.'}; });
+    const ev = [], seen = {};
+    const add = (cls, label, sub, dm, col)=>{ const k = cls+label+sub; if(seen[k]) return; seen[k] = 1; const okc = /^#[0-9a-f]{6}$/i.test(col||''); ev.push('<div class="jzEv '+cls+'"'+(okc?' style="background:'+col+';color:'+btTxtCol(col)+';border-color:'+col+'"':'')+'><b>'+esc(label)+'</b>'+(sub?' <span>'+esc(sub)+'</span>':'')+(dm?' <i>'+esc(dm)+'</i>':'')+'</div>'); };
+    [['wk','wk'],['sonst','st']].forEach(f=>{
+      (J[f[0]]||[]).forEach(x=>{
+        const xd = btDayNum(x.date); if(!xd || Math.abs(xd[0]-monT) > 20*DAY) return;
+        let xc = null; ['wkB','wkS','wkWC','wkL','sonst'].forEach(tk=>(tr[tk]||[]).forEach(b=>{ if(b.t===x.name && b.c) xc = b.c; }));
+        btParseWk(x.name, x.kind).forEach(p=>{
+          let hit = null;
+          if(p.range) hit = days.find(d=>d.md>=p.range[0] && d.md<=p.range[1]);
+          else if(xd[0]>=monT && xd[0]<=endT) hit = {dm:''};
+          if(!hit) return;
+          if(f[1]==='st') add('st', p.name, '', hit.dm, xc);
+          else add('wk', p.name, [p.ort,p.disc].filter(x=>x!=='-').join(' · '), hit.dm, xc);
+        });
+      });
+    });
+    [['fels','Fels','fl'],['test','Test','ts'],['deload','Deload','dl']].forEach(f=>{ const b = btBlockAt(tr[f[0]], i); if(b) add(f[2], b.t, '', '', b.c); });
+    const fb = btBlockAt(tr.ferien, i); if(fb && i===Math.max(fb.s, s)) add('fe', fb.t, '', '', fb.c);
+    const kl = btKwLab(w.mon, w.kw, w.y);
+    const cur = now >= monT && now < monT + 7*DAY;
+    if(lastY!==null && kl.y!==lastY) html += '<div class="jzYear">'+kl.y+'</div>';
+    if(lastY===null) html += '<div class="jzYear">'+kl.y+'</div>';
+    lastY = kl.y;
+    html += '<div class="jzRow'+(cur?' cur':'')+'"><div class="jzW"><b>KW '+kl.kw+'</b><span>'+btFmtDM(monT)+'–'+btFmtDM(endT)+'</span></div>'
+      + cell(tr.phase, i) + cell(tr.ka, i) + '<div class="jzE">'+ev.join('')+'</div></div>';
+  }
+  return '<div class="jz"><div class="jzHead"><span>Woche</span><span>Phase</span><span>Kraftausd.</span><span>Termine</span></div>'+html+'</div>';
+}
+
 function renderWochenplan(view, isSolo, key, hasSource, srcInfo){
   if(!hasSource){
     return `<div class="empty"><div class="t1">Keine Daten hinterlegt</div><div class="t2">${esc(srcInfo)}</div></div>`;
@@ -1754,6 +2023,7 @@ function renderLanding(){
           ${spogyOpt}
         </div>
       </div>
+      <div class="btTrainer">${renderTrainerspace(null)}<div><a href="${BT_UEB}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;padding:9px 14px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Übungssammlung</a></div></div>
     </div>
   `;
 }
@@ -1924,7 +2194,7 @@ function renderTrainerspace(view){
       <span class="subMeta">NOTIZEN DER TRAINER:INNEN · NUR FÜR GRUPPENTRAINER:INNEN</span>
     </div>`;
   const formLink = `<a href="${TRAINER_FORMS_URL}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;padding:9px 14px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Trainer-Doku ausfüllen</a>`;
-  const betaLink = `<a href="./beta.html" style="display:inline-flex;align-items:center;margin-left:8px;padding:9px 14px;border-radius:10px;background:#d20028;color:#fff;font:700 12px/1 Archivo,sans-serif;white-space:nowrap">Beta</a>`;
+  const betaLink = ``;
   const pwForm = (label)=>`<form id="trainerForm" style="display:flex;gap:8px;align-items:stretch">
       <input id="trainerPw" type="password" autocomplete="off" placeholder="${label}" ${state.trainerBusy?'disabled':''}
         style="flex:1;min-width:0;font:500 14px/1 Archivo,sans-serif;padding:11px 12px;border-radius:10px;border:1px solid ${DI};outline:none">
