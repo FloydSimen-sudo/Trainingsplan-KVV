@@ -694,7 +694,7 @@ function dayHint(key, day){
   if(!key || key.indexOf('g:')!==0 || key==='g:SPOGY Gruppe') return '';
   return `<div class="noteBlock"><span class="l">Hinweis</span><span class="t trainerNote">${esc(DAY_HINTS[day.date])}</span></div>`;
 }
-const BT_BUILD = "18.11.2026, 14:19";
+const BT_BUILD = "18.11.2026, 14:23";
 
 const BT_COL = {Bouldern:'#0090c9', Lead:'#78b83f', Speed:'#c9a227'};
 const BT_UEB = 'https://kletternvorarlberg-my.sharepoint.com/:x:/g/personal/floyd_simen_klettern-vorarlberg_at/IQC9XgUg3engR7KFVrcHcok8AZ1cxB0C8wP0TQrGWXO8Y18?e=onBkcG';
@@ -2272,7 +2272,7 @@ function renderGate(msg, busy){
   return `
     <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center">
       <span style="font:600 19px/1.2 Archivo,sans-serif;color:${TX}">Trainingspläne KVV</span>
-      <span style="font:500 12.5px/1.4 Archivo,sans-serif;color:${MU};max-width:280px">BETA-Testversion (Adrian Kathan, U15 II). Bitte Passwort eingeben.</span>
+      <span style="font:500 12.5px/1.4 Archivo,sans-serif;color:${MU};max-width:280px">BETA-Testversion (alle Einzel- und Gruppenpläne). Bitte Passwort eingeben.</span>
       <form id="gateForm" style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:260px">
         <input id="gatePw" type="password" autocomplete="current-password" placeholder="Passwort" ${busy?'disabled':''}
           style="font:500 15px/1 Archivo,sans-serif;padding:12px 14px;border-radius:10px;border:1px solid ${DI};outline:none">

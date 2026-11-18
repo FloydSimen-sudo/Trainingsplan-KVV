@@ -29,6 +29,9 @@ function loadData(){
 }
 const ATH = 'Adrian Kathan', GRP = 'U15 II';
 function filterBeta(D){
+  return D; // Beta zeigt jetzt alle Einzel- und Gruppenplaene (Stand: letzter committeter Datenstand)
+}
+function filterBetaOld(D){
   const pick = (o, keys) => { const r = {}; keys.forEach(k => { if (o && o[k] !== undefined) r[k] = o[k]; }); return r; };
   const out = Object.assign({}, D);
   const ak = 'a:' + ATH, gk = 'g:' + GRP;
@@ -52,7 +55,7 @@ function makeBetaHtml(html, ui){
   rep('<title>Trainingspläne KVV</title>', '<title>BETA · Trainingspläne KVV</title>');
   rep(BETA_A, LIVE_A);
   rep('<body>', '<body>' + BADGE);
-  rep('Bitte Passwort eingeben, um die Trainingspläne zu öffnen.', 'BETA-Testversion (Adrian Kathan, U15 II). Bitte Passwort eingeben.');
+  rep('Bitte Passwort eingeben, um die Trainingspläne zu öffnen.', 'BETA-Testversion (alle Einzel- und Gruppenpläne). Bitte Passwort eingeben.');
   return html;
 }
 function fromBetaToLive(beta){
@@ -63,7 +66,7 @@ function fromBetaToLive(beta){
   rep('<title>BETA · Trainingspläne KVV</title>', '<title>Trainingspläne KVV</title>');
   rep(BADGE, '');
   rep(LIVE_A, BETA_A);
-  rep('BETA-Testversion (Adrian Kathan, U15 II). Bitte Passwort eingeben.', 'Bitte Passwort eingeben, um die Trainingspläne zu öffnen.');
+  rep('BETA-Testversion (alle Einzel- und Gruppenpläne). Bitte Passwort eingeben.', 'Bitte Passwort eingeben, um die Trainingspläne zu öffnen.');
   return h;
 }
 const a = process.argv.slice(2);
