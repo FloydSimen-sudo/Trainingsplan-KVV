@@ -1,11 +1,19 @@
 // ---- Jahresplanung: KW47/2026 bis KW47/2027, eine Zeile je Woche, Phase + Kraftausdauer als senkrechte Balken, Termine rechts ----
 function btTxtCol(col){ const n = parseInt(col.slice(1),16), l = (0.299*(n>>16) + 0.587*((n>>8)&255) + 0.114*(n&255))/255; return l < 0.45 ? '#fff' : '#000'; }
 function btFmtDM(t){ const d = new Date(t); return d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'.'; }
+// KW-Zaehlung wie in den Trainingsplaenen: ab der Woche 28.12.2026-3.1.2027 beginnt die Zaehlung neu bei 1 (keine KW53)
+function btKwLab(monIso, isoKw, isoY){
+  if(monIso >= '2027-01-01' || monIso >= '2026-12-28'){
+    const n = Math.round((Date.parse(monIso+'T00:00:00Z') - Date.parse('2026-12-28T00:00:00Z'))/(7*864e5)) + 1;
+    return {kw:n, y:2027};
+  }
+  return {kw:isoKw, y:isoY};
+}
 function renderJahrBeta(view, key){
   const J = (D.JAHRESPLAN2027||{})[key];
   if(!J || !J.weeks) return '<div class="empty"><div class="t1">Keine Jahresplanung hinterlegt</div></div>';
   const W = J.weeks, tr = J.tracks || {};
-  let s = W.findIndex(w=>w.y===2026 && w.kw===47), e = W.findIndex(w=>w.y===2027 && w.kw===47);
+  let s = W.findIndex(w=>w.mon==='2026-11-16'), e = W.findIndex(w=>w.mon==='2027-11-15');
   if(s<0) s = 0; if(e<0) e = W.length-1;
   const now = Date.now(), DAY = 864e5;
   const cell = (bl, i, first)=>{
@@ -32,17 +40,18 @@ function renderJahrBeta(view, key){
           else if(xd[0]>=monT && xd[0]<=endT) hit = {dm:''};
           if(!hit) return;
           if(f[1]==='st') add('st', p.name, '', hit.dm, xc);
-          else add('wk', p.name, (p.ort!=='-'?p.ort+' · ':'')+p.disc, hit.dm, xc);
+          else add('wk', p.name, [p.ort,p.disc].filter(x=>x!=='-').join(' · '), hit.dm, xc);
         });
       });
     });
     [['fels','Fels','fl'],['test','Test','ts'],['deload','Deload','dl']].forEach(f=>{ const b = btBlockAt(tr[f[0]], i); if(b) add(f[2], b.t, '', '', b.c); });
     const fb = btBlockAt(tr.ferien, i); if(fb && i===Math.max(fb.s, s)) add('fe', fb.t, '', '', fb.c);
+    const kl = btKwLab(w.mon, w.kw, w.y);
     const cur = now >= monT && now < monT + 7*DAY;
-    if(lastY!==null && w.y!==lastY) html += '<div class="jzYear">'+w.y+'</div>';
-    if(lastY===null) html += '<div class="jzYear">'+w.y+'</div>';
-    lastY = w.y;
-    html += '<div class="jzRow'+(cur?' cur':'')+'"><div class="jzW"><b>KW '+w.kw+'</b><span>'+btFmtDM(monT)+'–'+btFmtDM(endT)+'</span></div>'
+    if(lastY!==null && kl.y!==lastY) html += '<div class="jzYear">'+kl.y+'</div>';
+    if(lastY===null) html += '<div class="jzYear">'+kl.y+'</div>';
+    lastY = kl.y;
+    html += '<div class="jzRow'+(cur?' cur':'')+'"><div class="jzW"><b>KW '+kl.kw+'</b><span>'+btFmtDM(monT)+'–'+btFmtDM(endT)+'</span></div>'
       + cell(tr.phase, i) + cell(tr.ka, i) + '<div class="jzE">'+ev.join('')+'</div></div>';
   }
   return '<div class="jz"><div class="jzHead"><span>Woche</span><span>Phase</span><span>Kraftausd.</span><span>Termine</span></div>'+html+'</div>';

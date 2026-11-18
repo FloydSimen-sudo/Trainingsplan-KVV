@@ -327,7 +327,7 @@
 .header > :not(.brandMark):not(.headerBtn):not(.headerLogo){order:3;flex:1 1 28% !important;justify-content:center;background:#005A96 !important}
 .jz{display:flex;flex-direction:column;gap:3px;padding-bottom:90px}
 .jzHead,.jzRow{display:grid;grid-template-columns:58px 74px 74px 1fr;gap:4px}
-.jzHead{position:sticky;top:0;z-index:5;background:#fff;padding:6px 0;font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.06em;color:#4a5b66;border-bottom:1px solid rgba(10,50,80,.15)}
+.jzHead{background:#fff;padding:6px 0;font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.06em;color:#4a5b66;border-bottom:1px solid rgba(10,50,80,.15)}
 .jzYear{font:800 18px/1 Archivo,sans-serif;padding:8px 0 2px}
 .jzRow{min-height:46px;align-items:stretch}
 .jzRow.cur .jzW{outline:2px solid #d20028;border-radius:6px}
@@ -651,7 +651,7 @@ function renderApp(){
       ${state.tab==='Dashboard' ? renderDashboard(view, isSolo, key) : ''}
       ${state.tab==='Jahr' ? renderJahrBeta(view, key) : renderEinheitBeta(view, isSolo, key, hasSource, srcInfo)}
       ${state.tab==='Wochenplan' ? renderWochenplan(view, isSolo, key, hasSource, srcInfo) : ''}
-      ${state.tab==='Jahr' ? renderJahr(view, isSolo, athlete, group) : ''}
+      
       ${state.tab==='Statistik' ? renderStatistik(view) : ''}
       ${state.tab==='Benchmarks' ? renderBenchmarks(view) : ''}
       ${state.tab==='Trainer' ? renderTrainerspace(view) : ''}
@@ -705,7 +705,8 @@ function btCard(e){
 function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
   if(!hasSource) return '<div class="empty"><div class="t1">Keine Daten hinterlegt</div><div class="t2">'+esc(srcInfo)+'</div></div>';
   const plan = (D.PLANS[key] || {})[state.year + '-' + state.kw] || null;
-  const nav = '<div class="weekNav"><button class="navBtn" data-act="prevWeek">‹</button><div class="weekTitle"><div class="weekKw">KW '+state.kw+' · '+state.year+'</div><div class="weekMeta">'+(plan ? esc(plan.span) : 'NOCH NICHT GEPLANT')+'</div></div><button class="navBtn" data-act="nextWeek">›</button></div>';
+  const kl0 = btKwLab(((plan && plan.days && plan.days[0]) ? plan.days[0].date : ''), state.kw, state.year);
+  const nav = '<div class="weekNav"><button class="navBtn" data-act="prevWeek">‹</button><div class="weekTitle"><div class="weekKw">KW '+kl0.kw+' · '+kl0.y+'</div><div class="weekMeta">'+(plan ? esc(plan.span) : 'NOCH NICHT GEPLANT')+'</div></div><button class="navBtn" data-act="nextWeek">›</button></div>';
   if(!plan) return nav + '<div class="empty"><div class="t1">Kein Plan für diese Woche</div></div>';
   const days = plan.days || [];
   const di = Math.min(state.day, Math.max(0, days.length-1));
@@ -823,11 +824,19 @@ function btStand(g){
 // ---- Jahresplanung: KW47/2026 bis KW47/2027, eine Zeile je Woche, Phase + Kraftausdauer als senkrechte Balken, Termine rechts ----
 function btTxtCol(col){ const n = parseInt(col.slice(1),16), l = (0.299*(n>>16) + 0.587*((n>>8)&255) + 0.114*(n&255))/255; return l < 0.45 ? '#fff' : '#000'; }
 function btFmtDM(t){ const d = new Date(t); return d.getUTCDate()+'.'+(d.getUTCMonth()+1)+'.'; }
+// KW-Zaehlung wie in den Trainingsplaenen: ab der Woche 28.12.2026-3.1.2027 beginnt die Zaehlung neu bei 1 (keine KW53)
+function btKwLab(monIso, isoKw, isoY){
+  if(monIso >= '2027-01-01' || monIso >= '2026-12-28'){
+    const n = Math.round((Date.parse(monIso+'T00:00:00Z') - Date.parse('2026-12-28T00:00:00Z'))/(7*864e5)) + 1;
+    return {kw:n, y:2027};
+  }
+  return {kw:isoKw, y:isoY};
+}
 function renderJahrBeta(view, key){
   const J = (D.JAHRESPLAN2027||{})[key];
   if(!J || !J.weeks) return '<div class="empty"><div class="t1">Keine Jahresplanung hinterlegt</div></div>';
   const W = J.weeks, tr = J.tracks || {};
-  let s = W.findIndex(w=>w.y===2026 && w.kw===47), e = W.findIndex(w=>w.y===2027 && w.kw===47);
+  let s = W.findIndex(w=>w.mon==='2026-11-16'), e = W.findIndex(w=>w.mon==='2027-11-15');
   if(s<0) s = 0; if(e<0) e = W.length-1;
   const now = Date.now(), DAY = 864e5;
   const cell = (bl, i, first)=>{
@@ -854,17 +863,18 @@ function renderJahrBeta(view, key){
           else if(xd[0]>=monT && xd[0]<=endT) hit = {dm:''};
           if(!hit) return;
           if(f[1]==='st') add('st', p.name, '', hit.dm, xc);
-          else add('wk', p.name, (p.ort!=='-'?p.ort+' · ':'')+p.disc, hit.dm, xc);
+          else add('wk', p.name, [p.ort,p.disc].filter(x=>x!=='-').join(' · '), hit.dm, xc);
         });
       });
     });
     [['fels','Fels','fl'],['test','Test','ts'],['deload','Deload','dl']].forEach(f=>{ const b = btBlockAt(tr[f[0]], i); if(b) add(f[2], b.t, '', '', b.c); });
     const fb = btBlockAt(tr.ferien, i); if(fb && i===Math.max(fb.s, s)) add('fe', fb.t, '', '', fb.c);
+    const kl = btKwLab(w.mon, w.kw, w.y);
     const cur = now >= monT && now < monT + 7*DAY;
-    if(lastY!==null && w.y!==lastY) html += '<div class="jzYear">'+w.y+'</div>';
-    if(lastY===null) html += '<div class="jzYear">'+w.y+'</div>';
-    lastY = w.y;
-    html += '<div class="jzRow'+(cur?' cur':'')+'"><div class="jzW"><b>KW '+w.kw+'</b><span>'+btFmtDM(monT)+'–'+btFmtDM(endT)+'</span></div>'
+    if(lastY!==null && kl.y!==lastY) html += '<div class="jzYear">'+kl.y+'</div>';
+    if(lastY===null) html += '<div class="jzYear">'+kl.y+'</div>';
+    lastY = kl.y;
+    html += '<div class="jzRow'+(cur?' cur':'')+'"><div class="jzW"><b>KW '+kl.kw+'</b><span>'+btFmtDM(monT)+'–'+btFmtDM(endT)+'</span></div>'
       + cell(tr.phase, i) + cell(tr.ka, i) + '<div class="jzE">'+ev.join('')+'</div></div>';
   }
   return '<div class="jz"><div class="jzHead"><span>Woche</span><span>Phase</span><span>Kraftausd.</span><span>Termine</span></div>'+html+'</div>';

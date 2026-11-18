@@ -28,7 +28,7 @@ const CSS = `
 .header > :not(.brandMark):not(.headerBtn):not(.headerLogo){order:3;flex:1 1 28% !important;justify-content:center;background:#005A96 !important}
 .jz{display:flex;flex-direction:column;gap:3px;padding-bottom:90px}
 .jzHead,.jzRow{display:grid;grid-template-columns:58px 74px 74px 1fr;gap:4px}
-.jzHead{position:sticky;top:0;z-index:5;background:#fff;padding:6px 0;font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.06em;color:#4a5b66;border-bottom:1px solid rgba(10,50,80,.15)}
+.jzHead{background:#fff;padding:6px 0;font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.06em;color:#4a5b66;border-bottom:1px solid rgba(10,50,80,.15)}
 .jzYear{font:800 18px/1 Archivo,sans-serif;padding:8px 0 2px}
 .jzRow{min-height:46px;align-items:stretch}
 .jzRow.cur .jzW{outline:2px solid #d20028;border-radius:6px}
@@ -92,7 +92,8 @@ function btCard(e){
 function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
   if(!hasSource) return '<div class="empty"><div class="t1">Keine Daten hinterlegt</div><div class="t2">'+esc(srcInfo)+'</div></div>';
   const plan = (D.PLANS[key] || {})[state.year + '-' + state.kw] || null;
-  const nav = '<div class="weekNav"><button class="navBtn" data-act="prevWeek">‹</button><div class="weekTitle"><div class="weekKw">KW '+state.kw+' · '+state.year+'</div><div class="weekMeta">'+(plan ? esc(plan.span) : 'NOCH NICHT GEPLANT')+'</div></div><button class="navBtn" data-act="nextWeek">›</button></div>';
+  const kl0 = btKwLab(((plan && plan.days && plan.days[0]) ? plan.days[0].date : ''), state.kw, state.year);
+  const nav = '<div class="weekNav"><button class="navBtn" data-act="prevWeek">‹</button><div class="weekTitle"><div class="weekKw">KW '+kl0.kw+' · '+kl0.y+'</div><div class="weekMeta">'+(plan ? esc(plan.span) : 'NOCH NICHT GEPLANT')+'</div></div><button class="navBtn" data-act="nextWeek">›</button></div>';
   if(!plan) return nav + '<div class="empty"><div class="t1">Kein Plan für diese Woche</div></div>';
   const days = plan.days || [];
   const di = Math.min(state.day, Math.max(0, days.length-1));
@@ -164,6 +165,7 @@ function apply(html) {
       \${routeBtn(view, 'head')}`, `white-space:nowrap">Doku</a>
       <a href="\${BT_UEB}" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;padding:8px 10px;border-radius:10px;background:\${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Übungssammlung</a>
       \${routeBtn(view, 'head')}`);
+  rep("${state.tab==='Jahr' ? renderJahr(view, isSolo, athlete, group) : ''}", '');
   rep("(n==='Woche'?'Einheit':(n==='Wochenplan'?'Woche':n))", "(n==='Woche'?'Einheit':(n==='Jahr'?'Jahresplanung':n))");
   rep("      </div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){", "      </div>\n      <div class=\"btTrainer\">${renderTrainerspace(null)}</div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){");
   return html;
