@@ -66,7 +66,7 @@ function btCard(e){
   if(has(m.pause)) sub.push('Pause: '+m.pause+(typeof m.pause==='number'?' min':''));
   const hw = (it.sx && D.EXHOW) ? D.EXHOW[it.sx] : null;
   const dur = mins ? btDur(mins) : (it.par ? 'läuft nebenbei' : '');
-  return '<div class="btCard'+(it.red?' red':'')+'" style="background:#fff;border-left:8px solid '+(it.col?'#'+esc(it.col):'#ddd')+'">'
+  return '<div class="btCard'+(it.red?' red':'')+'" style="background:'+(it.col?'#'+esc(it.col):'#fff')+'">'
     + '<div class="n">'+esc(btName(it))+'</div>'
     + (dur ? '<div class="d">'+esc(dur)+'</div>' : '')
     + (sub.length ? '<div class="s">'+sub.map(esc).join(' · ')+'</div>' : '')
@@ -108,7 +108,7 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     [day.sonstiges, day.notiz].concat((day.sessions||[]).map(s=>s.notiz)).forEach(t=>{ t=String(t||'').trim(); if(!t || t==='-' || notes.indexOf(t)>=0) return; if(wkDay.some(e=>e.ort!=='-' && t.indexOf(e.ort)>=0)) return; if(/^mit\\s/i.test(t) || (day.zeit && t.indexOf(day.zeit.replace(/\\s/g,''))>=0) || (day.zeit && t.replace(/\\s/g,'').indexOf(day.zeit.replace(/\\s/g,''))>=0)) return; notes.push(t); });
     if(rest.length || notes.length){
       body += '<div class="btSec"><div class="btSecH">Sonstige Inhalte</div>'
-        + rest.map(e=>{ const mins = tpItemMin(e.it); return '<div class="btRow" style="background:#fff;border-left:6px solid '+(e.it.col?'#'+esc(e.it.col):'#ddd')+'"><span class="c">'+esc(e.cat)+'</span><span class="n">'+esc(btName(e.it))+'</span><span class="d">'+(mins?esc(btDur(mins)):(e.it.par?'nebenbei':''))+'</span></div>'; }).join('')
+        + rest.map(e=>{ const mins = tpItemMin(e.it); return '<div class="btRow" style="background:'+(e.it.col?'#'+esc(e.it.col):'#fff')+'"><span class="c">'+esc(e.cat)+'</span><span class="n">'+esc(btName(e.it))+'</span><span class="d">'+(mins?esc(btDur(mins)):(e.it.par?'nebenbei':''))+'</span></div>'; }).join('')
         + notes.map(t=>'<div class="btNote">'+esc(t)+'</div>').join('')+'</div>';
     }
     if(!hasTr && !notes.length) body += '<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>';
