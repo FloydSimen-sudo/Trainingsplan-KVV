@@ -100,12 +100,12 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
   const day = days[di] || null;
   const chips = days.map((dd,i)=>{
     const cx = dd.cancel && !dd.cancel.p;
-    const col = cx ? '#d50000' : (BT_COL[dd.ortType] || '#dfe5e9');
+    const col = cx ? '#9aa3a9' : (BT_COL[dd.ortType] || '#dfe5e9');
     const main = btItems(dd, BT_H1).concat(btItems(dd, BT_H2)).filter(e=>!e.it.pause).map(e=>btName(e.it)).slice(0,4).join(' · ');
     const wks = btWkDay(key, dd.date);
     const sts = btWkDay(key, dd.date, 'sonst');
     const wkTag = (wks.length ? '<span class="wk">WK '+esc(wks.map(e=>e.ort!=='-'?e.ort:e.name).join(', '))+'</span>' : '') + (sts.length ? '<span class="wk st">'+esc(sts.map(e=>e.name).join(', '))+'</span>' : '');
-    return '<button class="btChip'+(i===di?' sel':'')+'" data-act="day" data-i="'+i+'" style="background:'+col+(cx?';color:#fff':'')+'"><span class="dw">'+esc((dd.dow||'').slice(0,2).toUpperCase())+'</span><span class="dm">'+esc(dd.dom)+'</span>'+(dd.cancel?'<span class="wk" style="background:#fff;color:#d50000">ENTFÄLLT</span>':'')+wkTag+(main?'<span class="ct">'+esc(main)+'</span>':'')+'</button>';
+    return '<button class="btChip'+(i===di?' sel':'')+'" data-act="day" data-i="'+i+'" style="background:'+col+(cx?';color:#000':'')+'"><span class="dw">'+esc((dd.dow||'').slice(0,2).toUpperCase())+'</span><span class="dm">'+esc(dd.dom)+'</span>'+(dd.cancel?'<span class="wk" style="background:#fff;color:#333">ENTFÄLLT</span>':'')+wkTag+(main?'<span class="ct">'+esc(main)+'</span>':'')+'</button>';
   }).join('');
   let body = '';
   if(day){
@@ -113,7 +113,7 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     const trainer = trainerDisplay(isSolo ? null : view.id, day);
     const hasTr = day.sessions && day.sessions.length;
     const cxd = day.cancel && !day.cancel.p;
-    body += '<div class="btBanner" style="background:'+(cxd?'#d50000;color:#fff':col)+'"><span class="d">'+esc(day.dow+', '+day.dom)+'</span><span class="o">'+(cxd?'Training entfällt':esc(day.ort || (hasTr ? 'Ort offen' : 'Trainingsfrei')))+'</span>'+(day.cancel?'<span style="font:700 16px Archivo,sans-serif">'+esc(day.cancel.r)+'</span>':'')+'
+    body += '<div class="btBanner" style="background:'+(cxd?'#9aa3a9;color:#000':col)+'"><span class="d">'+esc(day.dow+', '+day.dom)+'</span><span class="o">'+(cxd?'Training entfällt':esc(day.ort || (hasTr ? 'Ort offen' : 'Trainingsfrei')))+'</span>'+(day.cancel?'<span style="font:700 16px Archivo,sans-serif">'+esc(day.cancel.r)+'</span>':'')+'
       + ((day.zeit || trainer) ? '<div class="m">'+(day.zeit?'<span>'+esc(day.zeit)+'</span>':'')+(trainer?'<span>'+esc(trainer)+'</span>':'')+'</div>' : '')+'</div>';
     const wkDay = btWkDay(key, day.date);
     wkDay.forEach(e=>{ body += btWkCard(e); });
