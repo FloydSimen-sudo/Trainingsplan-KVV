@@ -321,8 +321,12 @@
 .btStand .k{display:none}
 .btStand .v{font:600 11px/1.2 Archivo,sans-serif;color:#33434d;white-space:nowrap}
 .btStand .f{display:none}
+.header{flex-wrap:wrap;row-gap:8px}
+.header .headerBtn{flex:1 1 220px !important;min-width:0}
+.header .headerLogo{order:2}
+.header > :not(.brandMark):not(.headerBtn):not(.headerLogo){order:3;flex:1 1 28% !important;justify-content:center;background:#005A96 !important}
 .btBanner{border-radius:16px;padding:16px 16px 14px;color:#000;display:flex;flex-direction:column;gap:6px}
-.btBanner .d{font:600 12px/1 'Roboto Mono',monospace;letter-spacing:.04em;text-transform:uppercase}
+.btBanner .d{font:800 22px/1.1 Archivo,sans-serif}
 .btBanner .o{font:800 34px/1.05 Archivo,sans-serif;word-break:break-word}
 .btBanner .m{display:flex;flex-wrap:wrap;gap:6px 16px;font:700 16px/1.2 Archivo,sans-serif}
 .btSec{display:flex;flex-direction:column;gap:8px}
@@ -337,7 +341,7 @@
 .btRow .c{font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;color:#4a5b66;flex:none;width:78px}
 .btRow .n{flex:1;font:600 13px/1.3 Archivo,sans-serif}
 .btRow .d{font:600 11px/1 'Roboto Mono',monospace;flex:none}
-.btNote{font:500 12.5px/1.4 Archivo,sans-serif;padding:8px 12px;border-radius:10px;background:rgba(232,163,61,.15)}
+.btNote{font:500 12.5px/1.4 Archivo,sans-serif;padding:8px 12px;border-radius:10px;background:#f3f6f8;color:#33434d}
 .btTrainer{padding:6px 16px 90px;display:flex;flex-direction:column;gap:10px;width:100%;max-width:560px;margin:0 auto;box-sizing:border-box}
 </style>
 </head>
@@ -615,6 +619,7 @@ function renderApp(){
         <span class="caret">▾</span>
       </button>
       <a href="${DOKU_FORMS_URL}" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;gap:5px;padding:8px 12px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Doku</a>
+      <a href="${BT_UEB}" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;padding:8px 10px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Übungssammlung</a>
       ${routeBtn(view, 'head')}
       <img class="headerLogo" src="${LOGO_IMG}" alt="Austria Climbing Vorarlberg">
     </div>
@@ -674,7 +679,7 @@ function btCard(e){
   if(has(m.pause)) sub.push('Pause: '+m.pause+(typeof m.pause==='number'?' min':''));
   const hw = (it.sx && D.EXHOW) ? D.EXHOW[it.sx] : null;
   const dur = mins ? btDur(mins) : (it.par ? 'läuft nebenbei' : '');
-  return '<div class="btCard'+(it.red?' red':'')+'" style="background:'+(it.col?'#'+esc(it.col):'#fff')+'">'
+  return '<div class="btCard'+(it.red?' red':'')+'" style="background:#fff;border-left:8px solid '+(it.col?'#'+esc(it.col):'#ddd')+'">'
     + '<div class="n">'+esc(btName(it))+'</div>'
     + (dur ? '<div class="d">'+esc(dur)+'</div>' : '')
     + (sub.length ? '<div class="s">'+sub.map(esc).join(' · ')+'</div>' : '')
@@ -716,14 +721,14 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     [day.sonstiges, day.notiz].concat((day.sessions||[]).map(s=>s.notiz)).forEach(t=>{ t=String(t||'').trim(); if(!t || t==='-' || notes.indexOf(t)>=0) return; if(wkDay.some(e=>e.ort!=='-' && t.indexOf(e.ort)>=0)) return; if(/^mit\s/i.test(t) || (day.zeit && t.indexOf(day.zeit.replace(/\s/g,''))>=0) || (day.zeit && t.replace(/\s/g,'').indexOf(day.zeit.replace(/\s/g,''))>=0)) return; notes.push(t); });
     if(rest.length || notes.length){
       body += '<div class="btSec"><div class="btSecH">Sonstige Inhalte</div>'
-        + rest.map(e=>{ const mins = tpItemMin(e.it); return '<div class="btRow" style="background:'+(e.it.col?'#'+esc(e.it.col)+'55':'#fff')+'"><span class="c">'+esc(e.cat)+'</span><span class="n">'+esc(btName(e.it))+'</span><span class="d">'+(mins?esc(btDur(mins)):(e.it.par?'nebenbei':''))+'</span></div>'; }).join('')
+        + rest.map(e=>{ const mins = tpItemMin(e.it); return '<div class="btRow" style="background:#fff;border-left:6px solid '+(e.it.col?'#'+esc(e.it.col):'#ddd')+'"><span class="c">'+esc(e.cat)+'</span><span class="n">'+esc(btName(e.it))+'</span><span class="d">'+(mins?esc(btDur(mins)):(e.it.par?'nebenbei':''))+'</span></div>'; }).join('')
         + notes.map(t=>'<div class="btNote">'+esc(t)+'</div>').join('')+'</div>';
     }
     if(!hasTr && !notes.length) body += '<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>';
   }
   const wkOpen = btWkOpen(key, days).map(e=>'<div class="btNote">Wettkampf diese Woche (Tag offen): '+esc(e.name)+' · '+esc(e.ort)+' · '+esc(e.disc)+'</div>').join('') + btWkOpen(key, days, 'sonst').map(e=>'<div class="btNote">Termin diese Woche (Tag offen): '+esc(e.name)+'</div>').join('');
   const ueb = '<a class="btUeb" href="'+BT_UEB+'" target="_blank" rel="noopener">Übungssammlung</a>';
-  return nav + btPhasePills(key) + '<div class="btChips">'+chips+'</div>' + wkOpen + ueb + body;
+  return nav + btPhasePills(key) + '<div class="btChips">'+chips+'</div>' + wkOpen + body;
 }
 // ---- Wettkaempfe aus der Jahresplanung (JAHRESPLAN2027[key].wk, Quelle: WK-Zeilen der Trainingsplanung) ----
 const BT_WK_PREFIX = ['Wild Cartd A-Cup','Wild Card A-Cup Lead','Wild Card A-Cup','A-Cup Lead','A-Cup L','A-Cup S','A-Cup','EYCH L','EYCH','EYC L','EYC','EC L','EC','WC','WM','OQ','ÖSTM Lead','ÖSTM','ÖM L','ÖM','LM','West Cup','Kids House MS','House MS','Talents Cup','Arge Alp','Jugend-WM','WYCH'];
