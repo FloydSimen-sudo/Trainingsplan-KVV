@@ -136,6 +136,11 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
 }
 `;
 
+function viennaStamp() {
+  const f = new Intl.DateTimeFormat('de-AT', {timeZone: 'Europe/Vienna', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false})
+    .formatToParts(new Date()).reduce((o, x) => (o[x.type] = x.value, o), {});
+  return f.day + '.' + f.month + '.' + f.year + ', ' + f.hour + ':' + f.minute;
+}
 function apply(html) {
   const rep = (a, b) => {
     const n = html.split(a).length - 1;
@@ -143,7 +148,7 @@ function apply(html) {
     html = html.replace(a, () => b);
   };
   rep('</style>', CSS + '</style>');
-  rep('function renderWochenplan(', JS + require('fs').readFileSync(__dirname + '/beta_wk.frag.js', 'utf8') + require('fs').readFileSync(__dirname + '/beta_jz.frag.js', 'utf8') + '\nfunction renderWochenplan(');
+  rep('function renderWochenplan(', 'const BT_BUILD = ' + JSON.stringify(viennaStamp()) + ';\n' + JS + require('fs').readFileSync(__dirname + '/beta_wk.frag.js', 'utf8') + require('fs').readFileSync(__dirname + '/beta_jz.frag.js', 'utf8') + '\nfunction renderWochenplan(');
   rep("const tabNames = ['Dashboard','Woche','Wochenplan','Jahr','Statistik'];\n  if(isSolo){ tabNames.push('Benchmarks'); }\n  tabNames.push('Trainer');\n  if(tabNames.indexOf(state.tab) < 0) state.tab = 'Dashboard';",
       "const tabNames = ['Woche','Jahr'];\n  if(tabNames.indexOf(state.tab) < 0) state.tab = 'Woche';");
   rep("${state.tab==='Woche' ? renderWoche(view, isSolo, key, hasSource, srcInfo) : ''}", "${state.tab==='Jahr' ? renderJahrBeta(view, key) : renderEinheitBeta(view, isSolo, key, hasSource, srcInfo)}");
@@ -157,7 +162,7 @@ function apply(html) {
       <span class="dot"></span>
       <div style="flex:1;display:flex;flex-direction:column;gap:3px;min-width:0">
         <span class="k">Letzte Aktualisierung</span>
-        <span class="v">Stand: \${esc(btStand(D.GENERATED))}</span>
+        <span class="v">App-Stand: \${esc(btStand(BT_BUILD))}</span>
         <span class="f">\${esc(srcInfo)}</span>
       </div>
     </div>`);
