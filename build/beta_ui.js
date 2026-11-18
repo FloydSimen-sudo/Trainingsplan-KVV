@@ -26,6 +26,22 @@ const CSS = `
 .header .headerBtn{flex:1 1 220px !important;min-width:0}
 .header .headerLogo{order:2}
 .header > :not(.brandMark):not(.headerBtn):not(.headerLogo){order:3;flex:1 1 28% !important;justify-content:center;background:#005A96 !important}
+.jz{display:flex;flex-direction:column;gap:3px;padding-bottom:90px}
+.jzHead,.jzRow{display:grid;grid-template-columns:58px 74px 74px 1fr;gap:4px}
+.jzHead{position:sticky;top:0;z-index:5;background:#fff;padding:6px 0;font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;letter-spacing:.06em;color:#4a5b66;border-bottom:1px solid rgba(10,50,80,.15)}
+.jzYear{font:800 18px/1 Archivo,sans-serif;padding:8px 0 2px}
+.jzRow{min-height:46px;align-items:stretch}
+.jzRow.cur .jzW{outline:2px solid #d20028;border-radius:6px}
+.jzW{display:flex;flex-direction:column;justify-content:center;padding:2px 4px}
+.jzW b{font:800 12px/1.1 Archivo,sans-serif}
+.jzW span{font:500 9px/1.2 'Roboto Mono',monospace;color:#4a5b66}
+.jzC{display:flex;align-items:flex-start;justify-content:center;text-align:center;padding:4px 3px;font:700 10.5px/1.15 Archivo,sans-serif;overflow-wrap:anywhere;background:#f3f6f8;border-radius:0}
+.jzE{display:flex;flex-direction:column;gap:3px;justify-content:center;padding:2px 0}
+.jzEv{padding:4px 7px;border-radius:7px;border:1px solid rgba(10,50,80,.15);background:#fff;font:500 11px/1.25 Archivo,sans-serif;color:#000}
+.jzEv b{font-weight:800}
+.jzEv span{font-weight:600}
+.jzEv i{font:600 10px/1 'Roboto Mono',monospace;font-style:normal;opacity:.75}
+.jzEv.wk{border-left:5px solid #d20028}
 .btBanner{border-radius:16px;padding:16px 16px 14px;color:#000;display:flex;flex-direction:column;gap:6px}
 .btBanner .d{font:800 22px/1.1 Archivo,sans-serif}
 .btBanner .o{font:800 34px/1.05 Archivo,sans-serif;word-break:break-word}
@@ -126,10 +142,10 @@ function apply(html) {
     html = html.replace(a, () => b);
   };
   rep('</style>', CSS + '</style>');
-  rep('function renderWochenplan(', JS + require('fs').readFileSync(__dirname + '/beta_wk.frag.js', 'utf8') + '\nfunction renderWochenplan(');
+  rep('function renderWochenplan(', JS + require('fs').readFileSync(__dirname + '/beta_wk.frag.js', 'utf8') + require('fs').readFileSync(__dirname + '/beta_jz.frag.js', 'utf8') + '\nfunction renderWochenplan(');
   rep("const tabNames = ['Dashboard','Woche','Wochenplan','Jahr','Statistik'];\n  if(isSolo){ tabNames.push('Benchmarks'); }\n  tabNames.push('Trainer');\n  if(tabNames.indexOf(state.tab) < 0) state.tab = 'Dashboard';",
-      "const tabNames = ['Woche'];\n  state.tab = 'Woche';");
-  rep("${state.tab==='Woche' ? renderWoche(view, isSolo, key, hasSource, srcInfo) : ''}", "${renderEinheitBeta(view, isSolo, key, hasSource, srcInfo)}");
+      "const tabNames = ['Woche','Jahr'];\n  if(tabNames.indexOf(state.tab) < 0) state.tab = 'Woche';");
+  rep("${state.tab==='Woche' ? renderWoche(view, isSolo, key, hasSource, srcInfo) : ''}", "${state.tab==='Jahr' ? renderJahrBeta(view, key) : renderEinheitBeta(view, isSolo, key, hasSource, srcInfo)}");
   rep(`<div class="syncbar">
       <span class="dot"></span>
       <div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0">
@@ -148,7 +164,7 @@ function apply(html) {
       \${routeBtn(view, 'head')}`, `white-space:nowrap">Doku</a>
       <a href="\${BT_UEB}" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;padding:8px 10px;border-radius:10px;background:\${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Übungssammlung</a>
       \${routeBtn(view, 'head')}`);
-  rep('<div class="tabs">\n      ${tabNames', '<div class="tabs" style="display:none">\n      ${tabNames');
+  rep("(n==='Woche'?'Einheit':(n==='Wochenplan'?'Woche':n))", "(n==='Woche'?'Einheit':(n==='Jahr'?'Jahresplanung':n))");
   rep("      </div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){", "      </div>\n      <div class=\"btTrainer\">${renderTrainerspace(null)}</div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){");
   return html;
 }
