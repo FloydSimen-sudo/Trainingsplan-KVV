@@ -23,9 +23,21 @@ function encrypt(jsonStr, pw){
   const ct = Buffer.concat([enc, c.getAuthTag()]);
   return 'window.TPDATA_ENC = ' + JSON.stringify({v:1,kdf:'PBKDF2',hash:'SHA-256',iterations:IT,salt:salt.toString('base64'),iv:iv.toString('base64'),ct:ct.toString('base64')}) + ';\n';
 }
+function applyOrte(D){   // nur Beta: Trainingsorte/Disziplin der Gruppen laut Google Kalender (build/ort_kalender.json), ab KW47
+  const ok = JSON.parse(fs.readFileSync('build/ort_kalender.json', 'utf8')), ORT = {Bouldern: 'SB Dornbirn', Lead: 'K1'};
+  const all = Object.values(ok).flatMap(o => Object.keys(o)).sort(), HORIZON = all[all.length - 1];
+  Object.keys(ok).forEach(gid => {
+    Object.values((D.PLANS || {})['g:' + gid] || {}).forEach(w => (w.days || []).forEach(d => {
+      if (d.date < '2026-11-16' || d.date > HORIZON) return;
+      const t = ok[gid][d.date];
+      if (t) { d.ort = ORT[t]; d.ortType = t; } else if (d.ort || d.ortType) { d.ort = null; d.ortType = null; }
+    }));
+  });
+  return D;
+}
 function loadData(){
   const raw = fs.readFileSync('tp-data.js','utf8').trim();
-  return JSON.parse(raw.slice('window.TPDATA = '.length).replace(/;\s*$/, ''));
+  return applyOrte(JSON.parse(raw.slice('window.TPDATA = '.length).replace(/;\s*$/, '')));
 }
 const ATH = 'Adrian Kathan', GRP = 'U15 II';
 function filterBeta(D){
