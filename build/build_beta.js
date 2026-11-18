@@ -33,6 +33,11 @@ function applyOrte(D){   // nur Beta: Trainingsorte/Disziplin der Gruppen laut G
       if (t) { d.ort = ORT[t]; d.ortType = t; } else if (d.ort || d.ortType) { d.ort = null; d.ortType = null; }
     }));
   });
+  // Entfallende Trainings laut Google Kalender (build/entfaellt_kalender.json: Titel mit "entfaellt", {r: Grund, p: nur Teil, z. B. Athletik OZ})
+  const ef = JSON.parse(fs.readFileSync('build/entfaellt_kalender.json', 'utf8'));
+  Object.keys(ef).forEach(gid => Object.values((D.PLANS || {})['g:' + gid] || {}).forEach(w => (w.days || []).forEach(d => {
+    delete d.cancel; if (ef[gid][d.date]) d.cancel = ef[gid][d.date];
+  })));
   return D;
 }
 function loadData(){
