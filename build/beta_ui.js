@@ -163,11 +163,11 @@ function apply(html) {
     </div>`);
   rep(`white-space:nowrap">Doku</a>
       \${routeBtn(view, 'head')}`, `white-space:nowrap">Doku</a>
-      <a href="\${BT_UEB}" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;padding:8px 10px;border-radius:10px;background:\${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Übungssammlung</a>
+      \${view.t==='a' ? '<a href="'+BT_UEB+'" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;padding:8px 10px;border-radius:10px;background:'+AM+';color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Übungssammlung</a>' : ''}
       \${routeBtn(view, 'head')}`);
   rep("${state.tab==='Jahr' ? renderJahr(view, isSolo, athlete, group) : ''}", '');
   rep("(n==='Woche'?'Einheit':(n==='Wochenplan'?'Woche':n))", "(n==='Woche'?'Einheit':(n==='Jahr'?'Jahresplanung':n))");
-  rep("      </div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){", "      </div>\n      <div class=\"btTrainer\">${renderTrainerspace(null)}</div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){");
+  rep("      </div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){", "      </div>\n      <div class=\"btTrainer\">${renderTrainerspace(null)}<div><a href=\"${BT_UEB}\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-flex;align-items:center;padding:9px 14px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap\">Übungssammlung</a></div></div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){");
   return html;
 }
 module.exports = { apply };
