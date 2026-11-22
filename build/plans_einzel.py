@@ -335,6 +335,16 @@ def compose(path, make_item, cal, today=None, pause=True, disc=None):
                 if date.fromisoformat(x) >= START_DATE:
                     items.setdefault(x, []).append((rw, part, red))
 
+    # Gruppen mit genau einem Trainingstag pro Woche (laut Kalender, z. B. U9): Inhalte, die laut Excel auf einem Tag ohne
+    # Training stehen (z. B. Beweglichkeit 1 = Di), werden auf den Trainingstag verlegt (Floyd, 22.11.2026)
+    if disc is not None:
+        for _iso in sorted(list(items)):
+            _d = date.fromisoformat(_iso)
+            _mon = _d - timedelta(days=_d.weekday())
+            _tr = [x for x in ((_mon + timedelta(days=i)).isoformat() for i in range(7)) if cal.get(x)]
+            if len(_tr) == 1 and _iso != _tr[0] and _iso not in cal:
+                items.setdefault(_tr[0], []).extend(items.pop(_iso))
+
     # 3) Tage zusammenbauen
     alldays = set(items) | {k for k in noti if date.fromisoformat(k) >= START_DATE} | \
         {k for k in cal if date.fromisoformat(k) >= START_DATE}
