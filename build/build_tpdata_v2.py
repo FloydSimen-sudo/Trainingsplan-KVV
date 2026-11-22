@@ -2230,7 +2230,13 @@ def main():
                 _ekal = plans_einzel.load_calendar(os.path.join(_bd, 'einzel_kalender.json'))
             else:
                 _ekal = (plans_einzel.load_calendar(os.path.join(_bd, 'gruppen_kalender.json')) or {}).get(fname27, {})
-            _nw = plans_einzel.compose(f27, _mk27, _ekal, pause=key27.startswith('a:'))
+            _disc = None
+            if key27.startswith('g:'):   # Gruppen: Disziplin je Tag laut Google Kalender (build/ort_kalender.json)
+                try:
+                    _disc = json.load(open(os.path.join(_bd, 'ort_kalender.json'), encoding='utf-8')).get(gid27)
+                except Exception:
+                    _disc = None
+            _nw = plans_einzel.compose(f27, _mk27, _ekal, pause=key27.startswith('a:'), disc=_disc)
             _tg = PLANS.setdefault(key27, {})
             for _wk, _w in _nw.items():
                 _old = _tg.get(_wk)

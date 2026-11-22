@@ -245,7 +245,10 @@ def parse_jahresplanung(path, cfg=None):
         if ws.cell(kw_row, c).value not in (None, ''):
             last_col = c
     start = date.fromisoformat(cfg['jahresplan_start'])
-    n_weeks = last_col - first_col + 1
+    # Neues Layout (ab 22.11.2026): vor jeder Wochenspalte steht eine Dauer-Spalte ("min") -> 2 Spalten je Woche
+    paired = _txt(ws.cell(kw_row + 1, first_col).value).lower() == 'min'
+    step = 2 if paired else 1
+    n_weeks = (last_col - first_col) // step + 1
     weeks = []
     for i in range(n_weeks):
         mon = start + timedelta(days=7 * i)
@@ -254,8 +257,39 @@ def parse_jahresplanung(path, cfg=None):
 
     hidden = {r for r, d in ws.row_dimensions.items() if d.hidden}
 
-    def blocks_for_row(r, coalesce=False):
+    def blocks_for_row(r, coalesce=False, content=False):
         out = []
+        if paired:
+            for wi in range(n_weeks):
+                c = first_col + 2 * wi
+                if content:
+                    cell = ws.cell(r, c + 1)
+                    t = _txt(_val(ws, mm, r, c + 1))
+                    if t:
+                        out.append({'s': wi, 'n': 1, 't': t, 'c': _fill_hex(cell)})
+                    continue
+                box = mm.get((r, c))
+                if box:
+                    if box[1] < c:
+                        continue
+                    t = _txt(ws.cell(box[0], box[1]).value)
+                    span = max(1, (min(box[3], last_col + 1) - c + 2) // 2)
+                    cell = ws.cell(box[0], box[1])
+                else:
+                    cell = ws.cell(r, c) if _txt(ws.cell(r, c).value) else ws.cell(r, c + 1)
+                    t = _txt(cell.value)
+                    span = 1
+                if t:
+                    out.append({'s': wi, 'n': span, 't': t, 'c': _fill_hex(cell)})
+            if coalesce:
+                merged = []
+                for b in out:
+                    if merged and merged[-1]['t'] == b['t'] and merged[-1]['s'] + merged[-1]['n'] == b['s']:
+                        merged[-1]['n'] += b['n']
+                    else:
+                        merged.append(dict(b))
+                out = merged
+            return out
         c = first_col
         while c <= last_col:
             box = mm.get((r, c))
@@ -321,7 +355,7 @@ def parse_jahresplanung(path, cfg=None):
             continue
         if r in hidden:
             continue
-        blocks = blocks_for_row(r)
+        blocks = blocks_for_row(r, content=paired)
         if not blocks:
             continue
         rows.append({

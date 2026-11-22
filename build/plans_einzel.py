@@ -18,6 +18,7 @@ JP_START = date(2026, 9, 7)  # KW37/2026 = Spalte E
 ROWMAP = [
     ('warm up', 'Aufwärmen', 1, 'allday'),
     ('bewegungsbouldern', 'Technik/Taktik', 1, 'bbday'),
+    ('frei bouldern', 'Technik/Taktik', 1, None),
     ('technik boulder', 'Technik/Taktik', 1, None),
     ('technik lead', 'Technik/Taktik', 2, None),
     ('taktik 1', 'Theorie', 1, None),
@@ -86,6 +87,15 @@ def _find_week_cols(ws):
         return None, {}
     cols = {}
     c = 5
+    if _t(ws.cell(kw_row + 1, 5).value).lower() == 'min':
+        # Neues Layout: je Woche zwei Spalten (links Dauer "min", rechts Inhalt); cols[Inhaltsspalte] = Montag
+        k = 0
+        while c + 1 <= ws.max_column:
+            if ws.cell(kw_row, c).value not in (None, ''):
+                cols[c + 1] = JP_START + timedelta(days=7 * k)
+            c += 2
+            k += 1
+        return kw_row, cols
     while c <= ws.max_column:
         if ws.cell(kw_row, c).value not in (None, ''):
             cols[c] = JP_START + timedelta(days=7 * (c - 5))
@@ -212,8 +222,10 @@ def _notizen(wb):
     return out
 
 
-def compose(path, make_item, cal, today=None, pause=True):
-    """-> weeks dict {'YYYY-KW': {'days':[7], 'span','year','kw'}} ab START_DATE."""
+def compose(path, make_item, cal, today=None, pause=True, disc=None):
+    """-> weeks dict {'YYYY-KW': {'days':[7], 'span','year','kw'}} ab START_DATE.
+    disc: nur Gruppen -- {datum: 'Bouldern'|'Lead'} laut Google Kalender. Die Excel enthaelt je Woche Boulder- UND
+    Lead-Inhalte; je Tag wird nur die Disziplin des Kalenders uebernommen, ohne Kalendereintrag keine von beiden."""
     try:
         wb = openpyxl.load_workbook(path, data_only=True)
     except Exception:
@@ -224,12 +236,18 @@ def compose(path, make_item, cal, today=None, pause=True):
     kw_row, cols = _find_week_cols(ws)
     if not cols:
         return {}
+    paired = _t(ws.cell(kw_row + 1, 5).value).lower() == 'min'
     rows = _rows(ws, wb)
+    if disc is not None:   # Gruppen: eine Einheit pro Tag (zweite Session nur laut Kalender)
+        for _rw in rows:
+            _rw['pref'] = 1
     heads = _head_rows(ws)
     noti = _notizen(wb)
 
     # 1) Inhalte je Datum: items[date] = [(row, text, red)]
     items = {}
+    durs = {}        # (Montag, Zeile, Text) -> Minuten aus der Dauer-Spalte ("min")
+    disc_skipped = {}  # Datum -> Disziplin-Inhalte, die mangels Kalender-Disziplin nicht uebernommen wurden
     unspecific = []  # (monday, row, text, red) fuer Zeilen ohne Wochentag
     for c, mon in cols.items():
         if mon + timedelta(days=6) < START_DATE:
@@ -241,7 +259,12 @@ def compose(path, make_item, cal, today=None, pause=True):
             if not txt or txt.lower() in SKIP:
                 continue
             red = plans2027._is_red_font(cc)
-            for part in [p.strip() for p in txt.split('\n') if p.strip()]:
+            _mv = ws.cell(rw['r'], c - 1).value if paired else None
+            try:
+                dmin = float(str(_mv).replace(',', '.')) if _mv not in (None, '') else None
+            except ValueError:
+                dmin = None
+            for pi, part in enumerate([p.strip() for p in txt.split('\n') if p.strip()]):
                 if part.lower() in SKIP:
                     continue
                 dow = rw['day']
@@ -273,6 +296,16 @@ def compose(path, make_item, cal, today=None, pause=True):
                 else:
                     d = mon + timedelta(days=dow)
                     if d >= START_DATE:
+                        if disc is not None:
+                            _dl = rw['label'].lower()
+                            _isb = _dl.startswith(('technik boulder', 'physis bouldern', 'spezial bouldern'))
+                            _isl = _dl.startswith(('technik lead', 'physis lead', 'spezial lead'))
+                            if (_isb or _isl) and disc.get(d.isoformat()) != ('Bouldern' if _isb else 'Lead'):
+                                if disc.get(d.isoformat()) is None:
+                                    disc_skipped.setdefault(d.isoformat(), set()).add('Bouldern' if _isb else 'Lead')
+                                continue
+                        if dmin and dmin > 0 and pi == 0:
+                            durs[(mon.isoformat(), rw['r'], part)] = dmin
                         items.setdefault(d.isoformat(), []).append((rw, part, red))
 
     # 2) Zeilen ohne Wochentag
@@ -346,6 +379,10 @@ def compose(path, make_item, cal, today=None, pause=True):
                     it = make_item('%s: %s' % (rw['label'], text), red)
             if rw.get('col'):
                 it['col'] = rw['col']
+            _dm = durs.get(((dt - timedelta(days=wd - 1)).isoformat(), rw['r'], part))
+            if _dm:   # Dauer aus der "min"-Spalte hat Vorrang vor Zeitangaben im Text
+                it['explicitTime'] = '%d min' % round(_dm)
+                it['dur'] = round(_dm)
             if lab_l.startswith('taktik 2'):
                 it['par'] = True   # Taktik 2 (mid Session) laeuft nebenher (Floyd 16.11.2026)
             cat['items'].append(it)
@@ -416,6 +453,9 @@ def compose(path, make_item, cal, today=None, pause=True):
                 if extra:
                     day['notiz'] = ' · '.join(extra)
                     day['notizRed'] = bool(nt.get('sonst1Red') or nt.get('sonst2Red'))
+        if iso in disc_skipped:
+            _n = 'Bouldern/Lead laut Google Kalender noch offen – Technik-/Physis-Inhalte folgen'
+            day['notiz'] = (day['notiz'] + ' · ' + _n) if day.get('notiz') else _n
         # Kopfzeilen: Fels / Deload / Ferien als Hinweis
         wk = weeks.setdefault('%d-%d' % (y, kw), {'days': {}, 'year': y, 'kw': kw})
         wk['days'][wd - 1] = day
@@ -424,7 +464,7 @@ def compose(path, make_item, cal, today=None, pause=True):
     for c, mon in cols.items():
         for hk in ('fels', 'deload'):
             if hk in heads:
-                v = _t(ws.cell(heads[hk], c).value)
+                v = _t(ws.cell(heads[hk], c - 1 if paired else c).value)
                 if v:
                     y, kw, _ = mon.isocalendar()
                     wk = weeks.get('%d-%d' % (y, kw))
