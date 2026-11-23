@@ -19,6 +19,7 @@ ROWMAP = [
     ('warm up', 'Aufwärmen', 1, 'allday'),
     ('bewegungsbouldern', 'Technik/Taktik', 1, 'bbday'),
     ('frei bouldern', 'Technik/Taktik', 1, None),
+    ('frei klettern', 'Technik/Taktik', 1, None),
     ('technik boulder', 'Technik/Taktik', 1, None),
     ('technik lead', 'Technik/Taktik', 2, None),
     ('taktik 1', 'Theorie', 1, None),
