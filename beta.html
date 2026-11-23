@@ -358,6 +358,49 @@
 .btRow .n{flex:1;font:600 13px/1.3 Archivo,sans-serif}
 .btRow .d{font:600 11px/1 'Roboto Mono',monospace;flex:none}
 .btNote{font:500 12.5px/1.4 Archivo,sans-serif;padding:8px 12px;border-radius:10px;background:#f3f6f8;color:#33434d}
+#app:has(.btTrainer.wide){max-width:none}
+.btTrainer.wide{max-width:none;padding-left:20px;padding-right:20px}
+.btTrainer.wide > :not(.spBoard){width:100%;max-width:560px;margin-left:auto;margin-right:auto}
+.spBoard{display:flex;flex-direction:column;gap:10px;width:100%}
+.spBar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.spTt{font:700 17px/1 Archivo,sans-serif;margin-right:auto}
+.spTabs{display:flex;border:1.5px solid #005A96;border-radius:10px;overflow:hidden}
+.spTabs button{border:0;background:#fff;color:#005A96;padding:9px 18px;font:700 13px/1 Archivo,sans-serif;cursor:pointer}
+.spTabs button.sel{background:#005A96;color:#fff}
+.spNav{display:flex;align-items:center;gap:10px}
+.spTitle{font:700 15px/1.2 Archivo,sans-serif;min-width:190px;text-align:center}
+.spToday{border:1px solid #9aa3a9;background:#fff;border-radius:8px;padding:8px 12px;font:600 12px/1 Archivo,sans-serif;cursor:pointer}
+.spScroll{overflow-x:auto;padding-bottom:8px}
+.spWeek{display:grid;grid-template-columns:150px repeat(7,minmax(150px,1fr));gap:6px;min-width:1150px}
+.spCorner{font:700 11px/1 'Roboto Mono',monospace;color:#4a5b66;align-self:end;padding:4px}
+.spDH{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:#eef2f5;cursor:pointer}
+.spDH.today{background:#005A96;color:#fff}
+.spDH b{font:800 14px/1 Archivo,sans-serif}.spDH span{font:600 11px/1 'Roboto Mono',monospace}
+.spName{display:flex;flex-direction:column;gap:3px;padding:10px;border-radius:10px;background:#eef2f5;justify-content:center}
+.spName b{font:700 14px/1.15 Archivo,sans-serif}.spName span{font:600 11px/1 'Roboto Mono',monospace;color:#4a5b66}
+.spCell{display:flex;flex-direction:column;gap:3px;padding:6px;border-radius:10px;border:1px solid rgba(10,50,80,.12);background:#fff;cursor:pointer;min-width:0}
+.spCell:hover{border-color:#005A96}
+.spCell.free{color:#9aa3a9;align-items:center;justify-content:center;background:#f7f9fa}
+.spCT{display:flex;flex-direction:column;gap:1px;padding:4px 7px;border-radius:7px;color:#000}
+.spCT b{font:800 12px/1.2 Archivo,sans-serif}.spCT span{font:600 10.5px/1.2 Archivo,sans-serif}
+.spL{font:600 11.5px/1.25 Archivo,sans-serif;padding:3px 6px;border-radius:6px;word-break:break-word}
+.spL i{font-style:normal;color:#4a5b66;font-weight:500}
+.spL.h1{background:#fff7b8}.spL.h2{background:#fbe0cd}.spL.rest{background:#eef2f5;color:#4a5b66;font-weight:500;font-size:10.5px}
+.spTags{display:flex;flex-wrap:wrap;gap:4px}
+.spTag{font:700 10px/1.2 Archivo,sans-serif;padding:3px 6px;border-radius:6px}
+.spTag.wk{background:#fff;border:1.5px solid #d20028;color:#d20028}.spTag.st{background:#fff;border:1.5px solid #e8a33d;color:#8a5a00}
+.spDay{display:grid;gap:10px;min-width:calc(8*165px)}
+.spCol{display:flex;flex-direction:column;gap:6px;min-width:0}
+.spHead{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;color:#000}
+.spHead b{font:800 16px/1.15 Archivo,sans-serif}.spHead .o{font:700 14px/1.2 Archivo,sans-serif}.spHead .m{font:600 11.5px/1.25 Archivo,sans-serif}
+.spSec{font:700 10px/1 'Roboto Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#4a5b66;padding-top:4px}
+.spItem{display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:9px;border:1px solid rgba(10,50,80,.10)}
+.spItem.red .n{color:#d20028}
+.spItem .n{font:700 12.5px/1.25 Archivo,sans-serif}.spItem .d{font:600 11px/1.2 'Roboto Mono',monospace}.spItem .s{font:500 11px/1.3 Archivo,sans-serif;color:#33434d}
+.spRow{display:flex;flex-direction:column;gap:1px;padding:6px 9px;border-radius:9px;border:1px solid rgba(10,50,80,.08)}
+.spRow .c{font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;color:#4a5b66}.spRow .n{font:600 12px/1.25 Archivo,sans-serif}.spRow .d{font:600 10.5px/1 'Roboto Mono',monospace}
+.spNote{font:500 11.5px/1.35 Archivo,sans-serif;padding:6px 9px;border-radius:9px;background:rgba(232,163,61,.15)}
+.spFree{font:500 12px/1.3 Archivo,sans-serif;color:#9aa3a9;padding:10px;border:1px dashed #c3ccd2;border-radius:9px;text-align:center}
 .btTrainer{padding:6px 16px 90px;display:flex;flex-direction:column;gap:10px;width:100%;max-width:560px;margin:0 auto;box-sizing:border-box}
 </style>
 </head>
@@ -694,7 +737,7 @@ function dayHint(key, day){
   if(!key || key.indexOf('g:')!==0 || key==='g:SPOGY Gruppe') return '';
   return `<div class="noteBlock"><span class="l">Hinweis</span><span class="t trainerNote">${esc(DAY_HINTS[day.date])}</span></div>`;
 }
-const BT_BUILD = "22.11.2026, 09:22";
+const BT_BUILD = "23.11.2026, 14:59";
 
 const BT_COL = {Bouldern:'#0090c9', Lead:'#78b83f', Speed:'#c9a227'};
 const BT_UEB = 'https://kletternvorarlberg-my.sharepoint.com/:x:/g/personal/floyd_simen_klettern-vorarlberg_at/IQC9XgUg3engR7KFVrcHcok8AZ1cxB0C8wP0TQrGWXO8Y18?e=onBkcG';
@@ -900,6 +943,119 @@ function renderJahrBeta(view, key){
       + cell(tr.phase, i) + cell(tr.ka, i) + '<div class="jzE">'+ev.join('')+'</div></div>';
   }
   return '<div class="jz"><div class="jzHead"><span>Woche</span><span>Phase</span><span>Kraftausd.</span><span>Termine</span></div>'+html+'</div>';
+}
+// ---- SPOGY-Board (Trainerreiter, PC-optimiert): Woche = Athlet x Tag, Tag = eine Spalte je Athlet ----
+const SP_DOW = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+function spIsoKw(iso){ const d = new Date(iso+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()+3-((d.getUTCDay()+6)%7)); const y = d.getUTCFullYear(); const w1 = new Date(Date.UTC(y,0,4)); return {kw:1+Math.round(((d-w1)/864e5-3+((w1.getUTCDay()+6)%7))/7), y:y}; }
+function spNames(){ const sg = D.GROUPS.find(g=>g.id==='SPOGY Gruppe'); return sg ? sg.athletes.map(a=>a.n) : []; }
+function spMonday(iso){ const d = new Date(iso+'T12:00:00'); const wd = (d.getDay()+6)%7; d.setDate(d.getDate()-wd); return trIso(d); }
+function spDayMin(day){ let t = 0; (day && day.sessions || []).forEach(s=>(s.cats||[]).forEach(c=>(c.items||[]).forEach(it=>{ const m = tpItemMin(it); if(m) t += m; }))); return t; }
+function spRest(day){
+  const rest = [];
+  (day && day.sessions || []).forEach(s=>(s.cats||[]).forEach(c=>(c.items||[]).forEach(it=>{
+    const inMain = (BT_H1.indexOf(c.name)>=0 && !it.par) || BT_H2.indexOf(c.name)>=0;
+    if(!inMain) rest.push({it:it, cat:(c.name==='Technik/Taktik'?'Taktik':c.name)});
+  })));
+  return rest;
+}
+function spNotes(day, wk){
+  const notes = [];
+  [day && day.sonstiges, day && day.notiz].concat(((day && day.sessions)||[]).map(s=>s.notiz)).forEach(t=>{
+    t = String(t||'').trim();
+    if(!t || t==='-' || notes.indexOf(t)>=0) return;
+    if(/^mit\s/i.test(t)) return;
+    if(day.zeit && t.replace(/\s/g,'').indexOf(day.zeit.replace(/\s/g,''))>=0) return;
+    if(wk.some(e=>e.ort!=='-' && t.indexOf(e.ort)>=0)) return;
+    notes.push(t);
+  });
+  return notes;
+}
+function spTag(wk, st){
+  return wk.map(e=>'<span class="spTag wk">WK '+esc(e.ort!=='-'?e.ort:e.name)+(e.disc && e.disc!=='-' ? ' · '+esc(e.disc) : '')+'</span>').join('')
+    + st.map(e=>'<span class="spTag st">'+esc(e.name)+'</span>').join('');
+}
+function spCompact(e){
+  const it = e.it, m = it.match || {}, mins = tpItemMin(it);
+  const has = v => v!=null && v!=='' && v!=='x';
+  const sub = [];
+  if(has(m.sets)) sub.push('Sätze '+m.sets);
+  if(has(m.vol)) sub.push(m.vol);
+  if(has(m.pause)) sub.push('Pause '+m.pause+(typeof m.pause==='number'?' min':''));
+  return '<div class="spItem'+(it.red?' red':'')+'" style="background:'+(it.col?'#'+esc(it.col):'#fff')+'"><div class="n">'+esc(btName(it))+'</div>'
+    + (mins || it.par ? '<div class="d">'+esc(mins ? btDur(mins) : 'nebenbei')+'</div>' : '')
+    + (sub.length ? '<div class="s">'+sub.map(esc).join(' · ')+'</div>' : '') + '</div>';
+}
+function spDayCol(nm, iso){
+  const key = 'a:'+nm, day = trFindDay(nm, iso);
+  const col = (day && BT_COL[day.ortType]) || '#dfe5e9';
+  const wk = btWkDay(key, iso), st = btWkDay(key, iso, 'sonst');
+  const h1 = btItems(day, BT_H1), h2 = btItems(day, BT_H2), rest = spRest(day), notes = spNotes(day, wk);
+  const total = spDayMin(day);
+  const hasTr = day && day.sessions && day.sessions.length;
+  const meta = day ? [day.zeit, day.trainer].filter(Boolean).join(' · ') : '';
+  let b = '<div class="spCol"><div class="spHead" style="background:'+col+'"><b>'+esc(nm)+'</b><span class="o">'+esc((day && day.ort) || (hasTr ? 'Ort offen' : 'Trainingsfrei'))+'</span>'
+    + (meta ? '<span class="m">'+esc(meta)+'</span>' : '') + (total ? '<span class="m">'+esc(btDur(total))+' geplant</span>' : '') + '</div>'
+    + (wk.length || st.length ? '<div class="spTags">'+spTag(wk, st)+'</div>' : '');
+  if(h1.length) b += '<div class="spSec">Hauptteil 1</div>' + h1.map(spCompact).join('');
+  if(h2.length) b += '<div class="spSec">Hauptteil 2</div>' + h2.map(spCompact).join('');
+  if(rest.length || notes.length){
+    b += '<div class="spSec">Sonstige Inhalte</div>'
+      + rest.map(e=>{ const mins = tpItemMin(e.it); return '<div class="spRow" style="background:'+(e.it.col?'#'+esc(e.it.col):'#fff')+'"><span class="c">'+esc(e.cat)+'</span><span class="n">'+esc(btName(e.it))+'</span><span class="d">'+(mins?esc(btDur(mins)):(e.it.par?'nebenbei':''))+'</span></div>'; }).join('')
+      + notes.map(t=>'<div class="spNote">'+esc(t)+'</div>').join('');
+  }
+  if(!hasTr && !notes.length && !wk.length && !st.length) b += '<div class="spFree">Kein Training eingetragen</div>';
+  return b + '</div>';
+}
+function spWeekCell(nm, iso){
+  const key = 'a:'+nm, day = trFindDay(nm, iso);
+  const wk = btWkDay(key, iso), st = btWkDay(key, iso, 'sonst');
+  const hasTr = day && day.sessions && day.sessions.length;
+  if(!day || (!hasTr && !wk.length && !st.length)) return '<div class="spCell free" data-spd="'+iso+'">–</div>';
+  const col = BT_COL[day.ortType] || '#dfe5e9';
+  const h1 = btItems(day, BT_H1), h2 = btItems(day, BT_H2), rest = spRest(day);
+  const ln = (arr, cls)=>arr.map(e=>'<div class="spL '+cls+'">'+esc(btName(e.it))+(tpItemMin(e.it) ? ' <i>'+tpItemMin(e.it)+'′</i>' : '')+'</div>').join('');
+  return '<div class="spCell" data-spd="'+iso+'"><div class="spCT" style="background:'+col+'"><b>'+esc(day.ort || (hasTr ? 'Ort offen' : ''))+'</b><span>'+esc(day.zeit || '')+'</span></div>'
+    + (wk.length || st.length ? '<div class="spTags">'+spTag(wk, st)+'</div>' : '')
+    + ln(h1, 'h1') + ln(h2, 'h2')
+    + (rest.length ? '<div class="spL rest">'+rest.map(e=>esc(btName(e.it))).slice(0,6).join(' · ')+'</div>' : '') + '</div>';
+}
+function renderSpogyBoard(){
+  const names = spNames();
+  const iso = state.trainerDay || trIso(new Date());
+  const mode = state.spogyMode === 'Tag' ? 'Tag' : 'Woche';
+  const mon = spMonday(iso), days = [0,1,2,3,4,5,6].map(i=>trShift(mon, i));
+  const today = trIso(new Date());
+  const tabs = '<div class="spTabs"><button class="'+(mode==='Woche'?'sel':'')+'" data-spm="Woche">Woche</button><button class="'+(mode==='Tag'?'sel':'')+'" data-spm="Tag">Tag</button></div>';
+  const step = mode==='Woche' ? 7 : 1;
+  const title = mode==='Woche'
+    ? 'KW '+(function(){ const k = spIsoKw(mon); return btKwLab(mon, k.kw, k.y).kw; })()+' · '+mon.slice(8,10)+'.'+mon.slice(5,7)+'. – '+days[6].slice(8,10)+'.'+days[6].slice(5,7)+'.'+days[6].slice(0,4)
+    : trFmtDate(iso);
+  const nav = '<div class="spNav"><button class="navBtn" data-trday="-'+step+'">‹</button><div class="spTitle">'+esc(title)+'</div><button class="navBtn" data-trday="'+step+'">›</button><button class="spToday" data-trday="0">Heute</button></div>';
+  let body = '';
+  if(mode==='Woche'){
+    body = '<div class="spWeek"><div class="spCorner">SPOGY</div>'
+      + days.map((d,i)=>'<div class="spDH'+(d===today?' today':'')+'" data-spd="'+d+'"><b>'+SP_DOW[i]+'</b><span>'+d.slice(8,10)+'.'+d.slice(5,7)+'.</span></div>').join('')
+      + names.map(nm=>{
+          let wt = 0; days.forEach(d=>{ wt += spDayMin(trFindDay(nm, d)); });
+          return '<div class="spName"><b>'+esc(nm)+'</b><span>'+(wt ? esc(btDur(wt))+' Woche' : '–')+'</span></div>' + days.map(d=>spWeekCell(nm, d)).join('');
+        }).join('') + '</div>';
+  } else {
+    body = '<div class="spDay" style="grid-template-columns:repeat('+Math.max(1,names.length)+',minmax(190px,1fr))">' + names.map(nm=>spDayCol(nm, iso)).join('') + '</div>';
+  }
+  return '<div class="spBoard"><div class="spBar"><span class="spTt">SPOGY · Übersicht Einzelathleten</span>'+tabs+nav+'</div><div class="spScroll">'+body+'</div></div>';
+}
+function btTrWide(){
+  const ids = trainerSession.order; if(!ids.length) return false;
+  let gid = state.trainerGroup; if(ids.indexOf(gid)<0) gid = ids[0];
+  return gid === 'SPOGY Gruppe';
+}
+if(typeof document !== 'undefined' && document.addEventListener){
+  document.addEventListener('click', ev=>{
+    const t = ev.target && ev.target.closest ? ev.target : null; if(!t) return;
+    const g = t.closest('[data-trg]'); if(g && g.getAttribute('data-trg')==='SPOGY Gruppe') setTimeout(()=>{ const b = document.querySelector('.spBoard'); if(b && b.scrollIntoView) b.scrollIntoView({block:'start'}); }, 80);
+    const m = t.closest('[data-spm]'); if(m){ setState({spogyMode: m.getAttribute('data-spm')}); return; }
+    const d = t.closest('[data-spd]'); if(d){ setState({spogyMode:'Tag', trainerDay: d.getAttribute('data-spd')}); }
+  });
 }
 
 function renderWochenplan(view, isSolo, key, hasSource, srcInfo){
@@ -2023,7 +2179,7 @@ function renderLanding(){
           ${spogyOpt}
         </div>
       </div>
-      <div class="btTrainer">${renderTrainerspace(null)}${trainerSession.order.length ? `<div><a href="${BT_UEB}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;padding:9px 14px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Übungssammlung</a></div>` : ''}</div>
+      <div class="btTrainer${btTrWide() ? ' wide' : ''}">${renderTrainerspace(null)}${trainerSession.order.length ? `<div><a href="${BT_UEB}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;padding:9px 14px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Übungssammlung</a></div>` : ''}</div>
     </div>
   `;
 }
@@ -2234,7 +2390,7 @@ function renderTrainerspace(view){
       <button id="trainerLogout" style="font:600 11px/1 Archivo,sans-serif;padding:7px 10px;border-radius:8px;border:1px solid ${DI};background:transparent;color:${MU};cursor:pointer">Abmelden</button>
     </div>
     ${chips}
-    ${gid==='SPOGY Gruppe' ? spogyDayOverview() : ''}
+    ${gid==='SPOGY Gruppe' ? renderSpogyBoard() : ''}
     <div class="roster" style="margin-top:0">
       <span style="font:500 9px/1 'Roboto Mono',monospace;letter-spacing:.08em;color:${DI};text-transform:uppercase">${esc(g.label)} · Übersicht</span>
       <div style="display:flex;align-items:baseline;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(10,50,80,.08)"><span style="font:400 12px/1 Archivo,sans-serif;color:${MU}">Einträge</span><span style="font:600 13px/1 'Roboto Mono',monospace">${es.length}</span></div>

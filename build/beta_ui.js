@@ -59,6 +59,49 @@ const CSS = `
 .btRow .n{flex:1;font:600 13px/1.3 Archivo,sans-serif}
 .btRow .d{font:600 11px/1 'Roboto Mono',monospace;flex:none}
 .btNote{font:500 12.5px/1.4 Archivo,sans-serif;padding:8px 12px;border-radius:10px;background:#f3f6f8;color:#33434d}
+#app:has(.btTrainer.wide){max-width:none}
+.btTrainer.wide{max-width:none;padding-left:20px;padding-right:20px}
+.btTrainer.wide > :not(.spBoard){width:100%;max-width:560px;margin-left:auto;margin-right:auto}
+.spBoard{display:flex;flex-direction:column;gap:10px;width:100%}
+.spBar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.spTt{font:700 17px/1 Archivo,sans-serif;margin-right:auto}
+.spTabs{display:flex;border:1.5px solid #005A96;border-radius:10px;overflow:hidden}
+.spTabs button{border:0;background:#fff;color:#005A96;padding:9px 18px;font:700 13px/1 Archivo,sans-serif;cursor:pointer}
+.spTabs button.sel{background:#005A96;color:#fff}
+.spNav{display:flex;align-items:center;gap:10px}
+.spTitle{font:700 15px/1.2 Archivo,sans-serif;min-width:190px;text-align:center}
+.spToday{border:1px solid #9aa3a9;background:#fff;border-radius:8px;padding:8px 12px;font:600 12px/1 Archivo,sans-serif;cursor:pointer}
+.spScroll{overflow-x:auto;padding-bottom:8px}
+.spWeek{display:grid;grid-template-columns:150px repeat(7,minmax(150px,1fr));gap:6px;min-width:1150px}
+.spCorner{font:700 11px/1 'Roboto Mono',monospace;color:#4a5b66;align-self:end;padding:4px}
+.spDH{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:#eef2f5;cursor:pointer}
+.spDH.today{background:#005A96;color:#fff}
+.spDH b{font:800 14px/1 Archivo,sans-serif}.spDH span{font:600 11px/1 'Roboto Mono',monospace}
+.spName{display:flex;flex-direction:column;gap:3px;padding:10px;border-radius:10px;background:#eef2f5;justify-content:center}
+.spName b{font:700 14px/1.15 Archivo,sans-serif}.spName span{font:600 11px/1 'Roboto Mono',monospace;color:#4a5b66}
+.spCell{display:flex;flex-direction:column;gap:3px;padding:6px;border-radius:10px;border:1px solid rgba(10,50,80,.12);background:#fff;cursor:pointer;min-width:0}
+.spCell:hover{border-color:#005A96}
+.spCell.free{color:#9aa3a9;align-items:center;justify-content:center;background:#f7f9fa}
+.spCT{display:flex;flex-direction:column;gap:1px;padding:4px 7px;border-radius:7px;color:#000}
+.spCT b{font:800 12px/1.2 Archivo,sans-serif}.spCT span{font:600 10.5px/1.2 Archivo,sans-serif}
+.spL{font:600 11.5px/1.25 Archivo,sans-serif;padding:3px 6px;border-radius:6px;word-break:break-word}
+.spL i{font-style:normal;color:#4a5b66;font-weight:500}
+.spL.h1{background:#fff7b8}.spL.h2{background:#fbe0cd}.spL.rest{background:#eef2f5;color:#4a5b66;font-weight:500;font-size:10.5px}
+.spTags{display:flex;flex-wrap:wrap;gap:4px}
+.spTag{font:700 10px/1.2 Archivo,sans-serif;padding:3px 6px;border-radius:6px}
+.spTag.wk{background:#fff;border:1.5px solid #d20028;color:#d20028}.spTag.st{background:#fff;border:1.5px solid #e8a33d;color:#8a5a00}
+.spDay{display:grid;gap:10px;min-width:calc(8*165px)}
+.spCol{display:flex;flex-direction:column;gap:6px;min-width:0}
+.spHead{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;color:#000}
+.spHead b{font:800 16px/1.15 Archivo,sans-serif}.spHead .o{font:700 14px/1.2 Archivo,sans-serif}.spHead .m{font:600 11.5px/1.25 Archivo,sans-serif}
+.spSec{font:700 10px/1 'Roboto Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:#4a5b66;padding-top:4px}
+.spItem{display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:9px;border:1px solid rgba(10,50,80,.10)}
+.spItem.red .n{color:#d20028}
+.spItem .n{font:700 12.5px/1.25 Archivo,sans-serif}.spItem .d{font:600 11px/1.2 'Roboto Mono',monospace}.spItem .s{font:500 11px/1.3 Archivo,sans-serif;color:#33434d}
+.spRow{display:flex;flex-direction:column;gap:1px;padding:6px 9px;border-radius:9px;border:1px solid rgba(10,50,80,.08)}
+.spRow .c{font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;color:#4a5b66}.spRow .n{font:600 12px/1.25 Archivo,sans-serif}.spRow .d{font:600 10.5px/1 'Roboto Mono',monospace}
+.spNote{font:500 11.5px/1.35 Archivo,sans-serif;padding:6px 9px;border-radius:9px;background:rgba(232,163,61,.15)}
+.spFree{font:500 12px/1.3 Archivo,sans-serif;color:#9aa3a9;padding:10px;border:1px dashed #c3ccd2;border-radius:9px;text-align:center}
 .btTrainer{padding:6px 16px 90px;display:flex;flex-direction:column;gap:10px;width:100%;max-width:560px;margin:0 auto;box-sizing:border-box}
 `;
 
@@ -150,7 +193,7 @@ function apply(html) {
     html = html.replace(a, () => b);
   };
   rep('</style>', CSS + '</style>');
-  rep('function renderWochenplan(', 'const BT_BUILD = ' + JSON.stringify(viennaStamp()) + ';\n' + JS + require('fs').readFileSync(__dirname + '/beta_wk.frag.js', 'utf8') + require('fs').readFileSync(__dirname + '/beta_jz.frag.js', 'utf8') + '\nfunction renderWochenplan(');
+  rep('function renderWochenplan(', 'const BT_BUILD = ' + JSON.stringify(viennaStamp()) + ';\n' + JS + require('fs').readFileSync(__dirname + '/beta_wk.frag.js', 'utf8') + require('fs').readFileSync(__dirname + '/beta_jz.frag.js', 'utf8') + require('fs').readFileSync(__dirname + '/beta_spogy.frag.js', 'utf8') + '\nfunction renderWochenplan(');
   rep("const tabNames = ['Dashboard','Woche','Wochenplan','Jahr','Statistik'];\n  if(isSolo){ tabNames.push('Benchmarks'); }\n  tabNames.push('Trainer');\n  if(tabNames.indexOf(state.tab) < 0) state.tab = 'Dashboard';",
       "const tabNames = ['Woche','Jahr'];\n  if(tabNames.indexOf(state.tab) < 0) state.tab = 'Woche';");
   rep("${state.tab==='Woche' ? renderWoche(view, isSolo, key, hasSource, srcInfo) : ''}", "${state.tab==='Jahr' ? renderJahrBeta(view, key) : renderEinheitBeta(view, isSolo, key, hasSource, srcInfo)}");
@@ -174,7 +217,8 @@ function apply(html) {
       \${routeBtn(view, 'head')}`);
   rep("${state.tab==='Jahr' ? renderJahr(view, isSolo, athlete, group) : ''}", '');
   rep("(n==='Woche'?'Einheit':(n==='Wochenplan'?'Woche':n))", "(n==='Woche'?'Einheit':(n==='Jahr'?'Jahresplanung':n))");
-  rep("      </div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){", "      </div>\n      <div class=\"btTrainer\">${renderTrainerspace(null)}${trainerSession.order.length ? `<div><a href=\"${BT_UEB}\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-flex;align-items:center;padding:9px 14px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap\">Übungssammlung</a></div>` : ''}</div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){");
+  rep("      </div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){", "      </div>\n      <div class=\"btTrainer${btTrWide() ? ' wide' : ''}\">${renderTrainerspace(null)}${trainerSession.order.length ? `<div><a href=\"${BT_UEB}\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-flex;align-items:center;padding:9px 14px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap\">Übungssammlung</a></div>` : ''}</div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){");
+  rep("${gid==='SPOGY Gruppe' ? spogyDayOverview() : ''}", "${gid==='SPOGY Gruppe' ? renderSpogyBoard() : ''}");
   return html;
 }
 module.exports = { apply };
