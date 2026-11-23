@@ -149,10 +149,17 @@ def _rows(ws, wb=None):
             continue
         for key, cat, pref, rule in ROWMAP:
             if l.startswith(key):
-                dtxt = _t(ws.cell(r, 4).value).lower()[:2]
+                dtxt = _t(ws.cell(r, 4).value).lower()
+                # Spalte D kann mehrere Tage enthalten ("Di/Fr", "Di + Fr", "Di/Fi" = Tippfehler fuer Fr)
+                dl = []
+                for tok in re.findall(r'(?<![a-zä])(mo|di|mi|do|fr|fi|sa|so)(?![a-zä])', dtxt):
+                    k = ABBR['fr' if tok == 'fi' else tok]
+                    if k not in dl:
+                        dl.append(k)
                 out.append({'r': r, 'label': lab, 'cat': cat, 'pref': pref, 'rule': rule,
                             'col': _fill_hex(ws.cell(r, 3), _theme_colors(wb)) if wb is not None else None,
-                            'day': None if rule == 'every' else ABBR.get(dtxt)})
+                            'days': [] if rule == 'every' else dl,
+                            'day': None if (rule == 'every' or not dl) else dl[0]})
                 break
     return out
 
@@ -264,10 +271,13 @@ def compose(path, make_item, cal, today=None, pause=True, disc=None):
                 dmin = float(str(_mv).replace(',', '.')) if _mv not in (None, '') else None
             except ValueError:
                 dmin = None
-            for pi, part in enumerate([p.strip() for p in txt.split('\n') if p.strip()]):
+            for pi, part in [(pi_, pt_) for pi_, pt_ in enumerate([p.strip() for p in txt.split('\n') if p.strip()])
+                             for _ in [0]]:
+              for dow in (rw['days'] or [None]):
                 if part.lower() in SKIP:
                     continue
-                dow = rw['day']
+                part0 = part
+                part = part0
                 m = PREFIX.match(part)
                 if rw['label'].lower().startswith(('andré', 'andre')):
                     # Mobi Andre ist immer mittwochs (Floyd, 16.11.2026)
@@ -279,6 +289,8 @@ def compose(path, make_item, cal, today=None, pause=True, disc=None):
                     part = m.group(2).strip()
                     if not part:
                         continue
+                if dmin and dmin > 0 and pi == 0:
+                    durs[(mon.isoformat(), rw['r'], part)] = dmin
                 if dow is None and rw['rule'] == 'every':
                     md = DATE_RE.search(part)
                     if md:
@@ -300,12 +312,10 @@ def compose(path, make_item, cal, today=None, pause=True, disc=None):
                             _dl = rw['label'].lower()
                             _isb = _dl.startswith(('technik boulder', 'physis bouldern', 'spezial bouldern'))
                             _isl = _dl.startswith(('technik lead', 'physis lead', 'spezial lead'))
-                            if (_isb or _isl) and disc.get(d.isoformat()) != ('Bouldern' if _isb else 'Lead'):
+                            if (_isb or _isl) and d.isoformat() in cal and disc.get(d.isoformat()) != ('Bouldern' if _isb else 'Lead'):
                                 if disc.get(d.isoformat()) is None:
                                     disc_skipped.setdefault(d.isoformat(), set()).add('Bouldern' if _isb else 'Lead')
                                 continue
-                        if dmin and dmin > 0 and pi == 0:
-                            durs[(mon.isoformat(), rw['r'], part)] = dmin
                         items.setdefault(d.isoformat(), []).append((rw, part, red))
 
     # 2) Zeilen ohne Wochentag
@@ -315,6 +325,7 @@ def compose(path, make_item, cal, today=None, pause=True, disc=None):
     for mon, lst in by_week.items():
         days_with = [(mon + timedelta(days=i)).isoformat() for i in range(7)
                      if (mon + timedelta(days=i)).isoformat() in items and
+                     (disc is None or (mon + timedelta(days=i)).isoformat() in cal) and
                      any(r['cat'] in ('Technik/Taktik', 'Physis Klettern', 'Athletik + Mentales')
                          for r, _, _ in items[(mon + timedelta(days=i)).isoformat()])]
         for rw, part, red in lst:
