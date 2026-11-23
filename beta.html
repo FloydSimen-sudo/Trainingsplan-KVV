@@ -737,7 +737,7 @@ function dayHint(key, day){
   if(!key || key.indexOf('g:')!==0 || key==='g:SPOGY Gruppe') return '';
   return `<div class="noteBlock"><span class="l">Hinweis</span><span class="t trainerNote">${esc(DAY_HINTS[day.date])}</span></div>`;
 }
-const BT_BUILD = "23.11.2026, 16:17";
+const BT_BUILD = "23.11.2026, 16:32";
 
 const BT_COL = {Bouldern:'#0090c9', Lead:'#78b83f', Speed:'#c9a227'};
 const BT_UEB = 'https://kletternvorarlberg-my.sharepoint.com/:x:/g/personal/floyd_simen_klettern-vorarlberg_at/IQC9XgUg3engR7KFVrcHcok8AZ1cxB0C8wP0TQrGWXO8Y18?e=onBkcG';
@@ -781,7 +781,7 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     const wks = btWkDay(key, dd.date);
     const sts = btWkDay(key, dd.date, 'sonst');
     const wkTag = (wks.length ? '<span class="wk">WK '+esc(wks.map(e=>e.ort!=='-'?e.ort:e.name).join(', '))+'</span>' : '') + (sts.length ? '<span class="wk st">'+esc(sts.map(e=>e.name).join(', '))+'</span>' : '');
-    return '<button class="btChip'+(i===di?' sel':'')+'" data-act="day" data-i="'+i+'" style="background:'+col+(cx?';color:#000':'')+'"><span class="dw">'+esc((dd.dow||'').slice(0,2).toUpperCase())+'</span><span class="dm">'+esc(dd.dom)+'</span>'+(dd.cancel?'<span class="wk" style="background:#fff;color:#333">ENTFÄLLT</span>':'')+wkTag+(main?'<span class="ct">'+esc(main)+'</span>':'')+'</button>';
+    return '<button class="btChip'+(i===di?' sel':'')+'" data-act="day" data-i="'+i+'" style="background:'+col+(cx?';color:#000':'')+'"><span class="dw">'+esc((dd.dow||'').slice(0,2).toUpperCase())+'</span><span class="dm">'+esc(dd.dom)+'</span>'+(dd.selbst?'<span class="wk st">Selbstständig</span>':'')+(dd.cancel?'<span class="wk" style="background:#fff;color:#333">ENTFÄLLT</span>':'')+wkTag+(main?'<span class="ct">'+esc(main)+'</span>':'')+'</button>';
   }).join('');
   let body = '';
   if(day){

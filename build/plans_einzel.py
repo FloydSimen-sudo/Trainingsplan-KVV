@@ -475,6 +475,9 @@ def compose(path, make_item, cal, today=None, pause=True, disc=None):
                 if extra:
                     day['notiz'] = ' · '.join(extra)
                     day['notizRed'] = bool(nt.get('sonst1Red') or nt.get('sonst2Red'))
+        if disc is not None and not evs and day_items:   # Gruppen: Inhalt an Tag ohne Kalendertraining = selbststaendig
+            day['selbst'] = True
+            day['ort'] = 'Selbstständig'
         if iso in disc_skipped:
             _n = 'Bouldern/Lead laut Google Kalender noch offen – Technik-/Physis-Inhalte folgen'
             day['notiz'] = (day['notiz'] + ' · ' + _n) if day.get('notiz') else _n

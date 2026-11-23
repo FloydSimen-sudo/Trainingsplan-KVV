@@ -148,7 +148,7 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     const wks = btWkDay(key, dd.date);
     const sts = btWkDay(key, dd.date, 'sonst');
     const wkTag = (wks.length ? '<span class="wk">WK '+esc(wks.map(e=>e.ort!=='-'?e.ort:e.name).join(', '))+'</span>' : '') + (sts.length ? '<span class="wk st">'+esc(sts.map(e=>e.name).join(', '))+'</span>' : '');
-    return '<button class="btChip'+(i===di?' sel':'')+'" data-act="day" data-i="'+i+'" style="background:'+col+(cx?';color:#000':'')+'"><span class="dw">'+esc((dd.dow||'').slice(0,2).toUpperCase())+'</span><span class="dm">'+esc(dd.dom)+'</span>'+(dd.cancel?'<span class="wk" style="background:#fff;color:#333">ENTFÄLLT</span>':'')+wkTag+(main?'<span class="ct">'+esc(main)+'</span>':'')+'</button>';
+    return '<button class="btChip'+(i===di?' sel':'')+'" data-act="day" data-i="'+i+'" style="background:'+col+(cx?';color:#000':'')+'"><span class="dw">'+esc((dd.dow||'').slice(0,2).toUpperCase())+'</span><span class="dm">'+esc(dd.dom)+'</span>'+(dd.selbst?'<span class="wk st">Selbstständig</span>':'')+(dd.cancel?'<span class="wk" style="background:#fff;color:#333">ENTFÄLLT</span>':'')+wkTag+(main?'<span class="ct">'+esc(main)+'</span>':'')+'</button>';
   }).join('');
   let body = '';
   if(day){
