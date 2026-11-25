@@ -1639,6 +1639,81 @@ def load_gk_competitions():
                     res[cl][dt.isoformat()].append(str(v).strip())
     return res
 
+# ---- Regionale Wettkaempfe aus dem Gesamtkalender in die App (Floyd, 25.11.2026: nur App, Excel unveraendert) ----
+def load_gk_events():
+    """{klasse: [(iso-date, name, kind, approx)]} aus Gesamtkalender MOAP (Zeilen 19-36: Bouldern/Lead/Speed je U9..U15)."""
+    wb = openpyxl.load_workbook(BASE + 'Gesamtkalender 2025_2027 – aktuell.xlsx', data_only=True)
+    ws = wb['MOAP']
+    rows, kind = [], None
+    for r in range(19, 37):
+        k = ws.cell(row=r, column=2).value
+        if k:
+            kind = {'bouldern': 'Bouldern', 'lead': 'Lead', 'speed': 'Speed'}.get(str(k).strip().lower())
+        cl = ws.cell(row=r, column=3).value
+        if kind and cl and re.match(r'U\d+$', str(cl).strip()):
+            rows.append((r, str(cl).strip(), kind))
+    res = {}
+    cur_year, last_month = 2025, 8
+    for c in range(4, ws.max_column + 1):
+        rng = ws.cell(row=2, column=c).value
+        if not rng:
+            continue
+        parts = str(rng).strip().split('-')
+        try:
+            day = int(re.search(r'^\s*(\d+)\.', parts[0]).group(1))
+            mm = re.search(r'\.(\d+)\.', parts[0]) or (re.search(r'\.(\d+)\.', parts[1]) if len(parts) > 1 else None)
+            month = int(mm.group(1))
+        except Exception:
+            continue
+        if month < last_month - 6:
+            cur_year += 1
+        last_month = month
+        try:
+            ref = date(cur_year, month, day)
+        except ValueError:
+            continue
+        for r, cl, kd in rows:
+            v = ws.cell(row=r, column=c).value
+            if not v:
+                continue
+            for part in re.split(r'\s+/\s+', str(v).replace('\n', ' ')):
+                part = part.strip()
+                if not part or re.search(r'test|LT KV', part, re.I):
+                    continue
+                ds = _wk_dates_from_text(part, ref)
+                dt, approx = (ds[0], False) if ds else (ref, True)
+                if dt < date(2026, 9, 1):
+                    continue   # Saison 2025/26 ist vorbei
+                res.setdefault(cl, []).append((dt.isoformat(), part, kd, approx))
+    return res
+
+_WK_STOP = {'cup', 'wild', 'card', 'cartd', 'mit', 'tour', 'finale'}
+def _wk_tokens(t):
+    return {w.lower() for w in re.findall(r'[A-Za-zÄÖÜäöüß]{4,}', str(t))} - _WK_STOP
+
+def add_gk_regional(jp27, gid27, gk):
+    """Haengt Wettkaempfe der passenden Klassen (WK_CLASS_BY_GROUP) an jp27['wk'], sofern nicht schon (Datum+Name) vorhanden."""
+    have = list(jp27.get('wk') or [])
+    added = 0
+    for cl in WK_CLASS_BY_GROUP.get(gid27, []):
+        for dt, name, kd, approx in gk.get(cl, []):
+            d0 = date.fromisoformat(dt)
+            dup = False
+            for e in have:
+                de = date.fromisoformat(e['date'])
+                diff = abs((de - d0).days)
+                same = (e['name'].strip().lower() == name.strip().lower()) if not (_wk_tokens(e['name']) and _wk_tokens(name)) else bool(_wk_tokens(e['name']) & _wk_tokens(name))
+                if same and (diff <= 1 or ((e.get('approx') or approx) and diff <= 7)):
+                    dup = True
+                    break
+            if dup:
+                continue
+            have.append({'date': dt, 'name': name, 'kind': kd, 'approx': approx, 'src': 'Gesamtkalender'})
+            added += 1
+    have.sort(key=lambda x: (x['date'], x['name']))
+    jp27['wk'] = have
+    return added
+
 def check_wk_conflicts(plans, today=None):
     today = today or date.today().isoformat()
     try:
@@ -2214,6 +2289,17 @@ def main():
         jp27 = plans2027.parse_jahresplanung(f27, P27)
         info27 = {'file': os.path.relpath(f27, BASE), 'policy': P27['einheiten_policy']}
         if jp27 and not LIVE_MODE:
+            if key27.startswith('g:') and gid27 in WK_CLASS_BY_GROUP:
+                try:
+                    _gk = _GK_EVENTS if '_GK_EVENTS' in globals() else globals().setdefault('_GK_EVENTS', load_gk_events())
+                    import copy as _cp
+                    _t = _cp.deepcopy(jp27)
+                    _n = add_gk_regional(_t, gid27, _gk)
+                    if os.environ.get('TP_GK') == '1':
+                        jp27['wk'] = _t['wk']      # nur auf ausdruecklichen Wunsch: Gesamtkalender-Ergaenzung in der App
+                    print('GK-Wettkaempfe', key27, 'fehlen in Excel:', _n, [e['date'][5:] + ' ' + e['name'][:30] for e in _t['wk'] if e.get('src')])
+                except Exception as _e:
+                    print('GK-Wettkaempfe nicht lesbar:', _e)
             JAHRESPLAN2027[key27] = jp27
             legacy27 = plans2027.legacy_phase_weeks(jp27)
             src27 = 'Jahresplanung 2027 · ' + os.path.basename(f27)
