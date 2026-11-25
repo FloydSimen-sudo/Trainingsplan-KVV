@@ -2309,8 +2309,9 @@ def main():
                     import copy as _cp
                     _t = _cp.deepcopy(jp27)
                     _n = add_gk_regional(_t, gid27, _gk, b1_classes(f27))
-                    jp27['wk'] = _t['wk']      # Floyd 25.11.2026: Gesamtkalender-Wettkaempfe ergaenzen, Klassen laut Zelle B1 des Plans
-                    print('GK-Wettkaempfe', key27, 'aus Gesamtkalender ergaenzt:', _n, b1_classes(f27), [e['date'][5:] + ' ' + e['name'][:30] for e in _t['wk'] if e.get('src')])
+                    if os.environ.get('TP_GK') == '1':   # Floyd 25.11.2026: App folgt nur den WK im Plan; Gesamtkalender nur Pruefung
+                        jp27['wk'] = _t['wk']
+                    print('GK-Wettkaempfe', key27, '(nur Pruefung) laut Gesamtkalender fehlen im Plan:', _n, b1_classes(f27), [e['date'][5:] + ' ' + e['name'][:30] for e in _t['wk'] if e.get('src')])
                 except Exception as _e:
                     print('GK-Wettkaempfe nicht lesbar:', _e)
             JAHRESPLAN2027[key27] = jp27
