@@ -1691,13 +1691,27 @@ _WK_STOP = {'cup', 'wild', 'card', 'cartd', 'mit', 'tour', 'finale'}
 def _wk_tokens(t):
     return {w.lower() for w in re.findall(r'[A-Za-zÄÖÜäöüß]{4,}', str(t))} - _WK_STOP
 
-def add_gk_regional(jp27, gid27, gk):
+def b1_classes(path):
+    """Zelle B1 der Gruppenplaene, z. B. '2026: U15 I, U15 II  ·  2027: U15 II, U17 I' -> {2026: ['U15'], 2027: ['U15','U17']}."""
+    try:
+        v = str(openpyxl.load_workbook(path, data_only=True)['Trainingsplanung']['B1'].value or '')
+    except Exception:
+        return {}
+    out = {}
+    for m in re.finditer(r'(20\d\d)\s*:\s*([^·\n]*)', v):
+        out[int(m.group(1))] = sorted({x for x in re.findall(r'U\d+', m.group(2))}, key=lambda z: int(z[1:]))
+    return out
+
+def add_gk_regional(jp27, gid27, gk, cls_by_year=None):
     """Haengt Wettkaempfe der passenden Klassen (WK_CLASS_BY_GROUP) an jp27['wk'], sofern nicht schon (Datum+Name) vorhanden."""
     have = list(jp27.get('wk') or [])
     added = 0
-    for cl in WK_CLASS_BY_GROUP.get(gid27, []):
+    allcls = sorted({c for v in (cls_by_year or {}).values() for c in v}) or WK_CLASS_BY_GROUP.get(gid27, [])
+    for cl in allcls:
         for dt, name, kd, approx in gk.get(cl, []):
             d0 = date.fromisoformat(dt)
+            if cls_by_year and cl not in cls_by_year.get(d0.year, []):
+                continue
             dup = False
             for e in have:
                 de = date.fromisoformat(e['date'])
@@ -2294,10 +2308,9 @@ def main():
                     _gk = _GK_EVENTS if '_GK_EVENTS' in globals() else globals().setdefault('_GK_EVENTS', load_gk_events())
                     import copy as _cp
                     _t = _cp.deepcopy(jp27)
-                    _n = add_gk_regional(_t, gid27, _gk)
-                    if os.environ.get('TP_GK') == '1':
-                        jp27['wk'] = _t['wk']      # nur auf ausdruecklichen Wunsch: Gesamtkalender-Ergaenzung in der App
-                    print('GK-Wettkaempfe', key27, 'fehlen in Excel:', _n, [e['date'][5:] + ' ' + e['name'][:30] for e in _t['wk'] if e.get('src')])
+                    _n = add_gk_regional(_t, gid27, _gk, b1_classes(f27))
+                    jp27['wk'] = _t['wk']      # Floyd 25.11.2026: Gesamtkalender-Wettkaempfe ergaenzen, Klassen laut Zelle B1 des Plans
+                    print('GK-Wettkaempfe', key27, 'aus Gesamtkalender ergaenzt:', _n, b1_classes(f27), [e['date'][5:] + ' ' + e['name'][:30] for e in _t['wk'] if e.get('src')])
                 except Exception as _e:
                     print('GK-Wettkaempfe nicht lesbar:', _e)
             JAHRESPLAN2027[key27] = jp27
