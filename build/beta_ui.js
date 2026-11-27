@@ -132,7 +132,7 @@ function btCard(e){
     + ((hw && hw.length) ? '<ul>'+hw.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>' : '')
     + '</div>';
 }
-function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
+function renderEinheitDayBeta(view, isSolo, key, hasSource, srcInfo){
   if(!hasSource) return '<div class="empty"><div class="t1">Keine Daten hinterlegt</div><div class="t2">'+esc(srcInfo)+'</div></div>';
   const plan = (D.PLANS[key] || {})[state.year + '-' + state.kw] || null;
   const kl0 = btKwLab(((plan && plan.days && plan.days[0]) ? plan.days[0].date : ''), state.kw, state.year);
@@ -179,6 +179,97 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
   const ueb = '<a class="btUeb" href="'+BT_UEB+'" target="_blank" rel="noopener">Übungssammlung</a>';
   return nav + btPhasePills(key) + '<div class="btChips">'+chips+'</div>' + wkOpen + body;
 }
+
+// ---- Einheiten-Kalender (Beta) ----
+const BT_MON = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const BT_DOW = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+function btIso(y,m,d){ return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+function btDayMap(key){
+  const mp = {}; const pl = D.PLANS[key] || {};
+  Object.keys(pl).forEach(k=>{ ((pl[k]&&pl[k].days)||[]).forEach((dd,i)=>{ if(dd && dd.date) mp[dd.date] = {dd:dd, k:k, i:i}; }); });
+  return mp;
+}
+function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
+  if(!hasSource) return renderEinheitDayBeta(view, isSolo, key, hasSource, srcInfo);
+  if(state.einMode === 'day') return '<div id="btDayWrap"><button class="btBack" data-bt="back">‹ Kalender</button>' + renderEinheitDayBeta(view, isSolo, key, hasSource, srcInfo) + '</div>';
+  const t = new Date();
+  if(state.calY == null){ state.calY = t.getFullYear(); state.calM = t.getMonth(); }
+  const y = state.calY, m = state.calM;
+  const mp = btDayMap(key);
+  const first = new Date(Date.UTC(y, m, 1));
+  const lead = (first.getUTCDay()+6)%7;
+  const dim = new Date(Date.UTC(y, m+1, 0)).getUTCDate();
+  const todayIso = btIso(t.getFullYear(), t.getMonth(), t.getDate());
+  let cells = '';
+  for(let i=0;i<lead;i++) cells += '<div class="btCal0"></div>';
+  for(let d=1; d<=dim; d++){
+    const iso = btIso(y,m,d); const e = mp[iso]; let bars = '';
+    if(e){
+      const dd = e.dd; const cx = dd.cancel && !dd.cancel.p;
+      btWkDay(key, iso).forEach(w=>{ bars += '<span class="btBar wk">'+esc(w.name)+'</span>'; });
+      if(cx) bars += '<span class="btBar cx">Entfällt</span>';
+      else {
+        const col = BT_COL[dd.ortType] || '#9aa3a9';
+        const names = btItems(dd, BT_H1).concat(btItems(dd, BT_H2)).filter(x=>!x.it.pause).map(x=>btName(x.it));
+        if(names.length) names.slice(0,2).forEach(n=>{ bars += '<span class="btBar" style="background:'+col+'">'+esc(n)+'</span>'; });
+        else if(dd.sessions && dd.sessions.length) bars += '<span class="btBar" style="background:'+col+'">'+esc(dd.ort || 'Training')+'</span>';
+        else if(dd.selbst) bars += '<span class="btBar self">Selbstständig</span>';
+      }
+    }
+    cells += '<button class="btCal'+(iso===todayIso?' today':'')+(e?' has':'')+'" data-bt="cal" data-iso="'+iso+'"><span class="dn">'+d+'</span>'+bars+'</button>';
+  }
+  return '<div id="btCalWrap"><div class="btCalHead"><button class="navBtn" data-bt="prev">‹</button><div class="btCalTitle">'+BT_MON[m]+' '+y+'</div><button class="navBtn" data-bt="next">›</button></div>'
+    + '<div class="btCalGrid btCalDow">'+BT_DOW.map(x=>'<span>'+x+'</span>').join('')+'</div>'
+    + '<div class="btCalGrid">'+cells+'</div></div>';
+}
+function btPost(){
+  document.querySelectorAll('[data-bt]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const a = el.getAttribute('data-bt');
+      if(a==='prev' || a==='next'){
+        let m = state.calM + (a==='next'?1:-1), y = state.calY;
+        if(m<0){ m=11; y--; } if(m>11){ m=0; y++; }
+        state.btFade = true; setState({calY:y, calM:m});
+      } else if(a==='cal'){
+        const iso = el.getAttribute('data-iso');
+        const key = btCurKey(); const e = btDayMap(key)[iso];
+        if(!e) return;
+        const r = el.getBoundingClientRect();
+        const kk = e.k.split('-');
+        state.btRect = {x:r.left, y:r.top, w:r.width, h:r.height};
+        state.btZoom = 'in';
+        setState({einMode:'day', year:parseInt(kk[0],10), kw:parseInt(kk[1],10), day:e.i, weekView:'tage'});
+      } else if(a==='back'){
+        const w = document.getElementById('btDayWrap'); const r = state.btRect;
+        const done = ()=>{ state.btZoom = 'out'; setState({einMode:'cal'}); };
+        if(w && r && w.animate && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)){
+          const b = w.getBoundingClientRect();
+          w.style.transformOrigin = '0 0';
+          const an = w.animate([{transform:'none',opacity:1},{transform:'translate('+(r.x-b.left)+'px,'+(r.y-b.top)+'px) scale('+(r.w/b.width)+','+Math.min(1,r.h/b.height)+')',opacity:0}], {duration:320, easing:'cubic-bezier(.5,0,.75,0)'});
+          an.onfinish = done;
+        } else done();
+      }
+    });
+  });
+  const z = state.btZoom; state.btZoom = null;
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(z==='in'){
+    const w = document.getElementById('btDayWrap'); const r = state.btRect;
+    if(w && r && w.animate && !reduce){
+      const b = w.getBoundingClientRect();
+      w.style.transformOrigin = '0 0';
+      w.animate([{transform:'translate('+(r.x-b.left)+'px,'+(r.y-b.top)+'px) scale('+(r.w/b.width)+','+Math.min(1,r.h/b.height)+')',opacity:0},{transform:'none',opacity:1}], {duration:380, easing:'cubic-bezier(.2,.8,.2,1)'});
+    }
+  } else if(z==='out' || state.btFade){
+    state.btFade = false;
+    const w = document.getElementById('btCalWrap');
+    if(w && w.animate && !reduce) w.animate([{transform:'scale(1.06)',opacity:0},{transform:'none',opacity:1}], {duration:260, easing:'ease-out'});
+  }
+}
+function btCurKey(){
+  const v = state.view; if(!v) return null;
+  return (v.t==='g' ? 'g:' : 'a:') + v.id;
+}
 `;
 
 function viennaStamp() {
@@ -192,7 +283,7 @@ function apply(html) {
     if (n !== 1) throw new Error('beta_ui: ' + n + 'x gefunden: ' + a.slice(0, 60));
     html = html.replace(a, () => b);
   };
-  rep('</style>', CSS + '</style>');
+  rep('</style>', CSS + '.btBack{display:inline-flex;align-items:center;gap:4px;margin:2px 0 10px;padding:8px 14px;border:0;border-radius:10px;background:#000;color:#fff;font:700 13px/1 Archivo,sans-serif;cursor:pointer}\n.btCalHead{display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px}\n.btCalTitle{font:800 22px/1 Archivo,sans-serif;letter-spacing:.2px}\n.btCalGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}\n.btCalDow span{text-align:center;font:700 11px/1 Archivo,sans-serif;color:#7a858c;padding:4px 0}\n.btCal0{min-height:92px}\n.btCal{min-height:92px;min-width:0;display:flex;flex-direction:column;gap:2px;align-items:stretch;padding:4px 2px 3px;border:1px solid #e3e8ec;border-radius:8px;background:#fff;color:inherit;font:inherit;text-align:left;cursor:pointer;overflow:hidden}\n.btCal:not(.has){opacity:.55;cursor:default}\n.btCal .dn{font:700 12px/1 Archivo,sans-serif;padding:0 3px 2px}\n.btCal.today .dn{display:inline-flex;align-self:flex-start;width:20px;height:20px;align-items:center;justify-content:center;border-radius:50%;border:2px solid #f08a00;padding:0}\n.btBar{display:block;font:600 8px/1.15 Archivo,sans-serif;color:#fff;background:#9aa3a9;border-radius:3px;padding:2px 3px;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;hyphens:auto}\n.btBar.wk{background:#d6262b}.btBar.cx{background:#9aa3a9;color:#000}.btBar.self{background:#000}\n' + '</style>');
   rep('function renderWochenplan(', 'const BT_BUILD = ' + JSON.stringify(viennaStamp()) + ';\n' + JS + require('fs').readFileSync(__dirname + '/beta_wk.frag.js', 'utf8') + require('fs').readFileSync(__dirname + '/beta_jz.frag.js', 'utf8') + require('fs').readFileSync(__dirname + '/beta_spogy.frag.js', 'utf8') + '\nfunction renderWochenplan(');
   rep("const tabNames = ['Dashboard','Woche','Wochenplan','Jahr','Statistik'];\n  if(isSolo){ tabNames.push('Benchmarks'); }\n  tabNames.push('Trainer');\n  if(tabNames.indexOf(state.tab) < 0) state.tab = 'Dashboard';",
       "const tabNames = ['Woche','Jahr'];\n  if(tabNames.indexOf(state.tab) < 0) state.tab = 'Woche';");
@@ -216,7 +307,9 @@ function apply(html) {
       \${view.t==='a' && trainerSession.order.length ? '<a href="'+BT_UEB+'" target="_blank" rel="noopener" style="flex:none;display:flex;align-items:center;padding:8px 10px;border-radius:10px;background:'+AM+';color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Übungssammlung</a>' : ''}
       \${routeBtn(view, 'head')}`);
   rep("${state.tab==='Jahr' ? renderJahr(view, isSolo, athlete, group) : ''}", '');
-  rep("(n==='Woche'?'Einheit':(n==='Wochenplan'?'Woche':n))", "(n==='Woche'?'Einheit':(n==='Jahr'?'Jahresplanung':n))");
+  rep('wireEvents();\n  wireTrainerForm();', 'wireEvents();\n  btPost();\n  wireTrainerForm();');
+  rep("zsOpen: {}, zsSel: null,", "zsOpen: {}, zsSel: null, einMode:'cal', calY:null, calM:null,");
+  rep("(n==='Woche'?'Einheit':(n==='Wochenplan'?'Woche':n))", "(n==='Woche'?'Einheiten':(n==='Jahr'?'Jahresplanung':n))");
   rep("      </div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){", "      </div>\n      <div class=\"btTrainer${btTrWide() ? ' wide' : ''}\">${renderTrainerspace(null)}${trainerSession.order.length ? `<div><a href=\"${BT_UEB}\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-flex;align-items:center;padding:9px 14px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap\">Übungssammlung</a></div>` : ''}</div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){");
   rep("${gid==='SPOGY Gruppe' ? spogyDayOverview() : ''}", "${gid==='SPOGY Gruppe' ? renderSpogyBoard() : ''}");
   return html;
