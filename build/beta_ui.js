@@ -54,7 +54,8 @@ const CSS = `
 .btCard .d{font:600 12px/1.2 'Roboto Mono',monospace}
 .btCard .s{font:500 12px/1.3 Archivo,sans-serif;color:#33434d}
 .btCard ul{margin:2px 0 0;padding-left:18px;font:400 12.5px/1.45 Archivo,sans-serif}
-.btRow{display:flex;gap:8px;align-items:baseline;padding:7px 10px;border-radius:10px;border:1px solid rgba(10,50,80,.08)}
+.btRow ul{flex-basis:100%;margin:2px 0 0;padding-left:20px;font:400 12.5px/1.45 Archivo,sans-serif}
+.btRow{flex-wrap:wrap;display:flex;gap:8px;align-items:baseline;padding:7px 10px;border-radius:10px;border:1px solid rgba(10,50,80,.08)}
 .btRow .c{font:700 9px/1 'Roboto Mono',monospace;text-transform:uppercase;color:#4a5b66;flex:none;width:78px}
 .btRow .n{flex:1;font:600 13px/1.3 Archivo,sans-serif}
 .btRow .d{font:600 11px/1 'Roboto Mono',monospace;flex:none}
@@ -170,7 +171,7 @@ function renderEinheitDayBeta(view, isSolo, key, hasSource, srcInfo){
     [day.sonstiges, day.notiz].concat((day.sessions||[]).map(s=>s.notiz)).forEach(t=>{ t=String(t||'').trim(); if(!t || t==='-' || notes.indexOf(t)>=0) return; if(wkDay.some(e=>e.ort!=='-' && t.indexOf(e.ort)>=0)) return; if(/^mit\\s/i.test(t) || (day.zeit && t.indexOf(day.zeit.replace(/\\s/g,''))>=0) || (day.zeit && t.replace(/\\s/g,'').indexOf(day.zeit.replace(/\\s/g,''))>=0)) return; notes.push(t); });
     if(rest.length || notes.length){
       body += '<div class="btSec"><div class="btSecH">Sonstige Inhalte</div>'
-        + rest.map(e=>{ const mins = tpItemMin(e.it); return '<div class="btRow" style="background:'+(e.it.col?'#'+esc(e.it.col):'#fff')+'"><span class="c">'+esc(e.cat)+'</span><span class="n">'+esc(btName(e.it))+'</span><span class="d">'+(mins?esc(btDur(mins)):(e.it.par?'nebenbei':''))+'</span></div>'; }).join('')
+        + rest.map(e=>{ const mins = tpItemMin(e.it); return '<div class="btRow" style="background:'+(e.it.col?'#'+esc(e.it.col):'#fff')+'"><span class="c">'+esc(e.cat)+'</span><span class="n">'+esc(btName(e.it))+'</span><span class="d">'+(mins?esc(btDur(mins)):(e.it.par?'nebenbei':''))+'</span>'+(function(){ const hw = (e.it.sx && D.EXHOW) ? D.EXHOW[e.it.sx] : null; return (hw && hw.length) ? '<ul>'+hw.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>' : ''; })()+'</div>'; }).join('')
         + notes.map(t=>'<div class="btNote">'+esc(t)+'</div>').join('')+'</div>';
     }
     if(!hasTr && !notes.length) body += '<div class="dashed">Trainingsfrei / keine Einheit eingetragen</div>';
