@@ -222,7 +222,37 @@ function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
     + '<div class="btCalGrid btCalDow">'+BT_DOW.map(x=>'<span>'+x+'</span>').join('')+'</div>'
     + '<div class="btCalGrid">'+cells+'</div></div>';
 }
+function btHomeZoom(){
+  if(window.__btZoomWired) return; window.__btZoomWired = true;
+  const reduce = ()=>window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.addEventListener('click', ev=>{
+    const el = ev.target.closest ? ev.target.closest('[data-act]') : null; if(!el) return;
+    const act = el.getAttribute('data-act');
+    if((act==='pickView' || act==='pickGroup') && !reduce()){ const r = el.getBoundingClientRect(); window.__btIn = {x:r.left, y:r.top, w:r.width, h:r.height}; }
+    else if(act==='goHome' && state.view && !reduce()){
+      const app = document.getElementById('app'); if(!app || !app.animate || window.__btBusy) return;
+      ev.stopPropagation(); window.__btBusy = true;
+      app.style.transformOrigin = '50% 30%';
+      const an = app.animate([{transform:'none',opacity:1},{transform:'scale(.82)',opacity:0}], {duration:280, easing:'cubic-bezier(.5,0,.75,0)'});
+      an.onfinish = ()=>{ window.__btBusy = false; window.__btOut = true; app.style.transform=''; setState({view:null, picker:false}); };
+    }
+  }, true);
+}
 function btPost(){
+  btHomeZoom();
+  { const app = document.getElementById('app');
+    if(app && app.animate){
+      if(window.__btIn && state.view){
+        const r = window.__btIn; window.__btIn = null; const b = app.getBoundingClientRect(); const sc = Math.max(.08, Math.min(1, r.w / b.width));
+        app.style.transformOrigin = '0 0';
+        app.animate([{transform:'translate('+(r.x-b.left)+'px,'+(r.y-b.top)+'px) scale('+sc+')',opacity:0},{transform:'none',opacity:1}], {duration:420, easing:'cubic-bezier(.2,.8,.2,1)'});
+      } else if(window.__btOut && !state.view){
+        window.__btOut = false; app.style.transformOrigin = '50% 30%';
+        app.animate([{transform:'scale(1.15)',opacity:0},{transform:'none',opacity:1}], {duration:320, easing:'ease-out'});
+      }
+    }
+    window.__btIn = null; if(state.view) window.__btOut = false;
+  }
   document.querySelectorAll('[data-bt]').forEach(el=>{
     el.addEventListener('click', ()=>{
       const a = el.getAttribute('data-bt');
