@@ -191,7 +191,7 @@ function btDayMap(key){
 }
 function renderEinheitBeta(view, isSolo, key, hasSource, srcInfo){
   if(!hasSource) return renderEinheitDayBeta(view, isSolo, key, hasSource, srcInfo);
-  if(state.einMode === 'day') return '<div id="btDayWrap"><button class="btBack" data-bt="back">‹ Kalender</button>' + renderEinheitDayBeta(view, isSolo, key, hasSource, srcInfo) + '</div>';
+  if(state.einMode === 'day') return '<div id="btDayWrap"><button class="btBack" data-bt="back"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg> Kalender</button>' + renderEinheitDayBeta(view, isSolo, key, hasSource, srcInfo) + '</div>';
   const t = new Date();
   if(state.calY == null){ state.calY = t.getFullYear(); state.calM = t.getMonth(); }
   const y = state.calY, m = state.calM;
@@ -240,8 +240,10 @@ function btPost(){
         state.btZoom = 'in';
         setState({einMode:'day', year:parseInt(kk[0],10), kw:parseInt(kk[1],10), day:e.i, weekView:'tage'});
       } else if(a==='back'){
-        const w = document.getElementById('btDayWrap'); const r = state.btRect;
-        const done = ()=>{ state.btZoom = 'out'; setState({einMode:'cal'}); };
+        const w = document.getElementById('btDayWrap'); let r = state.btRect;
+        if(!r){ const bb = el.getBoundingClientRect(); r = {x:bb.left, y:bb.top, w:bb.width, h:bb.height}; }
+        const cur = (btDayMap(btCurKey())); let cd = null; Object.keys(cur).forEach(k=>{ if(cur[k].k===state.year+'-'+state.kw && cur[k].i===state.day) cd = k; });
+        const done = ()=>{ state.btZoom = 'out'; const p = cd ? {calY:parseInt(cd.slice(0,4),10), calM:parseInt(cd.slice(5,7),10)-1} : {}; setState(Object.assign({einMode:'cal'}, p)); };
         if(w && r && w.animate && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)){
           const b = w.getBoundingClientRect();
           w.style.transformOrigin = '0 0';
@@ -308,7 +310,7 @@ function apply(html) {
       \${routeBtn(view, 'head')}`);
   rep("${state.tab==='Jahr' ? renderJahr(view, isSolo, athlete, group) : ''}", '');
   rep('wireEvents();\n  wireTrainerForm();', 'wireEvents();\n  btPost();\n  wireTrainerForm();');
-  rep("zsOpen: {}, zsSel: null,", "zsOpen: {}, zsSel: null, einMode:'cal', calY:null, calM:null,");
+  rep("zsOpen: {}, zsSel: null,", "zsOpen: {}, zsSel: null, einMode:'day', calY:null, calM:null,");
   rep("(n==='Woche'?'Einheit':(n==='Wochenplan'?'Woche':n))", "(n==='Woche'?'Einheiten':(n==='Jahr'?'Jahresplanung':n))");
   rep("      </div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){", "      </div>\n      <div class=\"btTrainer${btTrWide() ? ' wide' : ''}\">${renderTrainerspace(null)}${trainerSession.order.length ? `<div><a href=\"${BT_UEB}\" target=\"_blank\" rel=\"noopener\" style=\"display:inline-flex;align-items:center;padding:9px 14px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap\">Übungssammlung</a></div>` : ''}</div>\n    </div>\n  `;\n}\n\nfunction wireEvents(){");
   rep("${gid==='SPOGY Gruppe' ? spogyDayOverview() : ''}", "${gid==='SPOGY Gruppe' ? renderSpogyBoard() : ''}");
