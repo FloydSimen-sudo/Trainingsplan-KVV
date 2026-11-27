@@ -750,7 +750,7 @@ function dayHint(key, day){
   if(!key || key.indexOf('g:')!==0 || key==='g:SPOGY Gruppe') return '';
   return `<div class="noteBlock"><span class="l">Hinweis</span><span class="t trainerNote">${esc(DAY_HINTS[day.date])}</span></div>`;
 }
-const BT_BUILD = "27.11.2026, 18:26";
+const BT_BUILD = "27.11.2026, 18:30";
 
 const BT_COL = {Bouldern:'#0090c9', Lead:'#78b83f', Speed:'#c9a227'};
 const BT_UEB = 'https://kletternvorarlberg-my.sharepoint.com/:x:/g/personal/floyd_simen_klettern-vorarlberg_at/IQC9XgUg3engR7KFVrcHcok8AZ1cxB0C8wP0TQrGWXO8Y18?e=onBkcG';
@@ -2283,7 +2283,7 @@ function renderLanding(){
           ${spogyOpt}
         </div>
       </div>
-      <div class="btTrainer${btTrWide() ? ' wide' : ''}">${renderTrainerspace(null)}${trainerSession.order.length ? `<div><a href="${BT_UEB}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;padding:9px 14px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Übungssammlung</a></div>` : ''}</div>
+      <div class="btTrainer${btTrWide() ? ' wide' : ''}">${renderTrainerspace(null)}${trainerSession.order.length ? `<div><a href="${BT_UEB}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;padding:9px 14px;border-radius:10px;background:${AM};color:#fff;font:600 12px/1 Archivo,sans-serif;white-space:nowrap">Übungssammlung</a></div>` : ''}<div><a href="./beta.html" style="display:inline-flex;align-items:center;padding:9px 14px;border-radius:10px;background:#d20028;color:#fff;font:700 12px/1 Archivo,sans-serif;white-space:nowrap">Beta-Version</a></div></div>
     </div>
   `;
 }

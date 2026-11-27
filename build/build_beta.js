@@ -83,6 +83,7 @@ function fromBetaToLive(beta){
   rep('<title>BETA · Trainingspläne KVV</title>', '<title>Trainingspläne KVV</title>');
   rep(BADGE, '');
   rep(LIVE_A, '');
+  rep("Übungssammlung</a></div>` : ''}</div>", "Übungssammlung</a></div>` : ''}<div><a href=\"./beta.html\" style=\"display:inline-flex;align-items:center;padding:9px 14px;border-radius:10px;background:#d20028;color:#fff;font:700 12px/1 Archivo,sans-serif;white-space:nowrap\">Beta-Version</a></div></div>");
   rep('BETA-Testversion (alle Einzel- und Gruppenpläne). Bitte Passwort eingeben.', 'Bitte Passwort eingeben, um die Trainingspläne zu öffnen.');
   return h;
 }
