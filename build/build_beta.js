@@ -30,7 +30,7 @@ function applyOrte(D){   // nur Beta: Trainingsorte/Disziplin der Gruppen laut G
     Object.values((D.PLANS || {})['g:' + gid] || {}).forEach(w => (w.days || []).forEach(d => {
       if (d.date < '2026-11-16' || d.date > HORIZON) return;
       const t = ok[gid][d.date];
-      if (t) { d.ort = ORT[t]; d.ortType = t; } else if (d.ort || d.ortType) { d.ort = null; d.ortType = null; }
+      if (t) { d.ort = d.ortX || ORT[t]; d.ortType = t; } else if (d.ort || d.ortType) { d.ort = null; d.ortType = null; }
     }));
   });
   // Entfallende Trainings laut Google Kalender (build/entfaellt_kalender.json: Titel mit "entfaellt", {r: Grund, p: nur Teil, z. B. Athletik OZ})

@@ -55,6 +55,10 @@ SKIP = {'x', '-', '–'}
 TIME_RE = re.compile(r'(\d{1,2})[:.](\d{2})')
 
 
+ORT_CANON = {'k1': 'K1', 'vaduz': 'Vaduz', 'sb dornbirn': 'SB Dornbirn', 'dornbirn': 'Dornbirn', 'feldkirch': 'Feldkirch', 'bludenz': 'Bludenz', 'rankweil': 'Rankweil',
+             'hohenems': 'Hohenems', 'lustenau': 'Lustenau', 'bregenz': 'Bregenz', 'götzis': 'Götzis', 'schruns': 'Schruns', 'innsbruck': 'Innsbruck', 'zürich': 'Zürich'}
+ORT_SUFFIX_RE = re.compile(r'^(.*?\S)\s+(' + '|'.join(sorted((re.escape(k) for k in ORT_CANON), key=len, reverse=True)) + r')\s*$', re.I)
+
 def _t(v):
     if v is None:
         return ''
@@ -478,6 +482,17 @@ def compose(path, make_item, cal, today=None, pause=True, disc=None):
         if disc is not None and not evs and day_items:   # Gruppen: Inhalt an Tag ohne Kalendertraining = selbststaendig
             day['selbst'] = True
             day['ort'] = 'Selbstständig'
+        # Regel (Floyd 27.11.): steht hinter dem Inhaltsnamen ein Ort (z. B. "Einfachlängen Vaduz"), ist das der Trainingsort des Tages;
+        # die Farbe des Blocks bestimmt weiter die Disziplin. Ort wird vom Namen getrennt.
+        _orte = ORT_SUFFIX_RE
+        for _s in sessions:
+            for _c in _s.get('cats', []):
+                for _it in _c.get('items', []):
+                    _m = _orte.match(_it.get('ex') or '')
+                    if _m and _m.group(1).strip() and not re.search(r'(z\.\s?B\.|ev\.|evtl\.|oder|in|im|bei|nach)\s*$', _m.group(1).strip(), re.I):
+                        _it['ex'] = _m.group(1).strip()
+                        day['ortX'] = ORT_CANON.get(_m.group(2).lower(), _m.group(2))
+                        day['ort'] = day['ortX']
         # Kopfzeilen: Fels / Deload / Ferien als Hinweis
         wk = weeks.setdefault('%d-%d' % (y, kw), {'days': {}, 'year': y, 'kw': kw})
         wk['days'][wd - 1] = day

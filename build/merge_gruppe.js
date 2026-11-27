@@ -21,7 +21,7 @@ const all=Object.values(ok).flatMap(o=>Object.keys(o)).sort(); const HORIZON=all
 const P=prev.PLANS[GKEY]||{}; if(ok[GID]) for(const w of Object.values(P)) for(const d of (w.days||[])){
   if(d.date<TODAY||d.date>HORIZON) continue;
   const t=ok[GID][d.date];
-  if(t){ if(d.ort!==ORT[t]||d.ortType!==t) setN++; d.ort=ORT[t]; d.ortType=t; }
+  if(t){ if(d.ort!==(d.ortX||ORT[t])||d.ortType!==t) setN++; d.ort=d.ortX||ORT[t]; d.ortType=t; }
   else if(d.ort||d.ortType){ d.ort=null; d.ortType=null; clrN++; }
 }
 }
