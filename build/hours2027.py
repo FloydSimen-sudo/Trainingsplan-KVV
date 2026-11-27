@@ -15,7 +15,10 @@ H_RE = re.compile(r'^\s*(\d+(?:[.,]\d+)?)(?:\s*[-–]\s*(\d+(?:[.,]\d+)?))?\s*(?
 # Kurzformen aus den Plaenen -> Name in der Uebungsliste
 ALIASES = {'bb': 'bewegungsbouldern', 'bb offen': 'bewegungsbouldern', 'andere bb': 'bewegungsbouldern',
            'routine': 'warm up routine',
-           'spray max': 'max boulder', 'spray aufbau': 'aufbau boulder'}
+           'spray max': 'max boulder', 'spray aufbau': 'aufbau boulder',
+    # Tippfehler/Singular-Varianten (Floyd 27.11.2026: Beschreibungen aus der Uebungssammlung uebernehmen)
+    'doublles': 'doubles', 'spannungsboulder': 'spannungsbouldern', 'dauerkletten': 'dauerklettern',
+    'doppellänge': 'doppellängen', '1x doppellänge': 'doppellängen', 'einzellängen': 'einfachlängen'}
 
 def norm(s):
     return re.sub(r'\s+', ' ', re.sub(r'[^0-9a-zäöüß ]', ' ', str(s).lower())).strip()
